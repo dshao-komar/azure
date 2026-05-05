@@ -1,0 +1,309 @@
+Yes. Since you’re new to ADF, I would not start with the “read Excel directly from SharePoint into SQL” pattern. Microsoft’s SharePoint Online connector is primarily for lists, not files, and the file pattern uses a Web activity to get a token plus a Copy activity with HTTP source. Also, ADF’s Excel parser is supported for HTTP / Blob / ADLS / file-based connectors and reads Excel only as a source, not a sink. For a first implementation, the cleanest design is:
+
+SharePoint file → Blob/ADLS landing → Excel parse → SQL staging → stored proc / merge.
+
+Step 2, fully fleshed out
+0) Before you touch ADF
+
+Have these ready first:
+
+an Azure subscription
+an Azure Data Factory resource
+either Azure Blob Storage or ADLS Gen2 for the landing file
+your SQL Server target table or at least a staging table design
+access to the SharePoint site where the workbook lives
+a Windows machine that can reach your SQL Server, because if SQL Server is on-prem or otherwise network-restricted, ADF needs a self-hosted integration runtime for that connection.
+1) Create the Data Factory
+
+In Azure Portal:
+
+Search for Data Factory
+Click Create
+Choose subscription, resource group, region, and a factory name
+After deployment, click Launch Studio
+
+That gets you into the ADF UI where you’ll build the pipeline. Microsoft’s copy workflow in ADF is built around:
+
+linked services
+datasets
+pipeline activities.
+2) Create your Integration Runtime(s)
+
+This is the part most beginners miss.
+
+Azure IR
+
+You already get an Azure Integration Runtime by default. Use that for cloud-accessible pieces like SharePoint token/web calls and Azure storage.
+
+Self-hosted IR
+
+If your SQL Server is on-prem, behind firewall, or otherwise not publicly reachable, create a self-hosted IR:
+
+In ADF Studio:
+
+Manage
+Integration runtimes
++ New
+Choose Self-hosted
+Name it
+Download and install the runtime on a Windows server or VM that can reach SQL Server
+Register it with the key ADF gives you
+
+Microsoft’s docs are explicit that when copying to or from on-prem or network-restricted data stores, you need a self-hosted IR. Also, if one side of a Copy activity uses a self-hosted IR, that activity’s source and sink both need to be reachable from the machine hosting that IR.
+
+Practical advice: install the self-hosted IR on a server that:
+
+is always on
+has stable network
+can reach SQL Server
+can also reach Azure storage over HTTPS
+
+That keeps the second copy step simple.
+
+3) Create the SharePoint app registration
+
+To get files out of SharePoint Online in ADF, Microsoft’s documented pattern is:
+
+register an app in Microsoft Entra ID
+grant that app permission to the SharePoint site
+use a Web activity to request an access token
+pass that token to a Copy activity that uses HTTP as the source.
+
+From the SharePoint connector doc, you need:
+
+Application (client) ID
+Application key or certificate
+Tenant ID
+permission granted on the SharePoint site.
+
+In practice, your Microsoft 365 / SharePoint admin may need to help with this part.
+
+4) Create linked services
+
+Now go to Manage → Linked services → New and create these.
+
+A. Azure Storage linked service
+
+Create a linked service for either:
+
+Azure Blob Storage
+or ADLS Gen2
+
+This is where the workbook file will land first. ADF Copy activity supports file-based copy between stores, and Excel parsing is supported from Blob/ADLS.
+
+B. SQL Server linked service
+
+Create a linked service for SQL Server:
+
+server name
+database
+auth method
+select your self-hosted IR if SQL Server is not publicly accessible
+
+Test connection before saving. If this test fails, stop there and fix network/auth before building anything else. The pipeline will not magically solve a bad linked service. The need for self-hosted IR in on-prem/network-restricted scenarios is part of the Copy activity model.
+
+C. HTTP linked service
+
+Create an HTTP linked service pointing at the SharePoint file endpoint pattern you’ll use for the file copy. This works because ADF supports Excel parsing over HTTP, and the SharePoint file-copy pattern specifically uses HTTP as the source after obtaining a token.
+
+5) Build datasets
+
+Datasets are pointers to actual source/sink objects.
+
+You’ll want at least these:
+
+Dataset 1: Landing binary file in Blob/ADLS
+
+This represents the raw workbook after you copy it from SharePoint into Azure storage.
+
+Use a file-based dataset in your storage account, usually parameterized with:
+
+folder path
+file name
+Dataset 2: Excel dataset over the landed workbook
+
+Create an Excel dataset against the Blob/ADLS file.
+Set:
+
+file location = the landed .xlsx
+sheetName or sheetIndex
+firstRowAsHeader = true if your top row is headers
+
+Microsoft’s Excel format doc says Excel datasets support:
+
+.xls and .xlsx
+sheetName or sheetIndex
+optional range
+firstRowAsHeader
+and Excel is source-only, not sink.
+Dataset 3: SQL staging table
+
+Create an SQL dataset for something like:
+
+dbo.stg_sharepoint_excel_import
+
+I strongly recommend a staging table first, not writing straight into your final table.
+
+6) Create the pipeline
+
+Go to Author → + → Pipeline.
+
+Name it something like:
+pl_sharepoint_excel_to_sql
+
+Then add these activities in order.
+
+7) Activity 1: Web activity to get SharePoint token
+
+Add a Web activity named Get_SPO_Token.
+
+Microsoft’s SharePoint file-copy doc shows this pattern:
+
+URL:
+https://accounts.accesscontrol.windows.net/[Tenant-ID]/tokens/OAuth/2
+Method: POST
+Header:
+Content-Type: application/x-www-form-urlencoded
+Body with grant_type, client_id, client_secret, resource, and tenant values.
+
+This activity returns a token in the output JSON. You’ll reference that token in the next Copy activity.
+
+Important: save the app secret in Azure Key Vault if possible rather than hardcoding it. The SharePoint linked-service doc explicitly supports secret storage in Key Vault for credentials.
+
+8) Activity 2: Copy workbook file from SharePoint to Blob/ADLS
+
+Add a Copy data activity named Copy_SharePoint_File_To_Landing.
+
+This is still copying the workbook as a file, not parsing Excel yet.
+
+Configure it like this:
+
+Source: HTTP-based file source, authenticated with the bearer token from the Web activity
+Sink: Blob/ADLS file path like:
+raw/sharepoint/yourfile.xlsx
+
+Why do this first?
+Because it separates:
+
+SharePoint authentication/file retrieval
+Excel parsing
+SQL loading
+
+That makes debugging much easier. ADF can copy files as-is between file-based stores without serialization/deserialization when doing straight file movement.
+
+9) Activity 3: Copy Excel sheet into SQL staging
+
+Add another Copy data activity named Copy_Excel_To_SQL_Staging.
+
+Configure it like this:
+
+Source
+
+Use the Excel dataset you created on the landed file.
+Set:
+
+sheet name
+first row as header
+optional range if you do not want the entire sheet
+
+Microsoft’s Excel doc says if no range is specified, ADF reads the worksheet as a table from the first non-empty row/column.
+
+Sink
+
+Use your SQL staging dataset.
+
+For the first build, choose a very simple staging table with permissive column types, for example:
+
+varchar(...) for text-ish fields
+decimal(...) for numeric columns you trust
+datetime only if Excel dates are truly clean
+
+ADF can do column mapping during Copy activity, but Excel type weirdness is common. Microsoft also notes the Excel connector loads the whole file into memory and can time out on large files, especially over HTTP during preview/schema import.
+
+My advice: keep your workbook modest and your sheet clean:
+
+no merged cells
+no fancy title rows
+no totals row above headers
+one tabular block only
+10) Activity 4: Stored procedure to merge into final table
+
+After the staging load succeeds, add either:
+
+a Stored Procedure activity
+or a Script activity
+
+Use it to:
+
+validate row counts
+dedupe
+trim/cast columns
+MERGE or INSERT/UPDATE into final table
+
+That fits ADF’s intended pattern: Copy activity moves data, and then other activities handle transformation or downstream logic.
+
+A typical flow is:
+
+TRUNCATE TABLE dbo.stg_sharepoint_excel_import;
+
+-- ADF load happens here
+
+EXEC dbo.usp_merge_sharepoint_excel_import;
+11) Add trigger
+
+Once manual runs work, add a trigger.
+
+Go to Add Trigger → New/Edit and choose one of these:
+
+Scheduled trigger
+
+Best first version. Example:
+
+every day at 6:00 AM
+Event-driven
+
+Possible, but for your first ADF pipeline I would skip it. Scheduled is simpler and easier to troubleshoot.
+
+12) Monitor runs
+
+Use Monitor in ADF Studio.
+
+Microsoft’s Copy activity docs say ADF gives visual monitoring and performance stats for copy runs. When something fails, check which activity failed:
+
+token activity
+SharePoint file copy
+Excel parse
+SQL write
+
+For your first build, test in this order:
+
+run Get_SPO_Token
+verify the workbook lands in Blob/ADLS
+preview the Excel dataset
+load 5–20 rows into SQL staging
+then run full size
+What I would do in your shoes
+
+Build version 1 like this:
+
+SharePoint workbook copied to Blob as-is
+One specific sheet loaded to dbo.stg_xxx
+Stored proc merges into final table
+Daily scheduled trigger
+
+That is the easiest version to get working and the easiest version to support.
+
+The main gotchas
+
+The biggest traps are:
+
+SharePoint app permissions not actually granted
+self-hosted IR installed on the wrong machine
+SQL Server reachable from your laptop but not from the IR machine
+ugly Excel sheet structure
+trying to skip staging and go straight into production tables
+Honest take
+
+ADF can absolutely do this, but SharePoint file auth is the annoying part, not the SQL load. Once the file is landing in Blob/ADLS, the rest is straightforward.
+
+I can lay out the exact objects next: which linked services, datasets, activities, and expressions to create, with example names and values.
