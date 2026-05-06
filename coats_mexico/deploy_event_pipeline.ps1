@@ -1,0 +1,535 @@
+Set-StrictMode -Version Latest
+$ErrorActionPreference = "Stop"
+
+$repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
+$envPath = Join-Path $repoRoot ".env"
+if (-not (Test-Path $envPath)) {
+  throw "Missing .env file at $envPath"
+}
+
+function Read-DotEnv {
+  param([Parameter(Mandatory = $true)][string]$Path)
+
+  $config = @{}
+  Get-Content $Path | ForEach-Object {
+    $line = $_.Trim()
+    if (-not $line -or $line.StartsWith("#")) {
+      return
+    }
+
+    $parts = $line.Split("=", 2)
+    if ($parts.Count -ne 2) {
+      return
+    }
+
+    $config[$parts[0].Trim()] = $parts[1].Trim().Trim('"').Trim("'")
+  }
+  return $config
+}
+
+function Require-Config {
+  param(
+    [Parameter(Mandatory = $true)][hashtable]$Config,
+    [Parameter(Mandatory = $true)][string[]]$Names
+  )
+
+  foreach ($name in $Names) {
+    if (-not $Config.ContainsKey($name) -or [string]::IsNullOrWhiteSpace($Config[$name])) {
+      throw "Missing required .env value: $name"
+    }
+  }
+}
+
+function Invoke-AzJson {
+  param([Parameter(Mandatory = $true)][string[]]$Arguments)
+
+  $output = & az @Arguments --output json
+  if ($LASTEXITCODE -ne 0) {
+    throw "Azure CLI failed: az $($Arguments -join ' ')"
+  }
+  if ([string]::IsNullOrWhiteSpace($output)) {
+    return $null
+  }
+  return $output | ConvertFrom-Json
+}
+
+function Ensure-AzureProvider {
+  param([Parameter(Mandatory = $true)][string]$Namespace)
+
+  $provider = Invoke-AzJson -Arguments @("provider", "show", "--namespace", $Namespace)
+  if ($provider.registrationState -eq "Registered") {
+    return
+  }
+
+  Write-Host "Registering Azure provider $Namespace..."
+  & az provider register --namespace $Namespace | Out-Null
+  if ($LASTEXITCODE -ne 0) {
+    throw "Failed to start provider registration for $Namespace."
+  }
+
+  for ($attempt = 1; $attempt -le 30; $attempt++) {
+    Start-Sleep -Seconds 10
+    $provider = Invoke-AzJson -Arguments @("provider", "show", "--namespace", $Namespace)
+    Write-Host "$Namespace registration state:" $provider.registrationState
+    if ($provider.registrationState -eq "Registered") {
+      return
+    }
+  }
+
+  throw "Provider registration for $Namespace did not complete."
+}
+
+function Invoke-Graph {
+  param(
+    [Parameter(Mandatory = $true)][string]$Method,
+    [Parameter(Mandatory = $true)][string]$Uri,
+    [object]$Body = $null
+  )
+
+  $headers = @{
+    Authorization = "Bearer $script:GraphAccessToken"
+  }
+
+  if ($null -eq $Body) {
+    return Invoke-RestMethod -Method $Method -Uri $Uri -Headers $headers
+  }
+
+  return Invoke-RestMethod `
+    -Method $Method `
+    -Uri $Uri `
+    -Headers $headers `
+    -ContentType "application/json" `
+    -Body ($Body | ConvertTo-Json -Depth 20)
+}
+
+function Get-GraphToken {
+  param([Parameter(Mandatory = $true)][hashtable]$Config)
+
+  $body = @{
+    client_id = $Config["AZURE_CLIENT_ID"]
+    client_secret = $Config["AZURE_CLIENT_SECRET"]
+    scope = "https://graph.microsoft.com/.default"
+    grant_type = "client_credentials"
+  }
+
+  $token = Invoke-RestMethod `
+    -Method Post `
+    -Uri "https://login.microsoftonline.com/$($Config["AZURE_TENANT_ID"])/oauth2/v2.0/token" `
+    -ContentType "application/x-www-form-urlencoded" `
+    -Body $body
+
+  return $token.access_token
+}
+
+function ConvertTo-GraphPath {
+  param([Parameter(Mandatory = $true)][string]$SiteUrl)
+
+  $uri = [Uri]$SiteUrl
+  return "$($uri.Host):$($uri.AbsolutePath)"
+}
+
+function Find-SharePointDrive {
+  param(
+    [Parameter(Mandatory = $true)][string]$SiteUrl,
+    [Parameter(Mandatory = $true)][string]$Library
+  )
+
+  $siteGraphPath = ConvertTo-GraphPath -SiteUrl $SiteUrl
+  $site = Invoke-Graph -Method Get -Uri "https://graph.microsoft.com/v1.0/sites/$siteGraphPath"
+  $drives = Invoke-Graph -Method Get -Uri "https://graph.microsoft.com/v1.0/sites/$($site.id)/drives"
+  $drive = $drives.value |
+    Where-Object {
+      $_.name -eq $Library -or
+      $_.webUrl -like "*/$($Library.Replace(" ", "%20"))" -or
+      $_.webUrl -like "*/$Library" -or
+      ($Library -eq "Shared Documents" -and $_.name -eq "Documents")
+    } |
+    Select-Object -First 1
+
+  if (-not $drive) {
+    $drives.value | ForEach-Object { Write-Host "- $($_.name): $($_.webUrl)" }
+    throw "Could not find SharePoint document library '$Library'."
+  }
+
+  return $drive
+}
+
+function Resolve-DriveFolder {
+  param(
+    [Parameter(Mandatory = $true)][string]$DriveId,
+    [Parameter(Mandatory = $true)][string]$FolderPath
+  )
+
+  $encodedPath = ($FolderPath.Trim("/") -split "/" | ForEach-Object { [Uri]::EscapeDataString($_) }) -join "/"
+  return Invoke-Graph -Method Get -Uri "https://graph.microsoft.com/v1.0/drives/$DriveId/root:/$encodedPath"
+}
+
+function Get-ArmHeaders {
+  if (-not (Get-Variable -Name ArmHeaders -Scope Script -ErrorAction SilentlyContinue)) {
+    $armToken = Invoke-AzJson -Arguments @("account", "get-access-token", "--resource", "https://management.azure.com/")
+    $script:ArmHeaders = @{
+      Authorization = "Bearer $($armToken.accessToken)"
+    }
+  }
+  return $script:ArmHeaders
+}
+
+function Set-AdfResource {
+  param(
+    [Parameter(Mandatory = $true)][hashtable]$Config,
+    [Parameter(Mandatory = $true)][string]$ResourcePath,
+    [Parameter(Mandatory = $true)][hashtable]$Body
+  )
+
+  $uri = "https://management.azure.com/subscriptions/$($Config["AZURE_SUBSCRIPTION_ID"])/resourceGroups/$($Config["AZURE_RESOURCE_GROUP"])/providers/Microsoft.DataFactory/factories/$($Config["ADF_FACTORY_NAME"])/$ResourcePath`?api-version=2018-06-01"
+  Invoke-RestMethod `
+    -Method Put `
+    -Uri $uri `
+    -Headers (Get-ArmHeaders) `
+    -ContentType "application/json" `
+    -Body ($Body | ConvertTo-Json -Depth 100) | Out-Null
+}
+
+function Set-FunctionAppSettings {
+  param(
+    [Parameter(Mandatory = $true)][hashtable]$Config,
+    [Parameter(Mandatory = $true)][string]$FunctionAppName,
+    [Parameter(Mandatory = $true)][hashtable]$Settings
+  )
+
+  $baseUri = "https://management.azure.com/subscriptions/$($Config["AZURE_SUBSCRIPTION_ID"])/resourceGroups/$($Config["AZURE_RESOURCE_GROUP"])/providers/Microsoft.Web/sites/$FunctionAppName"
+  $listUri = "$baseUri/config/appsettings/list?api-version=2023-12-01"
+  $putUri = "$baseUri/config/appsettings?api-version=2023-12-01"
+
+  $current = Invoke-RestMethod `
+    -Method Post `
+    -Uri $listUri `
+    -Headers (Get-ArmHeaders) `
+    -ContentType "application/json"
+
+  $properties = @{}
+  if ($current.properties) {
+    $current.properties.PSObject.Properties | ForEach-Object {
+      $properties[$_.Name] = $_.Value
+    }
+  }
+
+  foreach ($key in $Settings.Keys) {
+    $properties[$key] = $Settings[$key]
+  }
+
+  Invoke-RestMethod `
+    -Method Put `
+    -Uri $putUri `
+    -Headers (Get-ArmHeaders) `
+    -ContentType "application/json" `
+    -Body (@{ properties = $properties } | ConvertTo-Json -Depth 20) | Out-Null
+}
+
+function Get-FunctionHostKey {
+  param(
+    [Parameter(Mandatory = $true)][string]$ResourceGroup,
+    [Parameter(Mandatory = $true)][string]$FunctionAppName
+  )
+
+  $keys = Invoke-AzJson -Arguments @("functionapp", "keys", "list", "--resource-group", $ResourceGroup, "--name", $FunctionAppName)
+  if ($keys.functionKeys.default) {
+    return $keys.functionKeys.default
+  }
+  if ($keys.masterKey) {
+    return $keys.masterKey
+  }
+  throw "Could not retrieve a function host key for $FunctionAppName."
+}
+
+function ConvertTo-AzCliPath {
+  param([Parameter(Mandatory = $true)][string]$Path)
+
+  $wslPath = Get-Command wslpath -ErrorAction SilentlyContinue
+  if ($wslPath) {
+    $converted = & wslpath -w $Path
+    if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($converted)) {
+      return $converted.Trim()
+    }
+  }
+
+  return $Path
+}
+
+$config = Read-DotEnv -Path $envPath
+Require-Config -Config $config -Names @(
+  "AZURE_TENANT_ID",
+  "AZURE_CLIENT_ID",
+  "AZURE_CLIENT_SECRET",
+  "AZURE_SUBSCRIPTION_ID",
+  "AZURE_RESOURCE_GROUP",
+  "ADF_FACTORY_NAME",
+  "SHAREPOINT_SITE_URL",
+  "SHAREPOINT_LIBRARY",
+  "STORAGE_ACCOUNT_NAME",
+  "STORAGE_CONTAINER",
+  "SQL_LINKED_SERVICE_NAME"
+)
+
+$script:GraphAccessToken = Get-GraphToken -Config $config
+
+Ensure-AzureProvider -Namespace "Microsoft.Web"
+
+$location = if ($config.ContainsKey("AZURE_LOCATION")) { $config["AZURE_LOCATION"] } else { "westus" }
+$functionAppName = if ($config.ContainsKey("COATS_FUNCTION_APP_NAME")) { $config["COATS_FUNCTION_APP_NAME"] } else { "func-coats-mexico-$($config["STORAGE_ACCOUNT_NAME"])" }
+$pipelineName = if ($config.ContainsKey("COATS_ADF_PIPELINE_NAME")) { $config["COATS_ADF_PIPELINE_NAME"] } else { "Coats_Mexico_Shipment_Stage_And_Validate" }
+$watchFolderPath = if ($config.ContainsKey("COATS_SHAREPOINT_FOLDER_PATH")) { $config["COATS_SHAREPOINT_FOLDER_PATH"] } else { "Coats Mexico Shipment Reports" }
+$library = $config["SHAREPOINT_LIBRARY"]
+
+Write-Host "Resolving SharePoint drive and folder..."
+$drive = Find-SharePointDrive -SiteUrl $config["SHAREPOINT_SITE_URL"] -Library $library
+$folder = Resolve-DriveFolder -DriveId $drive.id -FolderPath $watchFolderPath
+
+Write-Host "Preparing storage connection string..."
+$storageKey = Invoke-AzJson -Arguments @(
+  "storage", "account", "keys", "list",
+  "--resource-group", $config["AZURE_RESOURCE_GROUP"],
+  "--account-name", $config["STORAGE_ACCOUNT_NAME"]
+) | Select-Object -First 1
+
+$rawStorageConnectionString = "DefaultEndpointsProtocol=https;AccountName=$($config["STORAGE_ACCOUNT_NAME"]);AccountKey=$($storageKey.value);EndpointSuffix=core.windows.net"
+
+Write-Host "Ensuring Function App $functionAppName..."
+try {
+  Invoke-AzJson -Arguments @("functionapp", "show", "--resource-group", $config["AZURE_RESOURCE_GROUP"], "--name", $functionAppName) | Out-Null
+} catch {
+  Invoke-AzJson -Arguments @(
+    "functionapp", "create",
+    "--resource-group", $config["AZURE_RESOURCE_GROUP"],
+    "--name", $functionAppName,
+    "--storage-account", $config["STORAGE_ACCOUNT_NAME"],
+    "--consumption-plan-location", $location,
+    "--runtime", "python",
+    "--runtime-version", "3.12",
+    "--functions-version", "4",
+    "--os-type", "Linux"
+  ) | Out-Null
+}
+
+Invoke-AzJson -Arguments @("functionapp", "identity", "assign", "--resource-group", $config["AZURE_RESOURCE_GROUP"], "--name", $functionAppName) | Out-Null
+$functionApp = Invoke-AzJson -Arguments @("functionapp", "show", "--resource-group", $config["AZURE_RESOURCE_GROUP"], "--name", $functionAppName)
+$factoryScope = "/subscriptions/$($config["AZURE_SUBSCRIPTION_ID"])/resourceGroups/$($config["AZURE_RESOURCE_GROUP"])/providers/Microsoft.DataFactory/factories/$($config["ADF_FACTORY_NAME"])"
+
+Write-Host "Ensuring Function App can start ADF pipeline..."
+try {
+  Invoke-AzJson -Arguments @(
+    "role", "assignment", "create",
+    "--assignee-object-id", $functionApp.identity.principalId,
+    "--assignee-principal-type", "ServicePrincipal",
+    "--role", "b24988ac-6180-42a0-ab88-20f7382dd24c",
+    "--scope", $factoryScope
+  ) | Out-Null
+} catch {
+  Write-Host "Role assignment may already exist; continuing."
+}
+
+Write-Host "Configuring Function App settings..."
+Set-FunctionAppSettings -Config $config -FunctionAppName $functionAppName -Settings @{
+  ADF_SUBSCRIPTION_ID = $config["AZURE_SUBSCRIPTION_ID"]
+  ADF_RESOURCE_GROUP = $config["AZURE_RESOURCE_GROUP"]
+  ADF_FACTORY_NAME = $config["ADF_FACTORY_NAME"]
+  ADF_PIPELINE_NAME = $pipelineName
+  GRAPH_TENANT_ID = $config["AZURE_TENANT_ID"]
+  GRAPH_CLIENT_ID = $config["AZURE_CLIENT_ID"]
+  GRAPH_CLIENT_SECRET = $config["AZURE_CLIENT_SECRET"]
+  GRAPH_DRIVE_ID = $drive.id
+  GRAPH_WATCH_FOLDER_ITEM_ID = $folder.id
+  SHAREPOINT_WATCH_FOLDER_PATH = $watchFolderPath
+  RAW_STORAGE_CONNECTION_STRING = $rawStorageConnectionString
+  RAW_STORAGE_CONTAINER = $config["STORAGE_CONTAINER"]
+  AzureWebJobsFeatureFlags = "EnableWorkerIndexing"
+  SCM_DO_BUILD_DURING_DEPLOYMENT = "true"
+  ENABLE_ORYX_BUILD = "true"
+}
+
+Write-Host "Packaging Function App..."
+$packageRoot = Join-Path ([System.IO.Path]::GetTempPath()) "coats_mexico_function_package"
+$packageZip = Join-Path ([System.IO.Path]::GetTempPath()) "coats_mexico_function_package.zip"
+if (Test-Path $packageRoot) { Remove-Item -Recurse -Force $packageRoot }
+if (Test-Path $packageZip) { Remove-Item -Force $packageZip }
+New-Item -ItemType Directory -Path $packageRoot | Out-Null
+Copy-Item (Join-Path $PSScriptRoot "azure_function/host.json") $packageRoot
+Copy-Item (Join-Path $PSScriptRoot "azure_function/requirements.txt") $packageRoot
+Copy-Item (Join-Path $PSScriptRoot "azure_function/coats_function_common.py") $packageRoot
+Copy-Item (Join-Path $PSScriptRoot "azure_function/GraphSharePointNotification") $packageRoot -Recurse
+Copy-Item (Join-Path $PSScriptRoot "azure_function/ProcessCoatsWorkbook") $packageRoot -Recurse
+Copy-Item (Join-Path $PSScriptRoot "src/extract_coats_mexico_workbook.py") (Join-Path $packageRoot "extract_coats_mexico_workbook.py")
+
+Write-Host "Installing Python dependencies into package..."
+$sitePackagesPath = Join-Path $packageRoot ".python_packages/lib/site-packages"
+New-Item -ItemType Directory -Path $sitePackagesPath -Force | Out-Null
+& python3 -m pip install `
+  --disable-pip-version-check `
+  --no-input `
+  --target $sitePackagesPath `
+  -r (Join-Path $PSScriptRoot "azure_function/requirements.txt") | Out-Null
+if ($LASTEXITCODE -ne 0) {
+  throw "Python dependency installation failed."
+}
+
+$packageItems = @(
+  (Join-Path $packageRoot "host.json"),
+  (Join-Path $packageRoot "requirements.txt"),
+  (Join-Path $packageRoot "coats_function_common.py"),
+  (Join-Path $packageRoot "extract_coats_mexico_workbook.py"),
+  (Join-Path $packageRoot "GraphSharePointNotification"),
+  (Join-Path $packageRoot "ProcessCoatsWorkbook"),
+  (Join-Path $packageRoot ".python_packages")
+)
+Compress-Archive -Path $packageItems -DestinationPath $packageZip -Force
+
+Write-Host "Deploying Function App package..."
+$packageZipForAz = ConvertTo-AzCliPath -Path $packageZip
+Invoke-AzJson -Arguments @(
+  "functionapp", "deployment", "source", "config-zip",
+  "--resource-group", $config["AZURE_RESOURCE_GROUP"],
+  "--name", $functionAppName,
+  "--src", $packageZipForAz
+) | Out-Null
+
+$functionKey = Get-FunctionHostKey -ResourceGroup $config["AZURE_RESOURCE_GROUP"] -FunctionAppName $functionAppName
+$processUrl = "https://$functionAppName.azurewebsites.net/api/process-coats-workbook?code=$functionKey"
+$notificationUrl = "https://$functionAppName.azurewebsites.net/api/graph-sharepoint-notification?code=$functionKey"
+
+Write-Host "Creating/updating ADF pipeline $pipelineName..."
+$stagingSqlPath = Join-Path $PSScriptRoot "sql/001_create_coats_mexico_staging.sql"
+$stagingSqlText = Get-Content -Raw -Path $stagingSqlPath
+$stagingBatches = [regex]::Split($stagingSqlText, "(?im)^\s*GO\s*$")
+$stagingDdlText = $stagingBatches[0]
+$stagingProcText = $stagingBatches[1]
+$procBeginMatch = [regex]::Match($stagingProcText, "(?is)\bAS\s*BEGIN\s*")
+if (-not $procBeginMatch.Success) {
+  throw "Could not find procedure body in $stagingSqlPath."
+}
+$stageBody = $stagingProcText.Substring($procBeginMatch.Index + $procBeginMatch.Length)
+$lastEndIndex = $stageBody.LastIndexOf("END;")
+if ($lastEndIndex -lt 0) {
+  throw "Could not find final END in staging procedure body."
+}
+$stageBody = $stageBody.Substring(0, $lastEndIndex)
+$stageScript = @"
+USE P21Import;
+
+$stagingDdlText
+
+DECLARE @payload nvarchar(max) = @extraction_payload;
+
+$stageBody
+"@
+
+Set-AdfResource -Config $config -ResourcePath "pipelines/$pipelineName" -Body @{
+  properties = @{
+    parameters = @{
+      sharePointDriveId = @{ type = "String" }
+      sharePointDriveItemId = @{ type = "String" }
+      sourceFileName = @{ type = "String" }
+      sourceWebUrl = @{ type = "String" }
+      sourceFolderPath = @{ type = "String" }
+      graphSubscriptionId = @{ type = "String" }
+      notificationReceivedUtc = @{ type = "String" }
+    }
+    activities = @(
+      @{
+        name = "ProcessCoatsWorkbook"
+        type = "WebActivity"
+        dependsOn = @()
+        policy = @{
+          timeout = "0.00:10:00"
+          retry = 1
+          retryIntervalInSeconds = 30
+          secureInput = $true
+          secureOutput = $false
+        }
+        typeProperties = @{
+          method = "POST"
+          url = $processUrl
+          headers = @{
+            "Content-Type" = "application/json"
+          }
+          body = @{
+            value = "@json(concat('{', '""sharePointDriveId"":""', pipeline().parameters.sharePointDriveId, '"",', '""sharePointDriveItemId"":""', pipeline().parameters.sharePointDriveItemId, '"",', '""sourceFileName"":""', replace(pipeline().parameters.sourceFileName, '""', '\""'), '"",', '""sourceWebUrl"":""', replace(pipeline().parameters.sourceWebUrl, '""', '\""'), '"",', '""sourceFolderPath"":""', replace(pipeline().parameters.sourceFolderPath, '""', '\""'), '"",', '""pipelineRunId"":""', pipeline().RunId, '""', '}'))"
+            type = "Expression"
+          }
+        }
+      },
+      @{
+        name = "StageCoatsShipmentJson"
+        type = "Script"
+        dependsOn = @(
+          @{
+            activity = "ProcessCoatsWorkbook"
+            dependencyConditions = @("Succeeded")
+          }
+        )
+        policy = @{
+          timeout = "0.00:10:00"
+          retry = 0
+          retryIntervalInSeconds = 30
+          secureInput = $true
+          secureOutput = $false
+        }
+        linkedServiceName = @{
+          referenceName = $config["SQL_LINKED_SERVICE_NAME"]
+          type = "LinkedServiceReference"
+        }
+        typeProperties = @{
+          scripts = @(
+            @{
+              type = "Query"
+              text = $stageScript
+              parameters = @(
+                @{
+                  name = "extraction_payload"
+                  value = @{
+                    value = "@string(activity('ProcessCoatsWorkbook').output.extraction)"
+                    type = "Expression"
+                  }
+                  type = "String"
+                  direction = "Input"
+                }
+              )
+            }
+          )
+          scriptBlockExecutionTimeout = "00:10:00"
+          logSettings = @{
+            logDestination = "ActivityOutput"
+          }
+        }
+      }
+    )
+  }
+}
+
+Write-Host "Registering Microsoft Graph subscription..."
+$existingSubscriptions = Invoke-Graph -Method Get -Uri "https://graph.microsoft.com/v1.0/subscriptions"
+foreach ($existing in $existingSubscriptions.value) {
+  if ($existing.resource -eq "drives/$($drive.id)/root" -and $existing.notificationUrl -like "https://$functionAppName.azurewebsites.net/*") {
+    Write-Host "Deleting existing Graph subscription $($existing.id)..."
+    Invoke-Graph -Method Delete -Uri "https://graph.microsoft.com/v1.0/subscriptions/$($existing.id)" | Out-Null
+  }
+}
+
+$expiration = (Get-Date).ToUniversalTime().AddDays(25).ToString("yyyy-MM-ddTHH:mm:ssZ")
+$subscription = Invoke-Graph -Method Post -Uri "https://graph.microsoft.com/v1.0/subscriptions" -Body @{
+  changeType = "updated"
+  notificationUrl = $notificationUrl
+  resource = "drives/$($drive.id)/root"
+  expirationDateTime = $expiration
+  clientState = [Guid]::NewGuid().ToString()
+}
+
+$subscriptionOutputPath = Join-Path $PSScriptRoot "graph_subscription.json"
+$subscription | ConvertTo-Json -Depth 20 | Set-Content -Path $subscriptionOutputPath -Encoding UTF8
+
+Write-Host "Deployment complete."
+Write-Host "Function App: $functionAppName"
+Write-Host "ADF pipeline: $pipelineName"
+Write-Host "SharePoint drive: $($drive.name) / $($drive.id)"
+Write-Host "Watch folder: $watchFolderPath / $($folder.id)"
+Write-Host "Graph subscription id: $($subscription.id)"
+Write-Host "Graph subscription saved to: $subscriptionOutputPath"
