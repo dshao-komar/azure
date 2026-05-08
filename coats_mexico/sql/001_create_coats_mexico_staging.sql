@@ -160,6 +160,18 @@ BEGIN
         INCLUDE (Bin_ID, P21_Bin_ID, Invoiced_Qty, po_line_uid);
 END;
 
+IF COL_LENGTH('dbo.coats_mexico_shipment_pallet_line', 'vessel_receipts_line_uid') IS NULL
+BEGIN
+    ALTER TABLE dbo.coats_mexico_shipment_pallet_line
+    ADD vessel_receipts_line_uid int NULL;
+END;
+
+IF COL_LENGTH('dbo.coats_mexico_shipment_pallet_line', 'container_receipts_line_uid') IS NULL
+BEGIN
+    ALTER TABLE dbo.coats_mexico_shipment_pallet_line
+    ADD container_receipts_line_uid int NULL;
+END;
+
 IF NOT EXISTS (
     SELECT 1
     FROM sys.indexes

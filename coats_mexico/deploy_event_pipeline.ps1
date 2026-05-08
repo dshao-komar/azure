@@ -268,7 +268,9 @@ Require-Config -Config $config -Names @(
   "SHAREPOINT_LIBRARY",
   "STORAGE_ACCOUNT_NAME",
   "STORAGE_CONTAINER",
-  "SQL_LINKED_SERVICE_NAME"
+  "SQL_LINKED_SERVICE_NAME",
+  "COATS_VALIDATION_EMAIL_FROM",
+  "COATS_VALIDATION_EMAIL_TO"
 )
 
 $script:GraphAccessToken = Get-GraphToken -Config $config
@@ -279,6 +281,7 @@ $location = if ($config.ContainsKey("AZURE_LOCATION")) { $config["AZURE_LOCATION
 $functionAppName = if ($config.ContainsKey("COATS_FUNCTION_APP_NAME")) { $config["COATS_FUNCTION_APP_NAME"] } else { "func-coats-mexico-$($config["STORAGE_ACCOUNT_NAME"])" }
 $pipelineName = if ($config.ContainsKey("COATS_ADF_PIPELINE_NAME")) { $config["COATS_ADF_PIPELINE_NAME"] } else { "Coats_Mexico_Shipment_Stage_And_Validate" }
 $watchFolderPath = if ($config.ContainsKey("COATS_SHAREPOINT_FOLDER_PATH")) { $config["COATS_SHAREPOINT_FOLDER_PATH"] } else { "Coats Mexico Shipment Reports" }
+$p21CreatedBy = if ($config.ContainsKey("COATS_P21_CREATED_BY")) { $config["COATS_P21_CREATED_BY"] } else { "ADF" }
 $library = $config["SHAREPOINT_LIBRARY"]
 
 Write-Host "Resolving SharePoint drive and folder..."
@@ -342,6 +345,9 @@ Set-FunctionAppSettings -Config $config -FunctionAppName $functionAppName -Setti
   SHAREPOINT_WATCH_FOLDER_PATH = $watchFolderPath
   RAW_STORAGE_CONNECTION_STRING = $rawStorageConnectionString
   RAW_STORAGE_CONTAINER = $config["STORAGE_CONTAINER"]
+  COATS_VALIDATION_EMAIL_FROM = $config["COATS_VALIDATION_EMAIL_FROM"]
+  COATS_VALIDATION_EMAIL_TO = $config["COATS_VALIDATION_EMAIL_TO"]
+  COATS_VALIDATION_EMAIL_CC = if ($config.ContainsKey("COATS_VALIDATION_EMAIL_CC")) { $config["COATS_VALIDATION_EMAIL_CC"] } else { "" }
   AzureWebJobsFeatureFlags = "EnableWorkerIndexing"
   SCM_DO_BUILD_DURING_DEPLOYMENT = "true"
   ENABLE_ORYX_BUILD = "true"
@@ -358,6 +364,7 @@ Copy-Item (Join-Path $PSScriptRoot "azure_function/requirements.txt") $packageRo
 Copy-Item (Join-Path $PSScriptRoot "azure_function/coats_function_common.py") $packageRoot
 Copy-Item (Join-Path $PSScriptRoot "azure_function/GraphSharePointNotification") $packageRoot -Recurse
 Copy-Item (Join-Path $PSScriptRoot "azure_function/ProcessCoatsWorkbook") $packageRoot -Recurse
+Copy-Item (Join-Path $PSScriptRoot "azure_function/SendCoatsValidationEmail") $packageRoot -Recurse
 Copy-Item (Join-Path $PSScriptRoot "src/extract_coats_mexico_workbook.py") (Join-Path $packageRoot "extract_coats_mexico_workbook.py")
 
 Write-Host "Installing Python dependencies into package..."
@@ -379,6 +386,7 @@ $packageItems = @(
   (Join-Path $packageRoot "extract_coats_mexico_workbook.py"),
   (Join-Path $packageRoot "GraphSharePointNotification"),
   (Join-Path $packageRoot "ProcessCoatsWorkbook"),
+  (Join-Path $packageRoot "SendCoatsValidationEmail"),
   (Join-Path $packageRoot ".python_packages")
 )
 Compress-Archive -Path $packageItems -DestinationPath $packageZip -Force
@@ -394,6 +402,7 @@ Invoke-AzJson -Arguments @(
 
 $functionKey = Get-FunctionHostKey -ResourceGroup $config["AZURE_RESOURCE_GROUP"] -FunctionAppName $functionAppName
 $processUrl = "https://$functionAppName.azurewebsites.net/api/process-coats-workbook?code=$functionKey"
+$validationEmailUrl = "https://$functionAppName.azurewebsites.net/api/send-coats-validation-email?code=$functionKey"
 $notificationUrl = "https://$functionAppName.azurewebsites.net/api/graph-sharepoint-notification?code=$functionKey"
 
 Write-Host "Creating/updating ADF pipeline $pipelineName..."
@@ -420,6 +429,64 @@ $stagingDdlText
 DECLARE @payload nvarchar(max) = @extraction_payload;
 
 $stageBody
+"@
+
+$validationSqlPath = Join-Path $PSScriptRoot "sql/002_validate_coats_mexico_staging_from_p21.sql"
+$validationSqlText = Get-Content -Raw -Path $validationSqlPath
+$validationSqlText = [regex]::Replace($validationSqlText, "(?im)^\s*USE\s+P21Import\s*;\s*$", "")
+$validationSqlText = [regex]::Replace($validationSqlText, "(?im)^\s*GO\s*$", "")
+$validationSqlText = [regex]::Replace(
+  $validationSqlText,
+  "(?im)^\s*DECLARE\s+@ShipmentFileId\s+uniqueidentifier\s*=\s*'00000000-0000-0000-0000-000000000000'\s*;\s*$",
+  "SET @ShipmentFileId = TRY_CONVERT(uniqueidentifier, JSON_VALUE(@extractionPayload, '$.metadata.shipment_file_id'));"
+)
+$validationSqlText = [regex]::Replace(
+  $validationSqlText,
+  "(?is)IF\s+@ShipmentFileId\s*=\s*'00000000-0000-0000-0000-000000000000'\s*BEGIN\s*THROW\s+50000,\s*'Set @ShipmentFileId before running validation\.',\s*1;\s*END;",
+  "IF @ShipmentFileId IS NULL`nBEGIN`n    THROW 50000, 'Extractor payload metadata.shipment_file_id is missing or invalid.', 1;`nEND;"
+)
+$validationScript = @"
+USE P21Import;
+
+DECLARE @extractionPayload nvarchar(max) = @extraction_payload;
+DECLARE @ShipmentFileId uniqueidentifier = TRY_CONVERT(uniqueidentifier, JSON_VALUE(@extractionPayload, '$.metadata.shipment_file_id'));
+
+$validationSqlText
+"@
+
+$receiptSqlPath = Join-Path $PSScriptRoot "sql/004_create_coats_mexico_p21import_receipts.sql"
+$receiptSqlText = Get-Content -Raw -Path $receiptSqlPath
+$receiptBatches = [regex]::Split($receiptSqlText, "(?im)^\s*GO\s*$")
+$receiptDdlText = ($receiptBatches | Where-Object {
+  $_ -notmatch "(?is)CREATE\s+OR\s+ALTER\s+PROCEDURE\s+dbo\.usp_create_coats_mexico_p21import_receipts"
+} | ForEach-Object {
+  [regex]::Replace($_, "(?im)^\s*USE\s+P21Import\s*;\s*$", "")
+}) -join "`n"
+$receiptProcText = ($receiptBatches | Where-Object {
+  $_ -match "(?is)CREATE\s+OR\s+ALTER\s+PROCEDURE\s+dbo\.usp_create_coats_mexico_p21import_receipts"
+}) | Select-Object -First 1
+$receiptProcBeginMatch = [regex]::Match($receiptProcText, "(?is)\bAS\s*BEGIN\s*")
+if (-not $receiptProcBeginMatch.Success) {
+  throw "Could not find receipt procedure body in $receiptSqlPath."
+}
+$receiptBody = $receiptProcText.Substring($receiptProcBeginMatch.Index + $receiptProcBeginMatch.Length)
+$receiptLastEndIndex = $receiptBody.LastIndexOf("END;")
+if ($receiptLastEndIndex -lt 0) {
+  throw "Could not find final END in receipt procedure body."
+}
+$receiptBody = $receiptBody.Substring(0, $receiptLastEndIndex)
+$receiptScript = @"
+USE P21Import;
+
+DECLARE @extractionPayload nvarchar(max) = @extraction_payload;
+DECLARE @ShipmentFileId uniqueidentifier = TRY_CONVERT(uniqueidentifier, JSON_VALUE(@extractionPayload, '$.metadata.shipment_file_id'));
+DECLARE @CreatedBy nvarchar(30) = @created_by;
+DECLARE @ReceiptDate date = NULL;
+DECLARE @AllowExisting bit = 1;
+
+$receiptDdlText
+
+$receiptBody
 "@
 
 Set-AdfResource -Config $config -ResourcePath "pipelines/$pipelineName" -Body @{
@@ -499,6 +566,155 @@ Set-AdfResource -Config $config -ResourcePath "pipelines/$pipelineName" -Body @{
           logSettings = @{
             logDestination = "ActivityOutput"
           }
+        }
+      },
+      @{
+        name = "ValidateCoatsShipment"
+        type = "Script"
+        dependsOn = @(
+          @{
+            activity = "StageCoatsShipmentJson"
+            dependencyConditions = @("Succeeded")
+          }
+        )
+        policy = @{
+          timeout = "0.00:10:00"
+          retry = 0
+          retryIntervalInSeconds = 30
+          secureInput = $true
+          secureOutput = $false
+        }
+        linkedServiceName = @{
+          referenceName = $config["SQL_LINKED_SERVICE_NAME"]
+          type = "LinkedServiceReference"
+        }
+        typeProperties = @{
+          scripts = @(
+            @{
+              type = "Query"
+              text = $validationScript
+              parameters = @(
+                @{
+                  name = "extraction_payload"
+                  value = @{
+                    value = "@string(activity('ProcessCoatsWorkbook').output.extraction)"
+                    type = "Expression"
+                  }
+                  type = "String"
+                  direction = "Input"
+                }
+              )
+            }
+          )
+          scriptBlockExecutionTimeout = "00:10:00"
+          logSettings = @{
+            logDestination = "ActivityOutput"
+          }
+        }
+      },
+      @{
+        name = "IfBlockingValidationIssues"
+        type = "IfCondition"
+        dependsOn = @(
+          @{
+            activity = "ValidateCoatsShipment"
+            dependencyConditions = @("Succeeded")
+          }
+        )
+        typeProperties = @{
+          expression = @{
+            type = "Expression"
+            value = "@greater(int(activity('ValidateCoatsShipment').output.resultSets[0].rows[0].blocking_issue_count), 0)"
+          }
+          ifTrueActivities = @(
+            @{
+              name = "SendBlockingValidationEmail"
+              type = "WebActivity"
+              dependsOn = @()
+              policy = @{
+                timeout = "0.00:05:00"
+                retry = 1
+                retryIntervalInSeconds = 30
+                secureInput = $true
+                secureOutput = $false
+              }
+              typeProperties = @{
+                method = "POST"
+                url = $validationEmailUrl
+                headers = @{
+                  "Content-Type" = "application/json"
+                }
+                body = @{
+                  type = "Expression"
+                  value = "@json(concat('{', '""sourceFileName"":""', replace(coalesce(activity('ValidateCoatsShipment').output.resultSets[0].rows[0].source_file_name, ''), '""', '\""'), '"",', '""sourceWebUrl"":""', replace(coalesce(activity('ValidateCoatsShipment').output.resultSets[0].rows[0].source_web_url, ''), '""', '\""'), '"",', '""shipmentFileId"":""', string(activity('ValidateCoatsShipment').output.resultSets[0].rows[0].shipment_file_id), '"",', '""shipmentDate"":""', string(activity('ValidateCoatsShipment').output.resultSets[0].rows[0].shipment_date), '"",', '""trailerName"":""', replace(coalesce(activity('ValidateCoatsShipment').output.resultSets[0].rows[0].trailer_name, ''), '""', '\""'), '"",', '""pipelineRunId"":""', pipeline().RunId, '"",', '""blockingIssueCount"":', string(activity('ValidateCoatsShipment').output.resultSets[0].rows[0].blocking_issue_count), ',', '""issues"":', activity('ValidateCoatsShipment').output.resultSets[2].rows[0].issue_json, '}'))"
+                }
+              }
+            },
+            @{
+              name = "FailBlockingValidation"
+              type = "Fail"
+              dependsOn = @(
+                @{
+                  activity = "SendBlockingValidationEmail"
+                  dependencyConditions = @("Succeeded")
+                }
+              )
+              typeProperties = @{
+                errorCode = "COATS_BLOCKING_VALIDATION"
+                message = @{
+                  type = "Expression"
+                  value = "@concat('Coats Mexico shipment has ', string(activity('ValidateCoatsShipment').output.resultSets[0].rows[0].blocking_issue_count), ' blocking validation issue(s). Email notification sent; P21Import receipts were not created.')"
+                }
+              }
+            }
+          )
+          ifFalseActivities = @(
+            @{
+              name = "CreateP21ImportReceipts"
+              type = "Script"
+              dependsOn = @()
+              policy = @{
+                timeout = "0.00:10:00"
+                retry = 0
+                retryIntervalInSeconds = 30
+                secureInput = $true
+                secureOutput = $false
+              }
+              linkedServiceName = @{
+                referenceName = $config["SQL_LINKED_SERVICE_NAME"]
+                type = "LinkedServiceReference"
+              }
+              typeProperties = @{
+                scripts = @(
+                  @{
+                    type = "Query"
+                    text = $receiptScript
+                    parameters = @(
+                      @{
+                        name = "extraction_payload"
+                        value = @{
+                          value = "@string(activity('ProcessCoatsWorkbook').output.extraction)"
+                          type = "Expression"
+                        }
+                        type = "String"
+                        direction = "Input"
+                      },
+                      @{
+                        name = "created_by"
+                        value = $p21CreatedBy
+                        type = "String"
+                        direction = "Input"
+                      }
+                    )
+                  }
+                )
+                scriptBlockExecutionTimeout = "00:10:00"
+                logSettings = @{
+                  logDestination = "ActivityOutput"
+                }
+              }
+            }
+          )
         }
       }
     )

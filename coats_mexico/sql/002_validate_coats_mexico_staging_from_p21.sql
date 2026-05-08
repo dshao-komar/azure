@@ -1,13 +1,15 @@
 /*
-Validate one staged Coats Mexico shipment against P21.
+Validate one staged Coats Mexico shipment against P21Import.
 
-Run from the P21 database because this script joins P21Import staging tables to
-live P21 tables such as po_line, inv_mast, inventory_supplier, and
-document_line_bin.
+Run from the P21Import database. This keeps the Coats Mexico staging,
+validation, and receipt-write path scoped to P21Import instead of P21.
 
 Set @ShipmentFileId before running. This script does not create container,
 vessel receipt, container receipt, or document_line_bin records.
 */
+
+USE P21Import;
+GO
 
 SET NOCOUNT ON;
 SET XACT_ABORT ON;
@@ -268,6 +270,11 @@ COMMIT;
 
 SELECT
       shipment_file_id = @ShipmentFileId
+    , f.source_file_name
+    , f.source_web_url
+    , f.shipment_date
+    , f.trailer_name
+    , f.estimated_arrival_date
     , pallet_line_count = (
           SELECT COUNT(*)
           FROM P21Import.dbo.coats_mexico_shipment_pallet_line
@@ -277,15 +284,48 @@ SELECT
           SELECT COUNT(*)
           FROM P21Import.dbo.coats_mexico_shipment_validation_issue
           WHERE shipment_file_id = @ShipmentFileId
-            AND severity = 'BLOCKING'
-      );
+                AND severity = 'BLOCKING'
+      )
+FROM P21Import.dbo.coats_mexico_shipment_file AS f
+WHERE f.shipment_file_id = @ShipmentFileId;
 
 SELECT
       issue_code
-    , issue_count = COUNT(*)
+    , severity
+    , message
+    , source_sheet
+    , source_row_number
+    , Bin_ID
+    , Item_ID
+    , PO_No
+    , raw_pallet_comment
 FROM P21Import.dbo.coats_mexico_shipment_validation_issue
 WHERE shipment_file_id = @ShipmentFileId
-GROUP BY
-      issue_code
 ORDER BY
-      issue_code;
+      severity
+    , issue_code
+    , source_row_number;
+
+SELECT issue_json =
+    COALESCE(
+        (
+            SELECT
+                  issue_code
+                , severity
+                , message
+                , source_sheet
+                , source_row_number
+                , Bin_ID
+                , Item_ID
+                , PO_No
+                , raw_pallet_comment
+            FROM P21Import.dbo.coats_mexico_shipment_validation_issue
+            WHERE shipment_file_id = @ShipmentFileId
+            ORDER BY
+                  severity
+                , issue_code
+                , source_row_number
+            FOR JSON PATH
+        ),
+        '[]'
+    );

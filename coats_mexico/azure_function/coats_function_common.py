@@ -2,8 +2,10 @@ import json
 import logging
 import os
 import tempfile
+from html import escape
 from datetime import datetime, timedelta, timezone
 from typing import Any
+from urllib.parse import quote
 
 import requests
 from azure.identity import DefaultAzureCredential
@@ -68,6 +70,22 @@ def graph_download(url: str) -> bytes:
     return response.content
 
 
+def graph_post(url: str, body: dict[str, Any]) -> dict[str, Any]:
+    response = requests.post(
+        url,
+        headers={
+            "Authorization": f"Bearer {graph_access_token()}",
+            "Content-Type": "application/json",
+        },
+        data=json.dumps(body),
+        timeout=30,
+    )
+    response.raise_for_status()
+    if response.content:
+        return response.json()
+    return {}
+
+
 def start_adf_pipeline(parameters: dict[str, Any]) -> dict[str, Any]:
     subscription_id = required_setting("ADF_SUBSCRIPTION_ID")
     resource_group = required_setting("ADF_RESOURCE_GROUP")
@@ -91,6 +109,94 @@ def start_adf_pipeline(parameters: dict[str, Any]) -> dict[str, Any]:
     )
     response.raise_for_status()
     return response.json()
+
+
+def _email_recipients(setting_name: str) -> list[dict[str, dict[str, str]]]:
+    value = os.environ.get(setting_name, "")
+    addresses = [part.strip() for part in value.replace(";", ",").split(",") if part.strip()]
+    return [{"emailAddress": {"address": address}} for address in addresses]
+
+
+def _issue_rows_html(issues: list[dict[str, Any]]) -> str:
+    if not issues:
+        return "<p>No validation issue rows were provided by ADF.</p>"
+
+    rows = []
+    for issue in issues[:50]:
+        rows.append(
+            "<tr>"
+            f"<td>{escape(str(issue.get('issue_code') or ''))}</td>"
+            f"<td>{escape(str(issue.get('source_row_number') or ''))}</td>"
+            f"<td>{escape(str(issue.get('Item_ID') or ''))}</td>"
+            f"<td>{escape(str(issue.get('PO_No') or ''))}</td>"
+            f"<td>{escape(str(issue.get('Bin_ID') or ''))}</td>"
+            f"<td>{escape(str(issue.get('message') or ''))}</td>"
+            "</tr>"
+        )
+
+    overflow_note = ""
+    if len(issues) > 50:
+        overflow_note = f"<p>Showing first 50 of {len(issues)} blocking issues.</p>"
+
+    return (
+        f"{overflow_note}"
+        "<table border='1' cellpadding='4' cellspacing='0'>"
+        "<thead><tr>"
+        "<th>Issue</th><th>Row</th><th>Item</th><th>PO</th><th>Bin</th><th>Message</th>"
+        "</tr></thead>"
+        f"<tbody>{''.join(rows)}</tbody>"
+        "</table>"
+    )
+
+
+def send_validation_email(payload: dict[str, Any]) -> dict[str, Any]:
+    sender = required_setting("COATS_VALIDATION_EMAIL_FROM")
+    to_recipients = _email_recipients("COATS_VALIDATION_EMAIL_TO")
+    cc_recipients = _email_recipients("COATS_VALIDATION_EMAIL_CC")
+    if not to_recipients:
+        raise RuntimeError("Missing required app setting: COATS_VALIDATION_EMAIL_TO")
+
+    source_file_name = payload.get("sourceFileName") or "Unknown Coats Mexico shipment"
+    source_web_url = payload.get("sourceWebUrl")
+    shipment_file_id = payload.get("shipmentFileId")
+    shipment_date = payload.get("shipmentDate")
+    trailer_name = payload.get("trailerName")
+    pipeline_run_id = payload.get("pipelineRunId")
+    blocking_issue_count = payload.get("blockingIssueCount")
+    issues = payload.get("issues") or []
+
+    source_link = escape(str(source_web_url)) if source_web_url else ""
+    file_label = escape(str(source_file_name))
+    file_html = f"<a href='{source_link}'>{file_label}</a>" if source_link else file_label
+
+    html = (
+        "<p>The Coats Mexico shipment pipeline found blocking validation issues and did not create "
+        "P21Import receipt records.</p>"
+        "<ul>"
+        f"<li><b>Source file:</b> {file_html}</li>"
+        f"<li><b>Shipment file ID:</b> {escape(str(shipment_file_id or ''))}</li>"
+        f"<li><b>Shipment date:</b> {escape(str(shipment_date or ''))}</li>"
+        f"<li><b>Trailer:</b> {escape(str(trailer_name or ''))}</li>"
+        f"<li><b>ADF run ID:</b> {escape(str(pipeline_run_id or ''))}</li>"
+        f"<li><b>Blocking issue count:</b> {escape(str(blocking_issue_count or len(issues)))}</li>"
+        "</ul>"
+        f"{_issue_rows_html(issues)}"
+    )
+
+    message = {
+        "message": {
+            "subject": f"Coats Mexico shipment validation failed: {source_file_name}",
+            "body": {
+                "contentType": "HTML",
+                "content": html,
+            },
+            "toRecipients": to_recipients,
+            "ccRecipients": cc_recipients,
+        },
+        "saveToSentItems": True,
+    }
+    graph_post(f"https://graph.microsoft.com/v1.0/users/{quote(sender, safe='')}/sendMail", message)
+    return {"sent": True, "toCount": len(to_recipients), "ccCount": len(cc_recipients)}
 
 
 def is_target_workbook(item: dict[str, Any]) -> bool:
