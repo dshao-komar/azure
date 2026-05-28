@@ -1,0 +1,106 @@
+﻿{
+    "continuationToken":  null,
+    "value":  [
+                  {
+                      "activityName":  "RunProbe",
+                      "activityRunEnd":  "2026-05-19T22:29:40.328092+00:00",
+                      "activityRunId":  "68dc2bb0-474c-4766-9c50-6bfecd6f4527",
+                      "activityRunStart":  "2026-05-19T22:29:31.350445+00:00",
+                      "activityType":  "Script",
+                      "durationInMs":  8977,
+                      "error":  {
+                                    "details":  "",
+                                    "errorCode":  "",
+                                    "failureType":  "",
+                                    "message":  "",
+                                    "target":  "RunProbe"
+                                },
+                      "executionDetails":  {
+                                               "integrationRuntime":  [
+                                                                          {
+                                                                              "location":  "West US",
+                                                                              "name":  "SQLServer",
+                                                                              "nodes":  [
+                                                                                            "KASVRW2K8FS"
+                                                                                        ],
+                                                                              "type":  "SelfHosted"
+                                                                          }
+                                                                      ]
+                                           },
+                      "id":  "/SUBSCRIPTIONS/6624EC13-3826-43B2-8E45-077F9051B88F/RESOURCEGROUPS/RG1/PROVIDERS/MICROSOFT.DATAFACTORY/FACTORIES/2026-04-01-DF1/pipelineruns/2f225673-53d2-11f1-96a2-9cb150a3acae/activityruns/68dc2bb0-474c-4766-9c50-6bfecd6f4527",
+                      "input":  {
+                                    "logSettings":  {
+                                                        "logDestination":  "ActivityOutput"
+                                                    },
+                                    "scriptBlockExecutionTimeout":  "00:10:00",
+                                    "scripts":  [
+                                                    {
+                                                        "text":  "USE P21Play;\nSET NOCOUNT ON;\n\nDECLARE @required_column table(table_name sysname NOT NULL, column_name sysname NOT NULL);\nINSERT INTO @required_column(table_name, column_name)\nVALUES\n  (\u0027container_building\u0027, \u0027container_building_uid\u0027),\n  (\u0027container_building\u0027, \u0027container_name\u0027),\n  (\u0027container_building\u0027, \u0027location_id\u0027),\n  (\u0027container_building\u0027, \u0027row_status_flag\u0027),\n  (\u0027container_building_po\u0027, \u0027container_building_po_uid\u0027),\n  (\u0027container_building_po\u0027, \u0027po_line_uid\u0027),\n  (\u0027vessel_receipts_hdr\u0027, \u0027vessel_receipts_hdr_uid\u0027),\n  (\u0027vessel_receipts_hdr\u0027, \u0027receipt_date\u0027),\n  (\u0027vessel_receipts_hdr\u0027, \u0027exchange_date\u0027),\n  (\u0027vessel_receipts_hdr\u0027, \u0027currency_id\u0027),\n  (\u0027vessel_receipts_container\u0027, \u0027vessel_receipts_container_uid\u0027),\n  (\u0027vessel_receipts_container\u0027, \u0027row_status_flag\u0027),\n  (\u0027vessel_receipts_line\u0027, \u0027vessel_receipts_line_uid\u0027),\n  (\u0027vessel_receipts_line\u0027, \u0027exclude_from_landed_cost_flag\u0027),\n  (\u0027container_receipts_hdr\u0027, \u0027container_receipts_hdr_uid\u0027),\n  (\u0027container_receipts_hdr\u0027, \u0027vessel_receipts_container_uid\u0027),\n  (\u0027container_receipts_line\u0027, \u0027container_receipts_line_uid\u0027),\n  (\u0027container_receipts_line\u0027, \u0027transfer_flag\u0027),\n  (\u0027container_receipts_line\u0027, \u0027exclude_from_landed_cost_flag\u0027);\n\nSELECT\n    database_name = DB_NAME(),\n    p21play_access_ok = CONVERT(nvarchar(10), 1),\n    missing_required_column_count = CONVERT(nvarchar(20), COUNT(*))\nFROM @required_column AS rc\nWHERE COL_LENGTH(\u0027dbo.\u0027 + rc.table_name, rc.column_name) IS NULL;\n\nSELECT\n    rc.table_name,\n    rc.column_name,\n    col_length_value = CONVERT(nvarchar(20), COL_LENGTH(\u0027dbo.\u0027 + rc.table_name, rc.column_name))\nFROM @required_column AS rc\nWHERE COL_LENGTH(\u0027dbo.\u0027 + rc.table_name, rc.column_name) IS NULL\nORDER BY rc.table_name, rc.column_name;\n\nSELECT\n    staging_database_name = DB_NAME(),\n    p21import_stage_rows = CONVERT(nvarchar(20), (SELECT COUNT(*) FROM P21Import.dbo.coats_mexico_shipment_file)),\n    p21import_validation_rows = CONVERT(nvarchar(20), (SELECT COUNT(*) FROM P21Import.dbo.coats_mexico_shipment_validation_issue));",
+                                                        "type":  "Query"
+                                                    }
+                                                ]
+                                },
+                      "integrationRuntimeNames":  [
+                                                      "sqlserver"
+                                                  ],
+                      "iterationHash":  "",
+                      "linkedServiceName":  "",
+                      "output":  {
+                                     "billingReference":  {
+                                                              "activityType":  "PipelineActivity",
+                                                              "billableDuration":  [
+                                                                                       {
+                                                                                           "duration":  0.016666666666666666,
+                                                                                           "meterType":  "SelfhostedIR",
+                                                                                           "unit":  "Hours"
+                                                                                       }
+                                                                                   ]
+                                                          },
+                                     "durationInQueue":  {
+                                                             "integrationRuntimeQueue":  1
+                                                         },
+                                     "effectiveIntegrationRuntime":  "SQLServer",
+                                     "executionDuration":  0,
+                                     "outputLogs":  "Changed database context to \u0027P21Play\u0027.\n",
+                                     "outputLogsLocation":  "",
+                                     "outputParameters":  {
+
+                                                          },
+                                     "outputTruncated":  false,
+                                     "recordsAffected":  0,
+                                     "resultSetCount":  2,
+                                     "resultSets":  [
+                                                        {
+                                                            "rowCount":  1,
+                                                            "rows":  [
+                                                                         {
+                                                                             "database_name":  "P21Play",
+                                                                             "missing_required_column_count":  "0",
+                                                                             "p21play_access_ok":  "1"
+                                                                         }
+                                                                     ]
+                                                        },
+                                                        {
+                                                            "rowCount":  1,
+                                                            "rows":  [
+                                                                         {
+                                                                             "p21import_stage_rows":  "1",
+                                                                             "p21import_validation_rows":  "103",
+                                                                             "staging_database_name":  "P21Play"
+                                                                         }
+                                                                     ]
+                                                        }
+                                                    ]
+                                 },
+                      "pipelineName":  "Diag_Coats_P21Play_Receipt_Target_Probe",
+                      "pipelineRunId":  "2f225673-53d2-11f1-96a2-9cb150a3acae",
+                      "recoveryStatus":  "None",
+                      "resourceGroup":  "RG1",
+                      "retryAttempt":  null,
+                      "status":  "Succeeded",
+                      "userProperties":  {
+
+                                         }
+                  }
+              ]
+}

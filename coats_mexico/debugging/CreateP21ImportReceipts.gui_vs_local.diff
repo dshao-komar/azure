@@ -1,0 +1,131 @@
+--- /tmp/CreateP21ImportReceipts.local-generated.sql	2026-05-08 14:57:17.619745731 -0700
++++ /tmp/CreateP21ImportReceipts.gui.sql	2026-05-08 14:56:56.191353974 -0700
+@@ -187,10 +187,7 @@
+         , ('vessel_receipts_line', 'vessel_receipts_hdr_uid')
+         , ('vessel_receipts_line', 'line_no')
+         , ('vessel_receipts_line', 'po_line_uid')
+-        , ('vessel_receipts_line', 'qty_ordered')
+-        , ('vessel_receipts_line', 'qty_received')
+-        , ('vessel_receipts_line', 'unit_of_measure')
+-        , ('vessel_receipts_line', 'unit_size')
++        , ('vessel_receipts_line', 'container_qty_received')
+         , ('vessel_receipts_line', 'container_uom')
+         , ('vessel_receipts_line', 'container_unit_size')
+         , ('vessel_receipts_line', 'row_status_flag')
+@@ -240,13 +237,15 @@
+         SELECT
+               rc.table_name
+             , rc.column_name
+-            , issue = 'Missing required P21Import column'
++            , full_table_name = 'dbo.' + rc.table_name
++            , col_length_value = COL_LENGTH('dbo.' + rc.table_name, rc.column_name)
++            , issue = 'Missing required P21Import column according to ADF linked service login'
+         FROM @required_column AS rc
+         WHERE COL_LENGTH('dbo.' + rc.table_name, rc.column_name) IS NULL
+         ORDER BY
+               rc.table_name
+             , rc.column_name;
+-
++    
+         THROW 52009, 'One or more required P21Import target columns are missing. No counters were allocated.', 1;
+     END;
+ 
+@@ -411,13 +410,73 @@
+          @strCounterID = 'vessel_receipts_line'
+        , @iIncrementValue = @LineCount
+        , @LastValue = @LastValue OUTPUT;
++    
+     SET @FirstVesselReceiptsLineUid = @LastValue - @LineCount + 1;
++    
++    DECLARE @MaxVesselReceiptsLineUid bigint =
++    (
++        SELECT ISNULL(MAX(vessel_receipts_line_uid), 0)
++        FROM dbo.vessel_receipts_line
++    );
++    
++    IF @FirstVesselReceiptsLineUid <= @MaxVesselReceiptsLineUid
++    BEGIN
++        DECLARE @AdditionalVesselLineCounterIncrement bigint =
++            (@MaxVesselReceiptsLineUid + @LineCount) - @LastValue;
++    
++        IF @AdditionalVesselLineCounterIncrement <= 0
++        BEGIN
++            THROW 52013, 'Calculated vessel_receipts_line counter catch-up increment was not positive.', 1;
++        END;
++    
++        EXEC dbo.p21_get_counter
++             @strCounterID = 'vessel_receipts_line'
++           , @iIncrementValue = @AdditionalVesselLineCounterIncrement
++           , @LastValue = @LastValue OUTPUT;
++    
++        SET @FirstVesselReceiptsLineUid = @LastValue - @LineCount + 1;
++    END;
++    
++    IF @FirstVesselReceiptsLineUid <= @MaxVesselReceiptsLineUid
++    BEGIN
++        THROW 52013, 'Allocated vessel_receipts_line_uid block overlaps existing rows. Counter is behind.', 1;
++    END;
+ 
+     EXEC dbo.p21_get_counter
+          @strCounterID = 'container_receipts_line'
+        , @iIncrementValue = @LineCount
+        , @LastValue = @LastValue OUTPUT;
++    
+     SET @FirstContainerReceiptsLineUid = @LastValue - @LineCount + 1;
++    
++    DECLARE @MaxContainerReceiptsLineUid bigint =
++    (
++        SELECT ISNULL(MAX(container_receipts_line_uid), 0)
++        FROM dbo.container_receipts_line
++    );
++    
++    IF @FirstContainerReceiptsLineUid <= @MaxContainerReceiptsLineUid
++    BEGIN
++        DECLARE @AdditionalContainerLineCounterIncrement bigint =
++            (@MaxContainerReceiptsLineUid + @LineCount) - @LastValue;
++    
++        IF @AdditionalContainerLineCounterIncrement <= 0
++        BEGIN
++            THROW 52014, 'Calculated container_receipts_line counter catch-up increment was not positive.', 1;
++        END;
++    
++        EXEC dbo.p21_get_counter
++             @strCounterID = 'container_receipts_line'
++           , @iIncrementValue = @AdditionalContainerLineCounterIncrement
++           , @LastValue = @LastValue OUTPUT;
++    
++        SET @FirstContainerReceiptsLineUid = @LastValue - @LineCount + 1;
++    END;
++    
++    IF @FirstContainerReceiptsLineUid <= @MaxContainerReceiptsLineUid
++    BEGIN
++        THROW 52014, 'Allocated container_receipts_line_uid block overlaps existing rows. Counter is behind.', 1;
++    END;
+ 
+     IF @ContainerBuildingUid <= ISNULL((SELECT MAX(container_building_uid) FROM dbo.container_building), 0)
+     BEGIN
+@@ -621,10 +680,7 @@
+             , vessel_receipts_hdr_uid
+             , line_no
+             , po_line_uid
+-            , qty_ordered
+-            , qty_received
+-            , unit_of_measure
+-            , unit_size
++            , container_qty_received
+             , container_uom
+             , container_unit_size
+             , row_status_flag
+@@ -638,12 +694,9 @@
+             , @VesselReceiptsHdrUid
+             , s.line_no
+             , s.po_line_uid
+-            , s.qty
+             , 0
+             , s.container_uom
+             , s.container_unit_size
+-            , s.container_uom
+-            , s.container_unit_size
+             , @VesselLineStatus
+             , @Now
+             , @CreatedBy

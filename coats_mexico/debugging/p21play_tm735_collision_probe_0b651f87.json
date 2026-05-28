@@ -1,0 +1,113 @@
+﻿{
+    "continuationToken":  null,
+    "value":  [
+                  {
+                      "activityName":  "RunProbe",
+                      "activityRunEnd":  "2026-05-19T22:43:04.878399+00:00",
+                      "activityRunId":  "36958d41-1977-4208-922f-de6bde223d23",
+                      "activityRunStart":  "2026-05-19T22:42:50.524194+00:00",
+                      "activityType":  "Script",
+                      "durationInMs":  14354,
+                      "error":  {
+                                    "details":  "",
+                                    "errorCode":  "",
+                                    "failureType":  "",
+                                    "message":  "",
+                                    "target":  "RunProbe"
+                                },
+                      "executionDetails":  {
+                                               "integrationRuntime":  [
+                                                                          {
+                                                                              "location":  "West US",
+                                                                              "name":  "SQLServer",
+                                                                              "nodes":  [
+                                                                                            "INSPIRON_16"
+                                                                                        ],
+                                                                              "type":  "SelfHosted"
+                                                                          }
+                                                                      ]
+                                           },
+                      "id":  "/SUBSCRIPTIONS/6624EC13-3826-43B2-8E45-077F9051B88F/RESOURCEGROUPS/RG1/PROVIDERS/MICROSOFT.DATAFACTORY/FACTORIES/2026-04-01-DF1/pipelineruns/0b651f87-53d4-11f1-b57f-9cb150a3acae/activityruns/36958d41-1977-4208-922f-de6bde223d23",
+                      "input":  {
+                                    "logSettings":  {
+                                                        "logDestination":  "ActivityOutput"
+                                                    },
+                                    "scriptBlockExecutionTimeout":  "00:10:00",
+                                    "scripts":  [
+                                                    {
+                                                        "text":  "USE P21Play;\nSET NOCOUNT ON;\nDECLARE @TrailerName nvarchar(255)=N\u0027TM735\u0027;\nDECLARE @ShipmentDate date=\u00272026-05-11\u0027;\nSELECT result_name=\u0027container_building\u0027, row_count=CONVERT(nvarchar(20), COUNT(*)) FROM dbo.container_building WHERE location_id=210 AND container_name=@TrailerName;\nSELECT result_name=\u0027vessel_receipts_hdr\u0027, row_count=CONVERT(nvarchar(20), COUNT(*)) FROM dbo.vessel_receipts_hdr WHERE location_id=210 AND vessel_name=@TrailerName AND departure_date=@ShipmentDate;\nSELECT result_name=\u0027receipt_build_for_tm735\u0027, row_count=CONVERT(nvarchar(20), COUNT(*)) FROM P21Import.dbo.coats_mexico_shipment_receipt_build AS rb JOIN P21Import.dbo.coats_mexico_shipment_file AS f ON f.shipment_file_id=rb.shipment_file_id WHERE f.shipment_date=@ShipmentDate AND f.trailer_name=@TrailerName;",
+                                                        "type":  "Query"
+                                                    }
+                                                ]
+                                },
+                      "integrationRuntimeNames":  [
+                                                      "sqlserver"
+                                                  ],
+                      "iterationHash":  "",
+                      "linkedServiceName":  "",
+                      "output":  {
+                                     "billingReference":  {
+                                                              "activityType":  "PipelineActivity",
+                                                              "billableDuration":  [
+                                                                                       {
+                                                                                           "duration":  0.016666666666666666,
+                                                                                           "meterType":  "SelfhostedIR",
+                                                                                           "unit":  "Hours"
+                                                                                       }
+                                                                                   ]
+                                                          },
+                                     "durationInQueue":  {
+                                                             "integrationRuntimeQueue":  8
+                                                         },
+                                     "effectiveIntegrationRuntime":  "SQLServer",
+                                     "executionDuration":  0,
+                                     "outputLogs":  "Changed database context to \u0027P21Play\u0027.\n",
+                                     "outputLogsLocation":  "",
+                                     "outputParameters":  {
+
+                                                          },
+                                     "outputTruncated":  false,
+                                     "recordsAffected":  0,
+                                     "resultSetCount":  3,
+                                     "resultSets":  [
+                                                        {
+                                                            "rowCount":  1,
+                                                            "rows":  [
+                                                                         {
+                                                                             "result_name":  "container_building",
+                                                                             "row_count":  "1"
+                                                                         }
+                                                                     ]
+                                                        },
+                                                        {
+                                                            "rowCount":  1,
+                                                            "rows":  [
+                                                                         {
+                                                                             "result_name":  "vessel_receipts_hdr",
+                                                                             "row_count":  "0"
+                                                                         }
+                                                                     ]
+                                                        },
+                                                        {
+                                                            "rowCount":  1,
+                                                            "rows":  [
+                                                                         {
+                                                                             "result_name":  "receipt_build_for_tm735",
+                                                                             "row_count":  "0"
+                                                                         }
+                                                                     ]
+                                                        }
+                                                    ]
+                                 },
+                      "pipelineName":  "Diag_Coats_P21Play_Tm735_Collision_Probe",
+                      "pipelineRunId":  "0b651f87-53d4-11f1-b57f-9cb150a3acae",
+                      "recoveryStatus":  "None",
+                      "resourceGroup":  "RG1",
+                      "retryAttempt":  null,
+                      "status":  "Succeeded",
+                      "userProperties":  {
+
+                                         }
+                  }
+              ]
+}

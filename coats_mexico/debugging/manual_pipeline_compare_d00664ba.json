@@ -1,0 +1,78 @@
+﻿{
+    "continuationToken":  null,
+    "value":  [
+                  {
+                      "activityName":  "ProbeManualPipelineCompare",
+                      "activityRunEnd":  "2026-05-19T18:53:16.117272+00:00",
+                      "activityRunId":  "fa177872-294e-446b-84b0-0a6b3805a76b",
+                      "activityRunStart":  "2026-05-19T18:52:05.041341+00:00",
+                      "activityType":  "Script",
+                      "durationInMs":  71075,
+                      "error":  {
+                                    "details":  [
+
+                                                ],
+                                    "errorCode":  "2011",
+                                    "failureType":  "UserError",
+                                    "message":  "The server principal \"coats_automation\" is not able to access the database \"P21Import\" under the current security context.",
+                                    "target":  "ProbeManualPipelineCompare"
+                                },
+                      "executionDetails":  {
+                                               "integrationRuntime":  [
+                                                                          {
+                                                                              "location":  "West US",
+                                                                              "name":  "SQLServer",
+                                                                              "nodes":  [
+                                                                                            "KASVRW2K8FS"
+                                                                                        ],
+                                                                              "type":  "SelfHosted"
+                                                                          }
+                                                                      ]
+                                           },
+                      "id":  "/SUBSCRIPTIONS/6624EC13-3826-43B2-8E45-077F9051B88F/RESOURCEGROUPS/RG1/PROVIDERS/MICROSOFT.DATAFACTORY/FACTORIES/2026-04-01-DF1/pipelineruns/d00664ba-53b3-11f1-a48c-9cb150a3acae/activityruns/fa177872-294e-446b-84b0-0a6b3805a76b",
+                      "input":  {
+                                    "logSettings":  {
+                                                        "logDestination":  "ActivityOutput"
+                                                    },
+                                    "scriptBlockExecutionTimeout":  "00:10:00",
+                                    "scripts":  [
+                                                    {
+                                                        "text":  "USE P21Import;\nSET NOCOUNT ON;\n\nSELECT result_set = \u0027capture_runs\u0027, *\nFROM dbo.coats_mexico_manual_pipeline_capture_run\nWHERE capture_run_uid \u003c\u003e 2\nORDER BY capture_run_uid;\n\n;WITH latest AS\n(\n    SELECT TOP (1) capture_run_uid\n    FROM dbo.coats_mexico_manual_pipeline_capture_run\n    WHERE capture_run_uid \u003c\u003e 2\n      AND capture_phase = \u0027CAPTURE_AFTER_CONTAINER_RECEIPT_APPROVAL\u0027\n    ORDER BY capture_run_uid DESC\n)\nSELECT result_set = \u0027latest_after_approval_counts\u0027, r.entity_name, row_count = COUNT(*)\nFROM dbo.coats_mexico_manual_pipeline_capture_row AS r\nJOIN latest AS l ON l.capture_run_uid = r.capture_run_uid\nGROUP BY r.entity_name\nORDER BY r.entity_name;\n\n;WITH latest AS\n(\n    SELECT TOP (1) capture_run_uid, container_name\n    FROM dbo.coats_mexico_manual_pipeline_capture_run\n    WHERE capture_run_uid \u003c\u003e 2\n      AND capture_phase = \u0027CAPTURE_AFTER_CONTAINER_RECEIPT_APPROVAL\u0027\n    ORDER BY capture_run_uid DESC\n)\nSELECT result_set = \u0027manual_current_header_chain\u0027\n     , cb.container_building_uid, cb.container_name, cb.location_id, cb.row_status_flag AS cb_row_status_flag\n     , vh.vessel_receipts_hdr_uid, vh.vessel_receipt_number, vh.row_status_flag AS vh_row_status_flag, vh.vessel_name, vh.departure_date, vh.arrival_date, vh.receipt_date\n     , vc.vessel_receipts_container_uid, vc.row_status_flag AS vc_row_status_flag, vc.container_building_uid AS vc_container_building_uid, vc.expected_arrival_date, vc.received_date\n     , crh.container_receipts_hdr_uid, crh.row_status_flag AS crh_row_status_flag, crh.date_received, crh.cc_container_complete_flag, crh.receiving_location_id\nFROM latest AS l\nLEFT JOIN dbo.container_building AS cb ON cb.container_name = l.container_name AND cb.location_id = 210\nLEFT JOIN dbo.vessel_receipts_container AS vc ON vc.container_name = l.container_name AND vc.container_building_uid = cb.container_building_uid\nLEFT JOIN dbo.vessel_receipts_hdr AS vh ON vh.vessel_receipts_hdr_uid = vc.vessel_receipts_hdr_uid\nLEFT JOIN dbo.container_receipts_hdr AS crh ON crh.vessel_receipts_container_uid = vc.vessel_receipts_container_uid;\n\n;WITH latest AS\n(\n    SELECT TOP (1) container_name\n    FROM dbo.coats_mexico_manual_pipeline_capture_run\n    WHERE capture_run_uid \u003c\u003e 2\n      AND capture_phase = \u0027CAPTURE_AFTER_CONTAINER_RECEIPT_APPROVAL\u0027\n    ORDER BY capture_run_uid DESC\n)\nSELECT result_set = \u0027manual_line_null_summary\u0027\n     , vessel_line_count = COUNT(DISTINCT vl.vessel_receipts_line_uid)\n     , vl_missing_container_uid = SUM(CASE WHEN vl.vessel_receipts_container_uid IS NULL THEN 1 ELSE 0 END)\n     , vl_missing_cbp_uid = SUM(CASE WHEN vl.container_building_po_uid IS NULL THEN 1 ELSE 0 END)\n     , vl_missing_container_qty_received = SUM(CASE WHEN vl.container_qty_received IS NULL THEN 1 ELSE 0 END)\n     , vl_missing_po_sku_cost = SUM(CASE WHEN vl.po_sku_cost IS NULL THEN 1 ELSE 0 END)\n     , vl_statuses = STRING_AGG(CONVERT(varchar(20), vl.row_status_flag), \u0027,\u0027) WITHIN GROUP (ORDER BY vl.row_status_flag)\n     , receipt_line_count = COUNT(DISTINCT crl.container_receipts_line_uid)\n     , crl_transfer_flag_nulls = SUM(CASE WHEN crl.transfer_flag IS NULL THEN 1 ELSE 0 END)\n     , crl_transfer_flag_values = STRING_AGG(COALESCE(CONVERT(varchar(20), crl.transfer_flag), \u0027\u003cNULL\u003e\u0027), \u0027,\u0027) WITHIN GROUP (ORDER BY crl.transfer_flag)\nFROM latest AS l\nJOIN dbo.vessel_receipts_container AS vc ON vc.container_name = l.container_name\nJOIN dbo.vessel_receipts_line AS vl ON vl.vessel_receipts_hdr_uid = vc.vessel_receipts_hdr_uid\nLEFT JOIN dbo.container_receipts_line AS crl ON crl.vessel_receipts_line_uid = vl.vessel_receipts_line_uid;\n\n;WITH latest AS\n(\n    SELECT TOP (1) container_name\n    FROM dbo.coats_mexico_manual_pipeline_capture_run\n    WHERE capture_run_uid \u003c\u003e 2\n      AND capture_phase = \u0027CAPTURE_AFTER_CONTAINER_RECEIPT_APPROVAL\u0027\n    ORDER BY capture_run_uid DESC\n)\nSELECT result_set = \u0027manual_document_line_bin_summary\u0027\n     , crh.container_receipts_hdr_uid\n     , dlb_count = COUNT(dlb.document_no)\n     , dlb_qty = SUM(CONVERT(decimal(19, 9), COALESCE(dlb.qty_to_change, dlb.qty_applied, dlb.qty_allocated, 0)))\nFROM latest AS l\nJOIN dbo.vessel_receipts_container AS vc ON vc.container_name = l.container_name\nJOIN dbo.container_receipts_hdr AS crh ON crh.vessel_receipts_container_uid = vc.vessel_receipts_container_uid\nLEFT JOIN dbo.document_line_bin AS dlb ON dlb.document_type = \u0027CR\u0027 AND dlb.document_no = crh.container_receipts_hdr_uid\nGROUP BY crh.container_receipts_hdr_uid;\n\nSELECT TOP (10) result_set = \u0027adf_receipt_builds\u0027\n     , rb.*\nFROM dbo.coats_mexico_shipment_receipt_build AS rb\nORDER BY rb.created_at DESC;\n\n;WITH adf AS\n(\n    SELECT TOP (5) *\n    FROM dbo.coats_mexico_shipment_receipt_build\n    ORDER BY created_at DESC\n)\nSELECT result_set = \u0027adf_line_null_summary\u0027\n     , rb.container_name\n     , rb.container_receipts_hdr_uid\n     , vessel_line_count = COUNT(DISTINCT vl.vessel_receipts_line_uid)\n     , vl_missing_container_uid = SUM(CASE WHEN vl.vessel_receipts_container_uid IS NULL THEN 1 ELSE 0 END)\n     , vl_missing_cbp_uid = SUM(CASE WHEN vl.container_building_po_uid IS NULL THEN 1 ELSE 0 END)\n     , vl_missing_container_qty_received = SUM(CASE WHEN vl.container_qty_received IS NULL THEN 1 ELSE 0 END)\n     , vl_missing_po_sku_cost = SUM(CASE WHEN vl.po_sku_cost IS NULL THEN 1 ELSE 0 END)\n     , receipt_line_count = COUNT(DISTINCT crl.container_receipts_line_uid)\n     , crl_transfer_flag_nulls = SUM(CASE WHEN crl.transfer_flag IS NULL THEN 1 ELSE 0 END)\nFROM adf AS rb\nJOIN dbo.vessel_receipts_line AS vl ON vl.vessel_receipts_hdr_uid = rb.vessel_receipts_hdr_uid\nLEFT JOIN dbo.container_receipts_line AS crl ON crl.container_receipts_hdr_uid = rb.container_receipts_hdr_uid AND crl.vessel_receipts_line_uid = vl.vessel_receipts_line_uid\nGROUP BY rb.container_name, rb.container_receipts_hdr_uid;\n\n;WITH adf AS\n(\n    SELECT TOP (5) *\n    FROM dbo.coats_mexico_shipment_receipt_build\n    ORDER BY created_at DESC\n)\nSELECT result_set = \u0027adf_document_line_bin_summary\u0027\n     , rb.container_name\n     , rb.container_receipts_hdr_uid\n     , dlb_count = COUNT(dlb.document_no)\nFROM adf AS rb\nLEFT JOIN dbo.document_line_bin AS dlb ON dlb.document_type = \u0027CR\u0027 AND dlb.document_no = rb.container_receipts_hdr_uid\nGROUP BY rb.container_name, rb.container_receipts_hdr_uid;",
+                                                        "type":  "Query"
+                                                    }
+                                                ]
+                                },
+                      "integrationRuntimeNames":  [
+                                                      "sqlserver"
+                                                  ],
+                      "iterationHash":  "",
+                      "linkedServiceName":  "",
+                      "output":  {
+                                     "billingReference":  {
+                                                              "activityType":  "PipelineActivity",
+                                                              "billableDuration":  [
+                                                                                       {
+                                                                                           "duration":  0.016666666666666666,
+                                                                                           "meterType":  "SelfhostedIR",
+                                                                                           "unit":  "Hours"
+                                                                                       }
+                                                                                   ]
+                                                          },
+                                     "durationInQueue":  {
+                                                             "integrationRuntimeQueue":  6
+                                                         },
+                                     "effectiveIntegrationRuntime":  "SQLServer",
+                                     "executionDuration":  0
+                                 },
+                      "pipelineName":  "Diag_Coats_Manual_Pipeline_Compare",
+                      "pipelineRunId":  "d00664ba-53b3-11f1-a48c-9cb150a3acae",
+                      "recoveryStatus":  "None",
+                      "resourceGroup":  "RG1",
+                      "retryAttempt":  null,
+                      "status":  "Failed",
+                      "userProperties":  {
+
+                                         }
+                  }
+              ]
+}

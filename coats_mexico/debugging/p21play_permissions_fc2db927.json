@@ -1,0 +1,78 @@
+﻿{
+    "continuationToken":  null,
+    "value":  [
+                  {
+                      "activityName":  "RunProbe",
+                      "activityRunEnd":  "2026-05-19T23:04:08.553481+00:00",
+                      "activityRunId":  "145b03eb-a65c-4a21-9ec5-6fe06234885f",
+                      "activityRunStart":  "2026-05-19T23:03:53.905306+00:00",
+                      "activityType":  "Script",
+                      "durationInMs":  14648,
+                      "error":  {
+                                    "details":  [
+
+                                                ],
+                                    "errorCode":  "2011",
+                                    "failureType":  "UserError",
+                                    "message":  "Invalid column name \u0027state_desc\u0027.",
+                                    "target":  "RunProbe"
+                                },
+                      "executionDetails":  {
+                                               "integrationRuntime":  [
+                                                                          {
+                                                                              "location":  "West US",
+                                                                              "name":  "SQLServer",
+                                                                              "nodes":  [
+                                                                                            "KASVRW2K8FS"
+                                                                                        ],
+                                                                              "type":  "SelfHosted"
+                                                                          }
+                                                                      ]
+                                           },
+                      "id":  "/SUBSCRIPTIONS/6624EC13-3826-43B2-8E45-077F9051B88F/RESOURCEGROUPS/RG1/PROVIDERS/MICROSOFT.DATAFACTORY/FACTORIES/2026-04-01-DF1/pipelineruns/fc2db927-53d6-11f1-81ca-9cb150a3acae/activityruns/145b03eb-a65c-4a21-9ec5-6fe06234885f",
+                      "input":  {
+                                    "logSettings":  {
+                                                        "logDestination":  "ActivityOutput"
+                                                    },
+                                    "scriptBlockExecutionTimeout":  "00:10:00",
+                                    "scripts":  [
+                                                    {
+                                                        "text":  "USE P21Play;\nSET NOCOUNT ON;\nSELECT\n    database_name = DB_NAME(),\n    current_user_name = CURRENT_USER,\n    system_user_name = SYSTEM_USER,\n    original_login_name = ORIGINAL_LOGIN();\n\nSELECT\n    entity_name = \u0027p21_get_counter\u0027,\n    object_id = CONVERT(nvarchar(40), OBJECT_ID(\u0027dbo.p21_get_counter\u0027)),\n    execute_permission = HAS_PERMS_BY_NAME(\u0027dbo.p21_get_counter\u0027, \u0027OBJECT\u0027, \u0027EXECUTE\u0027),\n    view_definition_permission = HAS_PERMS_BY_NAME(\u0027dbo.p21_get_counter\u0027, \u0027OBJECT\u0027, \u0027VIEW DEFINITION\u0027);\n\nSELECT\n    permission_name,\n    subentity_name,\n    state_desc\nFROM sys.fn_my_permissions(\u0027dbo.p21_get_counter\u0027, \u0027OBJECT\u0027)\nORDER BY permission_name;\n\nSELECT\n    counter_name = c.name,\n    counter_object_id = CONVERT(nvarchar(40), c.object_id),\n    has_select = HAS_PERMS_BY_NAME(\u0027dbo.\u0027 + c.name, \u0027OBJECT\u0027, \u0027SELECT\u0027),\n    has_update = HAS_PERMS_BY_NAME(\u0027dbo.\u0027 + c.name, \u0027OBJECT\u0027, \u0027UPDATE\u0027),\n    object_type = c.type_desc\nFROM sys.objects AS c\nWHERE c.name LIKE \u0027%counter%\u0027 OR c.name LIKE \u0027%sequence%\u0027\nORDER BY c.name;\n\nSELECT\n    sequence_name = s.name,\n    current_value = CONVERT(nvarchar(80), s.current_value),\n    has_update = HAS_PERMS_BY_NAME(\u0027dbo.\u0027 + s.name, \u0027OBJECT\u0027, \u0027UPDATE\u0027),\n    has_select = HAS_PERMS_BY_NAME(\u0027dbo.\u0027 + s.name, \u0027OBJECT\u0027, \u0027SELECT\u0027)\nFROM sys.sequences AS s\nWHERE s.name LIKE \u0027%counter%\u0027 OR s.name LIKE \u0027%container%\u0027 OR s.name LIKE \u0027%vessel%\u0027\nORDER BY s.name;",
+                                                        "type":  "Query"
+                                                    }
+                                                ]
+                                },
+                      "integrationRuntimeNames":  [
+                                                      "sqlserver"
+                                                  ],
+                      "iterationHash":  "",
+                      "linkedServiceName":  "",
+                      "output":  {
+                                     "billingReference":  {
+                                                              "activityType":  "PipelineActivity",
+                                                              "billableDuration":  [
+                                                                                       {
+                                                                                           "duration":  0.016666666666666666,
+                                                                                           "meterType":  "SelfhostedIR",
+                                                                                           "unit":  "Hours"
+                                                                                       }
+                                                                                   ]
+                                                          },
+                                     "durationInQueue":  {
+                                                             "integrationRuntimeQueue":  6
+                                                         },
+                                     "effectiveIntegrationRuntime":  "SQLServer",
+                                     "executionDuration":  1
+                                 },
+                      "pipelineName":  "Diag_Coats_P21Play_Permissions",
+                      "pipelineRunId":  "fc2db927-53d6-11f1-81ca-9cb150a3acae",
+                      "recoveryStatus":  "None",
+                      "resourceGroup":  "RG1",
+                      "retryAttempt":  null,
+                      "status":  "Failed",
+                      "userProperties":  {
+
+                                         }
+                  }
+              ]
+}

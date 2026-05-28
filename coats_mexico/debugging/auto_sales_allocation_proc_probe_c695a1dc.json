@@ -1,0 +1,374 @@
+﻿{
+  "continuationToken": null,
+  "value": [
+    {
+      "activityName": "RunQuery",
+      "activityRunEnd": "2026-05-18T22:28:02.453753+00:00",
+      "activityRunId": "8610b8ba-a7cf-4645-85b4-a93e3d017305",
+      "activityRunStart": "2026-05-18T22:27:46.456782+00:00",
+      "activityType": "Script",
+      "durationInMs": 15996,
+      "error": {
+        "details": "",
+        "errorCode": "",
+        "failureType": "",
+        "message": "",
+        "target": "RunQuery"
+      },
+      "executionDetails": {
+        "integrationRuntime": [
+          {
+            "location": "West US",
+            "name": "SQLServer",
+            "nodes": [
+              "INSPIRON_16"
+            ],
+            "type": "SelfHosted"
+          }
+        ]
+      },
+      "id": "/SUBSCRIPTIONS/6624EC13-3826-43B2-8E45-077F9051B88F/RESOURCEGROUPS/RG1/PROVIDERS/MICROSOFT.DATAFACTORY/FACTORIES/2026-04-01-DF1/pipelineruns/c695a1dc-5308-11f1-9f5a-9cb150a3acae/activityruns/8610b8ba-a7cf-4645-85b4-a93e3d017305",
+      "input": {
+        "logSettings": {
+          "logDestination": "ActivityOutput"
+        },
+        "scriptBlockExecutionTimeout": "00:10:00",
+        "scripts": [
+          {
+            "text": "USE P21;\nSET NOCOUNT ON;\nSET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;\n\nSELECT result_set='module_definition_hit', object_name=OBJECT_SCHEMA_NAME(m.object_id)+'.'+OBJECT_NAME(m.object_id), line_no=CONVERT(varchar(20), v.line_no), line_text=v.line_text\nFROM sys.sql_modules m\nJOIN sys.objects o ON o.object_id=m.object_id\nCROSS APPLY (\n    SELECT ROW_NUMBER() OVER (ORDER BY (SELECT 1)) AS line_no, value AS line_text\n    FROM STRING_SPLIT(REPLACE(REPLACE(m.definition, CHAR(13), ''), CHAR(10), CHAR(30)), CHAR(30))\n) v\nWHERE OBJECT_SCHEMA_NAME(m.object_id)+'.'+OBJECT_NAME(m.object_id) IN ('dbo.p21_create_container_receipt_records','dbo.p21_move_hard_allocations')\n  AND (v.line_text LIKE '%alloc%' OR v.line_text LIKE '%container_receipts%' OR v.line_text LIKE '%transfer%' OR v.line_text LIKE '%reserve%' OR v.line_text LIKE '%hard%')\nORDER BY object_name, TRY_CONVERT(int,line_no);\n\nSELECT result_set='proc_parameters', object_name=OBJECT_SCHEMA_NAME(p.object_id)+'.'+OBJECT_NAME(p.object_id), parameter_id=CONVERT(varchar(20), p.parameter_id), parameter_name=p.name, type_name=TYPE_NAME(p.user_type_id), max_length=CONVERT(varchar(20), p.max_length), is_output=CONVERT(varchar(5), p.is_output)\nFROM sys.parameters p\nWHERE OBJECT_SCHEMA_NAME(p.object_id)+'.'+OBJECT_NAME(p.object_id) IN ('dbo.p21_create_container_receipt_records','dbo.p21_move_hard_allocations')\nORDER BY object_name, p.parameter_id;",
+            "type": "Query"
+          }
+        ]
+      },
+      "integrationRuntimeNames": [
+        "sqlserver"
+      ],
+      "iterationHash": "",
+      "linkedServiceName": "",
+      "output": {
+        "billingReference": {
+          "activityType": "PipelineActivity",
+          "billableDuration": [
+            {
+              "duration": 0.016666666666666666,
+              "meterType": "SelfhostedIR",
+              "unit": "Hours"
+            }
+          ]
+        },
+        "durationInQueue": {
+          "integrationRuntimeQueue": 6
+        },
+        "effectiveIntegrationRuntime": "SQLServer",
+        "executionDuration": 3,
+        "outputLogs": "Changed database context to 'P21'.\n",
+        "outputLogsLocation": "",
+        "outputParameters": {},
+        "outputTruncated": false,
+        "recordsAffected": 0,
+        "resultSetCount": 2,
+        "resultSets": [
+          {
+            "rowCount": 38,
+            "rows": [
+              {
+                "line_no": "8",
+                "line_text": "\t  -- If we're in the middle of processing PO's through Container Receipts, and after saving ",
+                "object_name": "dbo.p21_create_container_receipt_records",
+                "result_set": "module_definition_hit"
+              },
+              {
+                "line_no": "34",
+                "line_text": "           container_receipts_hdr_uid     INTEGER NOT NULL,",
+                "object_name": "dbo.p21_create_container_receipt_records",
+                "result_set": "module_definition_hit"
+              },
+              {
+                "line_no": "48",
+                "line_text": "                  (container_receipts_hdr_uid,",
+                "object_name": "dbo.p21_create_container_receipt_records",
+                "result_set": "module_definition_hit"
+              },
+              {
+                "line_no": "57",
+                "line_text": "      -- Grab any Container Receipts that are tied to a PO Receipt, but do not actually exist in the database.",
+                "object_name": "dbo.p21_create_container_receipt_records",
+                "result_set": "module_definition_hit"
+              },
+              {
+                "line_no": "58",
+                "line_text": "      SELECT inventory_receipts_hdr.container_receipts_hdr_uid,",
+                "object_name": "dbo.p21_create_container_receipt_records",
+                "result_set": "module_definition_hit"
+              },
+              {
+                "line_no": "70",
+                "line_text": "             LEFT JOIN container_receipts_hdr",
+                "object_name": "dbo.p21_create_container_receipt_records",
+                "result_set": "module_definition_hit"
+              },
+              {
+                "line_no": "71",
+                "line_text": "               ON inventory_receipts_hdr.container_receipts_hdr_uid = container_receipts_hdr.container_receipts_hdr_uid",
+                "object_name": "dbo.p21_create_container_receipt_records",
+                "result_set": "module_definition_hit"
+              },
+              {
+                "line_no": "92",
+                "line_text": "      WHERE  inventory_receipts_hdr.container_receipts_hdr_uid IS NOT NULL",
+                "object_name": "dbo.p21_create_container_receipt_records",
+                "result_set": "module_definition_hit"
+              },
+              {
+                "line_no": "93",
+                "line_text": "             AND container_receipts_hdr.container_receipts_hdr_uid IS NULL",
+                "object_name": "dbo.p21_create_container_receipt_records",
+                "result_set": "module_definition_hit"
+              },
+              {
+                "line_no": "134",
+                "line_text": "      -- Go ahead with inserting the values into the container_receipts_hdr/container_receipts_line.",
+                "object_name": "dbo.p21_create_container_receipt_records",
+                "result_set": "module_definition_hit"
+              },
+              {
+                "line_no": "135",
+                "line_text": "      INSERT INTO container_receipts_hdr",
+                "object_name": "dbo.p21_create_container_receipt_records",
+                "result_set": "module_definition_hit"
+              },
+              {
+                "line_no": "136",
+                "line_text": "                  (container_receipts_hdr_uid,",
+                "object_name": "dbo.p21_create_container_receipt_records",
+                "result_set": "module_definition_hit"
+              },
+              {
+                "line_no": "146",
+                "line_text": "      SELECT DISTINCT #container_receipt_records.container_receipts_hdr_uid,",
+                "object_name": "dbo.p21_create_container_receipt_records",
+                "result_set": "module_definition_hit"
+              },
+              {
+                "line_no": "158",
+                "line_text": "               ON inventory_receipts_hdr.container_receipts_hdr_uid = #container_receipt_records.container_receipts_hdr_uid",
+                "object_name": "dbo.p21_create_container_receipt_records",
+                "result_set": "module_definition_hit"
+              },
+              {
+                "line_no": "161",
+                "line_text": "        SELECT #container_receipt_records.container_receipts_hdr_uid,",
+                "object_name": "dbo.p21_create_container_receipt_records",
+                "result_set": "module_definition_hit"
+              },
+              {
+                "line_no": "167",
+                "line_text": "        ORDER  BY #container_receipt_records.container_receipts_hdr_uid",
+                "object_name": "dbo.p21_create_container_receipt_records",
+                "result_set": "module_definition_hit"
+              },
+              {
+                "line_no": "177",
+                "line_text": "                  EXECUTE @li_CRLCounter = P21_get_counter 'container_receipts_line', 1",
+                "object_name": "dbo.p21_create_container_receipt_records",
+                "result_set": "module_definition_hit"
+              },
+              {
+                "line_no": "179",
+                "line_text": "                  INSERT INTO container_receipts_line",
+                "object_name": "dbo.p21_create_container_receipt_records",
+                "result_set": "module_definition_hit"
+              },
+              {
+                "line_no": "180",
+                "line_text": "                              (container_receipts_line_uid,",
+                "object_name": "dbo.p21_create_container_receipt_records",
+                "result_set": "module_definition_hit"
+              },
+              {
+                "line_no": "181",
+                "line_text": "                               container_receipts_hdr_uid,",
+                "object_name": "dbo.p21_create_container_receipt_records",
+                "result_set": "module_definition_hit"
+              },
+              {
+                "line_no": "213",
+                "line_text": "      DEALLOCATE lc_CreateContainerReceiptLine",
+                "object_name": "dbo.p21_create_container_receipt_records",
+                "result_set": "module_definition_hit"
+              },
+              {
+                "line_no": "223",
+                "line_text": "            SELECT @msg = @msg + 'Error ' + Ltrim(Str(@error)) + ' when performing insert into container_receipts_line'",
+                "object_name": "dbo.p21_create_container_receipt_records",
+                "result_set": "module_definition_hit"
+              },
+              {
+                "line_no": "3",
+                "line_text": "CREATE PROCEDURE p21_move_hard_allocations",
+                "object_name": "dbo.p21_move_hard_allocations",
+                "result_set": "module_definition_hit"
+              },
+              {
+                "line_no": "41",
+                "line_text": "\t\tSELECT  @statement = ' exec p21_move_hard_allocations @ai_TagDetailUID=' + CASE WHEN @ai_TagDetailUID IS NULL THEN 'NULL' ELSE CONVERT(VARCHAR(30),@ai_TagDetailUID) END ",
+                "object_name": "dbo.p21_move_hard_allocations",
+                "result_set": "module_definition_hit"
+              },
+              {
+                "line_no": "177",
+                "line_text": "\t--Loop through every hard allocated tag.",
+                "object_name": "dbo.p21_move_hard_allocations",
+                "result_set": "module_definition_hit"
+              },
+              {
+                "line_no": "232",
+                "line_text": "\t--DSM 04/12/07 - Scopus 544989: Hard allocated tags for production orders are 1970, not 1798 (soft).",
+                "object_name": "dbo.p21_move_hard_allocations",
+                "result_set": "module_definition_hit"
+              },
+              {
+                "line_no": "240",
+                "line_text": "\t--DSM 12/20/06 - DT 1034534: For shipped Transfers we want to look for Document Type 'TP', else 'TS'",
+                "object_name": "dbo.p21_move_hard_allocations",
+                "result_set": "module_definition_hit"
+              },
+              {
+                "line_no": "515",
+                "line_text": "\t--END loop through every hard allocated TDL.",
+                "object_name": "dbo.p21_move_hard_allocations",
+                "result_set": "module_definition_hit"
+              },
+              {
+                "line_no": "603",
+                "line_text": "--$Log: /Server/CommerceCenter/Z_Wildebeest (24.1)/Stored Procedures/p21_move_hard_allocations.sql $",
+                "object_name": "dbo.p21_move_hard_allocations",
+                "result_set": "module_definition_hit"
+              },
+              {
+                "line_no": "630",
+                "line_text": "-- in p21_move_hard_allocations",
+                "object_name": "dbo.p21_move_hard_allocations",
+                "result_set": "module_definition_hit"
+              },
+              {
+                "line_no": "650",
+                "line_text": "-- add container receipts",
+                "object_name": "dbo.p21_move_hard_allocations",
+                "result_set": "module_definition_hit"
+              },
+              {
+                "line_no": "660",
+                "line_text": "-- Defect1034534: Add moving Shipped Transfers to",
+                "object_name": "dbo.p21_move_hard_allocations",
+                "result_set": "module_definition_hit"
+              },
+              {
+                "line_no": "661",
+                "line_text": "-- p21_move_hard_allocations",
+                "object_name": "dbo.p21_move_hard_allocations",
+                "result_set": "module_definition_hit"
+              },
+              {
+                "line_no": "666",
+                "line_text": "-- Defect1033538: Add transaction types to p21_move_hard_allocations",
+                "object_name": "dbo.p21_move_hard_allocations",
+                "result_set": "module_definition_hit"
+              },
+              {
+                "line_no": "684",
+                "line_text": "-- Defect1024253: Make changes to p21_pull_allocations.",
+                "object_name": "dbo.p21_move_hard_allocations",
+                "result_set": "module_definition_hit"
+              },
+              {
+                "line_no": "691",
+                "line_text": "-- Defect1024115: Must use sub_line_no for moving tags allocated to",
+                "object_name": "dbo.p21_move_hard_allocations",
+                "result_set": "module_definition_hit"
+              },
+              {
+                "line_no": "703",
+                "line_text": "-- Feature 18849: A few corrections to the p21_move_hard_allocations",
+                "object_name": "dbo.p21_move_hard_allocations",
+                "result_set": "module_definition_hit"
+              },
+              {
+                "line_no": "726",
+                "line_text": "-- Feature 18849-7: Add new SPs and UDF and modify SP for Allocated Tag",
+                "object_name": "dbo.p21_move_hard_allocations",
+                "result_set": "module_definition_hit"
+              }
+            ]
+          },
+          {
+            "rowCount": 6,
+            "rows": [
+              {
+                "is_output": "0",
+                "max_length": "4",
+                "object_name": "dbo.p21_move_hard_allocations",
+                "parameter_id": "1",
+                "parameter_name": "@ai_TagDetailUID",
+                "result_set": "proc_parameters",
+                "type_name": "int"
+              },
+              {
+                "is_output": "0",
+                "max_length": "4",
+                "object_name": "dbo.p21_move_hard_allocations",
+                "parameter_id": "2",
+                "parameter_name": "@ai_ToBinUID",
+                "result_set": "proc_parameters",
+                "type_name": "int"
+              },
+              {
+                "is_output": "0",
+                "max_length": "4",
+                "object_name": "dbo.p21_move_hard_allocations",
+                "parameter_id": "3",
+                "parameter_name": "@ai_FromBinUID",
+                "result_set": "proc_parameters",
+                "type_name": "int"
+              },
+              {
+                "is_output": "1",
+                "max_length": "9",
+                "object_name": "dbo.p21_move_hard_allocations",
+                "parameter_id": "4",
+                "parameter_name": "@adc_QtyMoved",
+                "result_set": "proc_parameters",
+                "type_name": "decimal"
+              },
+              {
+                "is_output": "0",
+                "max_length": "16",
+                "object_name": "dbo.p21_move_hard_allocations",
+                "parameter_id": "5",
+                "parameter_name": "@proc_run_top_parent_identifier",
+                "result_set": "proc_parameters",
+                "type_name": "uniqueidentifier"
+              },
+              {
+                "is_output": "0",
+                "max_length": "16",
+                "object_name": "dbo.p21_move_hard_allocations",
+                "parameter_id": "6",
+                "parameter_name": "@proc_run_parent_identifier",
+                "result_set": "proc_parameters",
+                "type_name": "uniqueidentifier"
+              }
+            ]
+          }
+        ]
+      },
+      "pipelineName": "Diag_Coats_Auto_Sales_Allocation",
+      "pipelineRunId": "c695a1dc-5308-11f1-9f5a-9cb150a3acae",
+      "recoveryStatus": "None",
+      "resourceGroup": "RG1",
+      "retryAttempt": null,
+      "status": "Succeeded",
+      "userProperties": {}
+    }
+  ]
+}

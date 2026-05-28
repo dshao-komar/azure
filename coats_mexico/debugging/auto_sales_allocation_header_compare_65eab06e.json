@@ -1,0 +1,178 @@
+﻿{
+  "continuationToken": null,
+  "value": [
+    {
+      "activityName": "RunQuery",
+      "activityRunEnd": "2026-05-18T22:32:25.607988+00:00",
+      "activityRunId": "a12352c7-8d85-41fe-b04e-daa302818bb2",
+      "activityRunStart": "2026-05-18T22:32:14.208424+00:00",
+      "activityType": "Script",
+      "durationInMs": 11399,
+      "error": {
+        "details": "",
+        "errorCode": "",
+        "failureType": "",
+        "message": "",
+        "target": "RunQuery"
+      },
+      "executionDetails": {
+        "integrationRuntime": [
+          {
+            "location": "West US",
+            "name": "SQLServer",
+            "nodes": [
+              "INSPIRON_16"
+            ],
+            "type": "SelfHosted"
+          }
+        ]
+      },
+      "id": "/SUBSCRIPTIONS/6624EC13-3826-43B2-8E45-077F9051B88F/RESOURCEGROUPS/RG1/PROVIDERS/MICROSOFT.DATAFACTORY/FACTORIES/2026-04-01-DF1/pipelineruns/65eab06e-5309-11f1-b5c1-9cb150a3acae/activityruns/a12352c7-8d85-41fe-b04e-daa302818bb2",
+      "input": {
+        "logSettings": {
+          "logDestination": "ActivityOutput"
+        },
+        "scriptBlockExecutionTimeout": "00:10:00",
+        "scripts": [
+          {
+            "text": "USE P21;\nSET NOCOUNT ON;\nSET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;\nDECLARE @Target int=682, @Good int=681;\nSELECT result_set='header_compare', sample_name=CASE WHEN container_receipts_hdr_uid=@Target THEN 'TARGET' ELSE 'KNOWN_GOOD' END, container_receipts_hdr_uid=CONVERT(varchar(50),container_receipts_hdr_uid), vessel_receipts_container_uid=CONVERT(varchar(50),vessel_receipts_container_uid), date_received=CONVERT(varchar(30),date_received,121), period=CONVERT(varchar(50),period), year_for_period=CONVERT(varchar(50),year_for_period), row_status_flag=CONVERT(varchar(50),row_status_flag), date_created=CONVERT(varchar(30),date_created,121), created_by, date_last_modified=CONVERT(varchar(30),date_last_modified,121), last_maintained_by, receiving_location_id=CONVERT(varchar(50),receiving_location_id), currency_line_uid=CONVERT(varchar(50),currency_line_uid), exchange_date=CONVERT(varchar(30),exchange_date,121), rfnav_trans_no=CONVERT(varchar(50),rfnav_trans_no), processing, processing_by\nFROM dbo.container_receipts_hdr WHERE container_receipts_hdr_uid IN (@Target,@Good)\nORDER BY sample_name DESC;\nSELECT result_set='vessel_container_compare', sample_name=CASE WHEN crh.container_receipts_hdr_uid=@Target THEN 'TARGET' ELSE 'KNOWN_GOOD' END, crh_uid=CONVERT(varchar(50),crh.container_receipts_hdr_uid), vc.*\nFROM dbo.container_receipts_hdr crh JOIN dbo.vessel_receipts_container vc ON vc.vessel_receipts_container_uid=crh.vessel_receipts_container_uid WHERE crh.container_receipts_hdr_uid IN (@Target,@Good);",
+            "type": "Query"
+          }
+        ]
+      },
+      "integrationRuntimeNames": [
+        "sqlserver"
+      ],
+      "iterationHash": "",
+      "linkedServiceName": "",
+      "output": {
+        "billingReference": {
+          "activityType": "PipelineActivity",
+          "billableDuration": [
+            {
+              "duration": 0.016666666666666666,
+              "meterType": "SelfhostedIR",
+              "unit": "Hours"
+            }
+          ]
+        },
+        "durationInQueue": {
+          "integrationRuntimeQueue": 5
+        },
+        "effectiveIntegrationRuntime": "SQLServer",
+        "executionDuration": 0,
+        "outputLogs": "Changed database context to 'P21'.\n",
+        "outputLogsLocation": "",
+        "outputParameters": {},
+        "outputTruncated": false,
+        "recordsAffected": 0,
+        "resultSetCount": 2,
+        "resultSets": [
+          {
+            "rowCount": 2,
+            "rows": [
+              {
+                "container_receipts_hdr_uid": "682",
+                "created_by": "ADF",
+                "currency_line_uid": null,
+                "date_created": "2026-05-14 15:50:25.307",
+                "date_last_modified": "2026-05-18 09:59:50.830",
+                "date_received": "2026-05-18 00:00:00.000",
+                "exchange_date": null,
+                "last_maintained_by": "VTAMAYO",
+                "period": "5",
+                "processing": "N",
+                "processing_by": null,
+                "receiving_location_id": null,
+                "result_set": "header_compare",
+                "rfnav_trans_no": null,
+                "row_status_flag": "972",
+                "sample_name": "TARGET",
+                "vessel_receipts_container_uid": "762",
+                "year_for_period": "2026"
+              },
+              {
+                "container_receipts_hdr_uid": "681",
+                "created_by": "VTAMAYO",
+                "currency_line_uid": null,
+                "date_created": "2026-04-29 10:16:26.933",
+                "date_last_modified": "2026-05-04 12:20:23.580",
+                "date_received": "2026-05-04 00:00:00.000",
+                "exchange_date": "2026-04-29 00:00:00.000",
+                "last_maintained_by": "MORTIZ",
+                "period": "5",
+                "processing": "Y",
+                "processing_by": "DSHAO",
+                "receiving_location_id": null,
+                "result_set": "header_compare",
+                "rfnav_trans_no": null,
+                "row_status_flag": "972",
+                "sample_name": "KNOWN_GOOD",
+                "vessel_receipts_container_uid": "761",
+                "year_for_period": "2026"
+              }
+            ]
+          },
+          {
+            "rowCount": 2,
+            "rows": [
+              {
+                "comments": null,
+                "container_building_uid": 899,
+                "container_capacity": null,
+                "container_name": "TA858",
+                "container_packaging_weight": 0.0,
+                "container_seal_id": null,
+                "container_type_uid": null,
+                "created_by": "KMCKINLEY",
+                "crh_uid": "681",
+                "date_created": "2026-04-28T18:14:06.13Z",
+                "date_last_modified": "2026-05-04T12:20:23.657Z",
+                "expected_arrival_date": "2026-05-01T00:00:00Z",
+                "last_maintained_by": "MORTIZ",
+                "processing": null,
+                "processing_by": null,
+                "received_date": null,
+                "result_set": "vessel_container_compare",
+                "row_status_flag": 701,
+                "sample_name": "KNOWN_GOOD",
+                "vessel_receipts_container_uid": 761,
+                "vessel_receipts_hdr_uid": 761
+              },
+              {
+                "comments": null,
+                "container_building_uid": 900,
+                "container_capacity": null,
+                "container_name": "TM735 2026-05-14",
+                "container_packaging_weight": 0.0,
+                "container_seal_id": null,
+                "container_type_uid": null,
+                "created_by": "ADF",
+                "crh_uid": "682",
+                "date_created": "2026-05-14T15:50:25.307Z",
+                "date_last_modified": "2026-05-18T09:59:50.953Z",
+                "expected_arrival_date": "2026-05-15T00:00:00Z",
+                "last_maintained_by": "VTAMAYO",
+                "processing": null,
+                "processing_by": null,
+                "received_date": null,
+                "result_set": "vessel_container_compare",
+                "row_status_flag": 701,
+                "sample_name": "TARGET",
+                "vessel_receipts_container_uid": 762,
+                "vessel_receipts_hdr_uid": 762
+              }
+            ]
+          }
+        ]
+      },
+      "pipelineName": "Diag_Coats_Auto_Sales_Allocation",
+      "pipelineRunId": "65eab06e-5309-11f1-b5c1-9cb150a3acae",
+      "recoveryStatus": "None",
+      "resourceGroup": "RG1",
+      "retryAttempt": null,
+      "status": "Succeeded",
+      "userProperties": {}
+    }
+  ]
+}

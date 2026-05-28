@@ -1,0 +1,224 @@
+﻿{
+  "continuationToken": null,
+  "value": [
+    {
+      "activityName": "RunQuery",
+      "activityRunEnd": "2026-05-18T22:38:59.130867+00:00",
+      "activityRunId": "6d79cad1-9cae-40af-9897-557e068400aa",
+      "activityRunStart": "2026-05-18T22:38:49.417734+00:00",
+      "activityType": "Script",
+      "durationInMs": 9713,
+      "error": {
+        "details": "",
+        "errorCode": "",
+        "failureType": "",
+        "message": "",
+        "target": "RunQuery"
+      },
+      "executionDetails": {
+        "integrationRuntime": [
+          {
+            "location": "West US",
+            "name": "SQLServer",
+            "nodes": [
+              "INSPIRON_16"
+            ],
+            "type": "SelfHosted"
+          }
+        ]
+      },
+      "id": "/SUBSCRIPTIONS/6624EC13-3826-43B2-8E45-077F9051B88F/RESOURCEGROUPS/RG1/PROVIDERS/MICROSOFT.DATAFACTORY/FACTORIES/2026-04-01-DF1/pipelineruns/519034d5-530a-11f1-82e0-9cb150a3acae/activityruns/6d79cad1-9cae-40af-9897-557e068400aa",
+      "input": {
+        "logSettings": {
+          "logDestination": "ActivityOutput"
+        },
+        "scriptBlockExecutionTimeout": "00:10:00",
+        "scripts": [
+          {
+            "text": "USE P21;\nSET NOCOUNT ON;\nSET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;\nDECLARE @TargetStart decimal(19,0)=9010472, @TargetEnd decimal(19,0)=9010490, @GoodStart decimal(19,0)=9010440, @GoodEnd decimal(19,0)=9010450;\nSELECT result_set='transfer_backorders_columns', column_id=CONVERT(varchar(20),c.column_id), column_name=c.name, type_name=ty.name FROM sys.columns c JOIN sys.types ty ON ty.user_type_id=c.user_type_id WHERE c.object_id=OBJECT_ID('dbo.transfer_backorders') ORDER BY c.column_id;\nSELECT result_set='transfer_backorders_detail_columns', column_id=CONVERT(varchar(20),c.column_id), column_name=c.name, type_name=ty.name FROM sys.columns c JOIN sys.types ty ON ty.user_type_id=c.user_type_id WHERE c.object_id=OBJECT_ID('dbo.transfer_backorders_detail') ORDER BY c.column_id;\nSELECT result_set='transfer_backorders_rows', sample_name=CASE WHEN tb.transfer_no BETWEEN @TargetStart AND @TargetEnd THEN 'TARGET' ELSE 'KNOWN_GOOD' END, transfer_no=CONVERT(varchar(50),tb.transfer_no), rows_count=CONVERT(varchar(50),COUNT(*))\nFROM transfer_backorders tb WHERE tb.transfer_no BETWEEN @TargetStart AND @TargetEnd OR tb.transfer_no BETWEEN @GoodStart AND @GoodEnd GROUP BY CASE WHEN tb.transfer_no BETWEEN @TargetStart AND @TargetEnd THEN 'TARGET' ELSE 'KNOWN_GOOD' END,tb.transfer_no ORDER BY sample_name, transfer_no;\nSELECT result_set='transfer_backorders_detail_rows', sample_name=CASE WHEN tbd.transfer_no BETWEEN @TargetStart AND @TargetEnd THEN 'TARGET' ELSE 'KNOWN_GOOD' END, transfer_no=CONVERT(varchar(50),tbd.transfer_no), rows_count=CONVERT(varchar(50),COUNT(*))\nFROM transfer_backorders_detail tbd WHERE tbd.transfer_no BETWEEN @TargetStart AND @TargetEnd OR tbd.transfer_no BETWEEN @GoodStart AND @GoodEnd GROUP BY CASE WHEN tbd.transfer_no BETWEEN @TargetStart AND @TargetEnd THEN 'TARGET' ELSE 'KNOWN_GOOD' END,tbd.transfer_no ORDER BY sample_name, transfer_no;",
+            "type": "Query"
+          }
+        ]
+      },
+      "integrationRuntimeNames": [
+        "sqlserver"
+      ],
+      "iterationHash": "",
+      "linkedServiceName": "",
+      "output": {
+        "billingReference": {
+          "activityType": "PipelineActivity",
+          "billableDuration": [
+            {
+              "duration": 0.016666666666666666,
+              "meterType": "SelfhostedIR",
+              "unit": "Hours"
+            }
+          ]
+        },
+        "durationInQueue": {
+          "integrationRuntimeQueue": 4
+        },
+        "effectiveIntegrationRuntime": "SQLServer",
+        "executionDuration": 0,
+        "outputLogs": "Changed database context to 'P21'.\n",
+        "outputLogsLocation": "",
+        "outputParameters": {},
+        "outputTruncated": false,
+        "recordsAffected": 0,
+        "resultSetCount": 2,
+        "resultSets": [
+          {
+            "rowCount": 15,
+            "rows": [
+              {
+                "column_id": "1",
+                "column_name": "transfer_backorders_uid",
+                "result_set": "transfer_backorders_columns",
+                "type_name": "int"
+              },
+              {
+                "column_id": "2",
+                "column_name": "source_location_id",
+                "result_set": "transfer_backorders_columns",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "3",
+                "column_name": "destination_location_id",
+                "result_set": "transfer_backorders_columns",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "4",
+                "column_name": "inv_mast_uid",
+                "result_set": "transfer_backorders_columns",
+                "type_name": "int"
+              },
+              {
+                "column_id": "5",
+                "column_name": "qty_backordered",
+                "result_set": "transfer_backorders_columns",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "6",
+                "column_name": "date_created",
+                "result_set": "transfer_backorders_columns",
+                "type_name": "datetime"
+              },
+              {
+                "column_id": "7",
+                "column_name": "date_last_modified",
+                "result_set": "transfer_backorders_columns",
+                "type_name": "datetime"
+              },
+              {
+                "column_id": "8",
+                "column_name": "last_maintained_by",
+                "result_set": "transfer_backorders_columns",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "9",
+                "column_name": "source",
+                "result_set": "transfer_backorders_columns",
+                "type_name": "int"
+              },
+              {
+                "column_id": "10",
+                "column_name": "type",
+                "result_set": "transfer_backorders_columns",
+                "type_name": "int"
+              },
+              {
+                "column_id": "11",
+                "column_name": "po_no",
+                "result_set": "transfer_backorders_columns",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "12",
+                "column_name": "po_line_no",
+                "result_set": "transfer_backorders_columns",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "13",
+                "column_name": "item_revision_uid",
+                "result_set": "transfer_backorders_columns",
+                "type_name": "int"
+              },
+              {
+                "column_id": "14",
+                "column_name": "transfer_no",
+                "result_set": "transfer_backorders_columns",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "15",
+                "column_name": "lock_transaction",
+                "result_set": "transfer_backorders_columns",
+                "type_name": "char"
+              }
+            ]
+          },
+          {
+            "rowCount": 7,
+            "rows": [
+              {
+                "column_id": "1",
+                "column_name": "transfer_backorders_detail_uid",
+                "result_set": "transfer_backorders_detail_columns",
+                "type_name": "int"
+              },
+              {
+                "column_id": "2",
+                "column_name": "transfer_backorders_uid",
+                "result_set": "transfer_backorders_detail_columns",
+                "type_name": "int"
+              },
+              {
+                "column_id": "3",
+                "column_name": "transfer_no",
+                "result_set": "transfer_backorders_detail_columns",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "4",
+                "column_name": "date_created",
+                "result_set": "transfer_backorders_detail_columns",
+                "type_name": "datetime"
+              },
+              {
+                "column_id": "5",
+                "column_name": "created_by",
+                "result_set": "transfer_backorders_detail_columns",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "6",
+                "column_name": "date_last_modified",
+                "result_set": "transfer_backorders_detail_columns",
+                "type_name": "datetime"
+              },
+              {
+                "column_id": "7",
+                "column_name": "last_maintained_by",
+                "result_set": "transfer_backorders_detail_columns",
+                "type_name": "varchar"
+              }
+            ]
+          }
+        ]
+      },
+      "pipelineName": "Diag_Coats_Auto_Sales_Allocation",
+      "pipelineRunId": "519034d5-530a-11f1-82e0-9cb150a3acae",
+      "recoveryStatus": "None",
+      "resourceGroup": "RG1",
+      "retryAttempt": null,
+      "status": "Succeeded",
+      "userProperties": {}
+    }
+  ]
+}

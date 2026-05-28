@@ -1,0 +1,36 @@
+﻿{
+    "properties":  {
+                       "activities":  [
+                                          {
+                                              "name":  "RunProbe",
+                                              "policy":  {
+                                                             "retryIntervalInSeconds":  30,
+                                                             "secureInput":  false,
+                                                             "retry":  0,
+                                                             "timeout":  "0.00:10:00",
+                                                             "secureOutput":  false
+                                                         },
+                                              "dependsOn":  [
+
+                                                            ],
+                                              "type":  "Script",
+                                              "linkedServiceName":  {
+                                                                        "referenceName":  "SqlServer1",
+                                                                        "type":  "LinkedServiceReference"
+                                                                    },
+                                              "typeProperties":  {
+                                                                     "logSettings":  {
+                                                                                         "logDestination":  "ActivityOutput"
+                                                                                     },
+                                                                     "scriptBlockExecutionTimeout":  "00:10:00",
+                                                                     "scripts":  [
+                                                                                     {
+                                                                                         "text":  "USE P21Play;\nSET NOCOUNT ON;\nDECLARE @PoNo int=6070127, @PoLineNo int=8, @PoLineUid int=387337, @LocationId int=210, @ItemId varchar(40)=\u002711880 528SY\u0027;\n\nSELECT\n    section=\u0027oe_line_po_detail\u0027,\n    order_number=CONVERT(nvarchar(40), order_number),\n    line_number=CONVERT(nvarchar(40), line_number),\n    po_no=CONVERT(nvarchar(40), po_no),\n    po_line_number=CONVERT(nvarchar(40), po_line_number),\n    quantity_on_po=CONVERT(nvarchar(60), quantity_on_po),\n    completed,\n    cancel_flag,\n    delete_flag,\n    connection_type,\n    date_created=CONVERT(nvarchar(30), date_created, 126),\n    date_last_modified=CONVERT(nvarchar(30), date_last_modified, 126),\n    last_maintained_by\nFROM dbo.oe_line_po\nWHERE po_no=@PoNo AND po_line_number=@PoLineNo;\n\nSELECT TOP (20)\n    section=\u0027function_call_type_P\u0027,\n    order_no=CONVERT(nvarchar(40), order_no),\n    item_id,\n    qty_ordered=CONVERT(nvarchar(60), qty_ordered),\n    qty_allocated=CONVERT(nvarchar(60), qty_allocated),\n    linked_qty=CONVERT(nvarchar(60), linked_qty),\n    original_linked_qty=CONVERT(nvarchar(60), original_linked_qty),\n    c_qty_on_other_po=CONVERT(nvarchar(60), c_qty_on_other_po),\n    line_no=CONVERT(nvarchar(20), line_no),\n    oe_line_uid=CONVERT(nvarchar(40), oe_line_uid),\n    po_no=CONVERT(nvarchar(40), po_no),\n    po_line_no=CONVERT(nvarchar(20), po_line_no),\n    po_line_uid=CONVERT(nvarchar(40), po_line_uid)\nFROM dbo.p21_fnt_get_linkable_transactions(@LocationId,@ItemId,@PoNo,@PoLineNo,NULL,NULL,\u0027N\u0027,@PoLineUid,\u0027N\u0027,\u0027N\u0027,\u0027P\u0027,CONVERT(date, GETDATE()))\nORDER BY order_no, line_no;\n\nSELECT TOP (20)\n    section=\u0027function_call_type_G\u0027,\n    order_no=CONVERT(nvarchar(40), order_no),\n    item_id,\n    qty_ordered=CONVERT(nvarchar(60), qty_ordered),\n    qty_allocated=CONVERT(nvarchar(60), qty_allocated),\n    linked_qty=CONVERT(nvarchar(60), linked_qty),\n    original_linked_qty=CONVERT(nvarchar(60), original_linked_qty),\n    c_qty_on_other_po=CONVERT(nvarchar(60), c_qty_on_other_po),\n    line_no=CONVERT(nvarchar(20), line_no),\n    oe_line_uid=CONVERT(nvarchar(40), oe_line_uid),\n    po_no=CONVERT(nvarchar(40), po_no),\n    po_line_no=CONVERT(nvarchar(20), po_line_no),\n    po_line_uid=CONVERT(nvarchar(40), po_line_uid)\nFROM dbo.p21_fnt_get_linkable_transactions(@LocationId,@ItemId,@PoNo,@PoLineNo,NULL,NULL,\u0027N\u0027,@PoLineUid,\u0027N\u0027,\u0027N\u0027,\u0027G\u0027,CONVERT(date, GETDATE()))\nORDER BY order_no, line_no;\n\nSELECT TOP (100)\n    section=\u0027transfer_hdr_recent\u0027,\n    th.transfer_no,\n    th.from_location_id,\n    th.to_location_id,\n    th.complete_flag,\n    th.delete_flag,\n    th.date_created=CONVERT(nvarchar(30), th.date_created, 126),\n    th.created_by,\n    th.last_maintained_by\nFROM dbo.transfer_hdr AS th\nWHERE th.date_created \u003e= \u00272026-05-19\u0027\nORDER BY th.transfer_no DESC;\n\nSELECT TOP (100)\n    section=\u0027transfer_line_for_item\u0027,\n    th.transfer_no,\n    tl.transfer_line_no,\n    tl.inv_mast_uid,\n    im.item_id,\n    tl.qty_to_transfer,\n    tl.qty_transferred,\n    tl.qty_received,\n    th.from_location_id,\n    th.to_location_id,\n    th.date_created=CONVERT(nvarchar(30), th.date_created, 126)\nFROM dbo.transfer_hdr AS th\nJOIN dbo.transfer_line AS tl ON tl.transfer_no=th.transfer_no\nJOIN dbo.inv_mast AS im ON im.inv_mast_uid=tl.inv_mast_uid\nWHERE th.date_created \u003e= \u00272026-05-19\u0027\n  AND im.item_id=@ItemId\nORDER BY th.transfer_no DESC;",
+                                                                                         "type":  "Query"
+                                                                                     }
+                                                                                 ]
+                                                                 }
+                                          }
+                                      ]
+                   }
+}

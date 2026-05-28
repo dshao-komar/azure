@@ -1,3 +1,9 @@
+param(
+  [switch]$Live,
+  [string]$ReceiptDatabase,
+  [switch]$BypassMissingPoLine
+)
+
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
@@ -257,6 +263,10 @@ function ConvertTo-AzCliPath {
 }
 
 $config = Read-DotEnv -Path $envPath
+if (-not $Live) {
+  $config["COATS_VALIDATION_EMAIL_TO"] = "dshao@komar.com"
+  $config["COATS_VALIDATION_EMAIL_CC"] = ""
+}
 Require-Config -Config $config -Names @(
   "AZURE_TENANT_ID",
   "AZURE_CLIENT_ID",
@@ -280,6 +290,21 @@ Ensure-AzureProvider -Namespace "Microsoft.Web"
 $location = if ($config.ContainsKey("AZURE_LOCATION")) { $config["AZURE_LOCATION"] } else { "westus" }
 $functionAppName = if ($config.ContainsKey("COATS_FUNCTION_APP_NAME")) { $config["COATS_FUNCTION_APP_NAME"] } else { "func-coats-mexico-$($config["STORAGE_ACCOUNT_NAME"])" }
 $pipelineName = if ($config.ContainsKey("COATS_ADF_PIPELINE_NAME")) { $config["COATS_ADF_PIPELINE_NAME"] } else { "Coats_Mexico_Shipment_Stage_And_Validate" }
+$pipelineDisplayPrefix = ""
+$targetDatabase = "P21Import"
+$stagingDatabase = "P21Import"
+if ($Live) {
+  $pipelineName = "LIVE_Coats_Mexico_Shipment_Stage_And_Validate"
+  $pipelineDisplayPrefix = "[LIVE] "
+  $targetDatabase = "P21"
+}
+if (-not [string]::IsNullOrWhiteSpace($ReceiptDatabase)) {
+  $targetDatabase = $ReceiptDatabase.Trim()
+  if (-not $Live -and $targetDatabase -ne "P21Import") {
+    $pipelineDisplayPrefix = "[TEST $targetDatabase] "
+  }
+}
+$receiptActivityName = if ($Live) { "CreateP21Receipts" } else { "CreateP21ImportReceipts" }
 $watchFolderPath = if ($config.ContainsKey("COATS_SHAREPOINT_FOLDER_PATH")) { $config["COATS_SHAREPOINT_FOLDER_PATH"] } else { "Coats Mexico Shipment Reports" }
 $p21CreatedBy = if ($config.ContainsKey("COATS_P21_CREATED_BY")) { $config["COATS_P21_CREATED_BY"] } else { "ADF" }
 $library = $config["SHAREPOINT_LIBRARY"]
@@ -348,6 +373,9 @@ Set-FunctionAppSettings -Config $config -FunctionAppName $functionAppName -Setti
   COATS_VALIDATION_EMAIL_FROM = $config["COATS_VALIDATION_EMAIL_FROM"]
   COATS_VALIDATION_EMAIL_TO = $config["COATS_VALIDATION_EMAIL_TO"]
   COATS_VALIDATION_EMAIL_CC = if ($config.ContainsKey("COATS_VALIDATION_EMAIL_CC")) { $config["COATS_VALIDATION_EMAIL_CC"] } else { "" }
+  COATS_PIPELINE_DISPLAY_PREFIX = $pipelineDisplayPrefix
+  COATS_TARGET_DATABASE = $targetDatabase
+  COATS_STAGING_DATABASE = $stagingDatabase
   AzureWebJobsFeatureFlags = "EnableWorkerIndexing"
   SCM_DO_BUILD_DURING_DEPLOYMENT = "true"
   ENABLE_ORYX_BUILD = "true"
@@ -361,35 +389,65 @@ if (Test-Path $packageZip) { Remove-Item -Force $packageZip }
 New-Item -ItemType Directory -Path $packageRoot | Out-Null
 Copy-Item (Join-Path $PSScriptRoot "azure_function/host.json") $packageRoot
 Copy-Item (Join-Path $PSScriptRoot "azure_function/requirements.txt") $packageRoot
+Copy-Item (Join-Path $PSScriptRoot "azure_function/function_app.py") $packageRoot
 Copy-Item (Join-Path $PSScriptRoot "azure_function/coats_function_common.py") $packageRoot
 Copy-Item (Join-Path $PSScriptRoot "azure_function/GraphSharePointNotification") $packageRoot -Recurse
 Copy-Item (Join-Path $PSScriptRoot "azure_function/ProcessCoatsWorkbook") $packageRoot -Recurse
 Copy-Item (Join-Path $PSScriptRoot "azure_function/SendCoatsValidationEmail") $packageRoot -Recurse
+Copy-Item (Join-Path $PSScriptRoot "azure_function/SendCoatsSuccessEmail") $packageRoot -Recurse
 Copy-Item (Join-Path $PSScriptRoot "src/extract_coats_mexico_workbook.py") (Join-Path $packageRoot "extract_coats_mexico_workbook.py")
 
 Write-Host "Installing Python dependencies into package..."
 $sitePackagesPath = Join-Path $packageRoot ".python_packages/lib/site-packages"
 New-Item -ItemType Directory -Path $sitePackagesPath -Force | Out-Null
-& python3 -m pip install `
+$pythonCommand = Get-Command python3, python -ErrorAction SilentlyContinue |
+  Where-Object { $_.Source -notlike "*\WindowsApps\*" } |
+  Select-Object -First 1
+$pythonArgs = @()
+if (-not $pythonCommand) {
+  $pythonCommand = Get-Command py -ErrorAction SilentlyContinue | Select-Object -First 1
+  $pythonArgs = @("-3")
+}
+if (-not $pythonCommand) {
+  throw "Python was not found. Install Python or add it to PATH before deploying."
+}
+
+$pipPlatformArgs = @(
+  "--platform", "manylinux2014_x86_64",
+  "--implementation", "cp",
+  "--python-version", "3.12",
+  "--only-binary=:all:"
+)
+
+& $pythonCommand.Source @pythonArgs -m pip install `
   --disable-pip-version-check `
   --no-input `
+  @pipPlatformArgs `
   --target $sitePackagesPath `
   -r (Join-Path $PSScriptRoot "azure_function/requirements.txt") | Out-Null
 if ($LASTEXITCODE -ne 0) {
   throw "Python dependency installation failed."
 }
 
-$packageItems = @(
-  (Join-Path $packageRoot "host.json"),
-  (Join-Path $packageRoot "requirements.txt"),
-  (Join-Path $packageRoot "coats_function_common.py"),
-  (Join-Path $packageRoot "extract_coats_mexico_workbook.py"),
-  (Join-Path $packageRoot "GraphSharePointNotification"),
-  (Join-Path $packageRoot "ProcessCoatsWorkbook"),
-  (Join-Path $packageRoot "SendCoatsValidationEmail"),
-  (Join-Path $packageRoot ".python_packages")
-)
-Compress-Archive -Path $packageItems -DestinationPath $packageZip -Force
+$env:PACKAGE_ROOT = $packageRoot
+$env:PACKAGE_ZIP = $packageZip
+@'
+import os
+import zipfile
+
+root = os.environ["PACKAGE_ROOT"]
+zip_path = os.environ["PACKAGE_ZIP"]
+
+with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as archive:
+    for dirpath, _, filenames in os.walk(root):
+        for filename in filenames:
+            path = os.path.join(dirpath, filename)
+            arcname = os.path.relpath(path, root).replace(os.sep, "/")
+            archive.write(path, arcname)
+'@ | & $pythonCommand.Source @pythonArgs -
+if ($LASTEXITCODE -ne 0) {
+  throw "Function package zip creation failed."
+}
 
 Write-Host "Deploying Function App package..."
 $packageZipForAz = ConvertTo-AzCliPath -Path $packageZip
@@ -403,10 +461,11 @@ Invoke-AzJson -Arguments @(
 $functionKey = Get-FunctionHostKey -ResourceGroup $config["AZURE_RESOURCE_GROUP"] -FunctionAppName $functionAppName
 $processUrl = "https://$functionAppName.azurewebsites.net/api/process-coats-workbook?code=$functionKey"
 $validationEmailUrl = "https://$functionAppName.azurewebsites.net/api/send-coats-validation-email?code=$functionKey"
+$successEmailUrl = "https://$functionAppName.azurewebsites.net/api/send-coats-success-email?code=$functionKey"
 $notificationUrl = "https://$functionAppName.azurewebsites.net/api/graph-sharepoint-notification?code=$functionKey"
 
 Write-Host "Creating/updating ADF pipeline $pipelineName..."
-$stagingSqlPath = Join-Path $PSScriptRoot "sql/001_create_coats_mexico_staging.sql"
+$stagingSqlPath = Join-Path $PSScriptRoot "sql/main/001_create_coats_mexico_staging.sql"
 $stagingSqlText = Get-Content -Raw -Path $stagingSqlPath
 $stagingBatches = [regex]::Split($stagingSqlText, "(?im)^\s*GO\s*$")
 $stagingDdlText = $stagingBatches[0]
@@ -431,7 +490,7 @@ DECLARE @payload nvarchar(max) = @extraction_payload;
 $stageBody
 "@
 
-$validationSqlPath = Join-Path $PSScriptRoot "sql/002_validate_coats_mexico_staging_from_p21.sql"
+$validationSqlPath = Join-Path $PSScriptRoot "sql/main/002_validate_coats_mexico_staging_from_p21.sql"
 $validationSqlText = Get-Content -Raw -Path $validationSqlPath
 $validationSqlText = [regex]::Replace($validationSqlText, "(?im)^\s*USE\s+P21Import\s*;\s*$", "")
 $validationSqlText = [regex]::Replace($validationSqlText, "(?im)^\s*GO\s*$", "")
@@ -445,6 +504,17 @@ $validationSqlText = [regex]::Replace(
   "(?is)IF\s+@ShipmentFileId\s*=\s*'00000000-0000-0000-0000-000000000000'\s*BEGIN\s*THROW\s+50000,\s*'Set @ShipmentFileId before running validation\.',\s*1;\s*END;",
   "IF @ShipmentFileId IS NULL`nBEGIN`n    THROW 50000, 'Extractor payload metadata.shipment_file_id is missing or invalid.', 1;`nEND;"
 )
+if ($BypassMissingPoLine) {
+  $validationSqlText = [regex]::Replace(
+    $validationSqlText,
+    "(?im)^\s*DECLARE\s+@BypassMissingPoLine\s+bit\s*=\s*0\s*;\s*$",
+    "DECLARE @BypassMissingPoLine bit = 1;"
+  )
+}
+if ($targetDatabase -ne "P21Import") {
+  $validationSqlText = [regex]::Replace($validationSqlText, "(?i)(\bFROM\s+)dbo\.(document_line_bin|inventory_supplier|inv_mast|po_line)\b", "`${1}$targetDatabase.dbo.`$2")
+  $validationSqlText = [regex]::Replace($validationSqlText, "(?i)(\bJOIN\s+)dbo\.(document_line_bin|inventory_supplier|inv_mast|po_line)\b", "`${1}$targetDatabase.dbo.`$2")
+}
 $validationScript = @"
 USE P21Import;
 
@@ -454,7 +524,7 @@ DECLARE @ShipmentFileId uniqueidentifier = TRY_CONVERT(uniqueidentifier, JSON_VA
 $validationSqlText
 "@
 
-$receiptSqlPath = Join-Path $PSScriptRoot "sql/004_create_coats_mexico_p21import_receipts.sql"
+$receiptSqlPath = Join-Path $PSScriptRoot "sql/main/004_create_coats_mexico_p21import_receipts.sql"
 $receiptSqlText = Get-Content -Raw -Path $receiptSqlPath
 $receiptBatches = [regex]::Split($receiptSqlText, "(?im)^\s*GO\s*$")
 $receiptDdlText = ($receiptBatches | Where-Object {
@@ -475,8 +545,37 @@ if ($receiptLastEndIndex -lt 0) {
   throw "Could not find final END in receipt procedure body."
 }
 $receiptBody = $receiptBody.Substring(0, $receiptLastEndIndex)
+if ($Live) {
+  $receiptDdlText = $receiptDdlText `
+    -replace "Create Coats Mexico P21Import receipt records from validated staging rows\.", "Create Coats Mexico P21 receipt records from validated P21Import staging rows." `
+    -replace "Run in P21Import\. This script intentionally does not use the P21 database and\s+does not insert document_line_bin rows\.", "Stage audit DDL runs in P21Import; receipt inserts run in P21. This script does not insert document_line_bin rows."
+  $receiptBody = $receiptBody `
+    -replace "DB_NAME\(\) <> 'P21Import'", "DB_NAME() <> 'P21'" `
+    -replace "This procedure must run in the P21Import database\.", "This receipt script must run in the P21 database." `
+    -replace "Missing required P21Import column", "Missing required P21 column" `
+    -replace "required P21Import target columns", "required P21 target columns" `
+    -replace "P21Import receipt records", "P21 receipt records" `
+    -replace "\bdbo\.(coats_mexico_shipment_receipt_build|coats_mexico_shipment_file|coats_mexico_shipment_validation_issue|coats_mexico_shipment_pallet_line|coats_mexico_shipment_raw_line)\b", "P21Import.dbo.`$1"
+}
+elseif ($targetDatabase -ne "P21Import") {
+  $receiptDdlText = $receiptDdlText `
+    -replace "Create Coats Mexico P21Import receipt records from validated staging rows\.", "Create Coats Mexico $targetDatabase receipt records from validated P21Import staging rows." `
+    -replace "Run in P21Import\. This script intentionally does not use the P21 database and\s+does not insert document_line_bin rows\.", "Stage audit DDL runs in P21Import; receipt inserts run in $targetDatabase. This script does not insert document_line_bin rows."
+  $receiptBody = $receiptBody `
+    -replace "DB_NAME\(\) <> 'P21Import'", "DB_NAME() <> '$targetDatabase'" `
+    -replace "This procedure must run in the P21Import database\.", "This receipt script must run in the $targetDatabase database." `
+    -replace "Missing required P21Import column", "Missing required $targetDatabase column" `
+    -replace "required P21Import target columns", "required $targetDatabase target columns" `
+    -replace "P21Import receipt records", "$targetDatabase receipt records" `
+    -replace "\bdbo\.(coats_mexico_shipment_receipt_build|coats_mexico_shipment_file|coats_mexico_shipment_validation_issue|coats_mexico_shipment_pallet_line|coats_mexico_shipment_raw_line)\b", "P21Import.dbo.`$1"
+}
+$receiptDatabase = $targetDatabase
 $receiptScript = @"
 USE P21Import;
+
+$receiptDdlText
+
+USE $receiptDatabase;
 
 DECLARE @extractionPayload nvarchar(max) = @extraction_payload;
 DECLARE @ShipmentFileId uniqueidentifier = TRY_CONVERT(uniqueidentifier, JSON_VALUE(@extractionPayload, '$.metadata.shipment_file_id'));
@@ -484,10 +583,33 @@ DECLARE @CreatedBy nvarchar(30) = @created_by;
 DECLARE @ReceiptDate date = NULL;
 DECLARE @AllowExisting bit = 1;
 
-$receiptDdlText
-
 $receiptBody
 "@
+
+$extractRawScript = $null
+$successEmailDependencyName = $receiptActivityName
+if ($Live) {
+  $extractRawSqlPath = Join-Path $PSScriptRoot "sql/main/005_extract_raw_file.sql"
+  $extractRawSqlText = Get-Content -Raw -Path $extractRawSqlPath
+  $extractRawSqlText = [regex]::Replace(
+    $extractRawSqlText,
+    "(?im)^\s*DECLARE\s+@ShipmentFileId\s+uniqueidentifier\s*=\s*'00000000-0000-0000-0000-000000000000'\s*;\s*$",
+    "DECLARE @ShipmentFileId uniqueidentifier = TRY_CONVERT(uniqueidentifier, JSON_VALUE(@extractionPayload, '$.metadata.shipment_file_id'));"
+  )
+  $extractRawSqlText = [regex]::Replace(
+    $extractRawSqlText,
+    "(?is)IF\s+@ShipmentFileId\s*=\s*'00000000-0000-0000-0000-000000000000'\s*BEGIN\s*THROW\s+53000,\s*'Set @ShipmentFileId before running the raw file extract\.',\s*1;\s*END;",
+    "IF @ShipmentFileId IS NULL`nBEGIN`n    THROW 53000, 'Extractor payload metadata.shipment_file_id is missing or invalid.', 1;`nEND;"
+  )
+  $extractRawScript = @"
+USE P21;
+
+DECLARE @extractionPayload nvarchar(max) = @extraction_payload;
+
+$extractRawSqlText
+"@
+  $successEmailDependencyName = "ExtractRawFileForEmail"
+}
 
 Set-AdfResource -Config $config -ResourcePath "pipelines/$pipelineName" -Body @{
   properties = @{
@@ -646,7 +768,7 @@ Set-AdfResource -Config $config -ResourcePath "pipelines/$pipelineName" -Body @{
                 }
                 body = @{
                   type = "Expression"
-                  value = "@json(concat('{', '""sourceFileName"":""', replace(coalesce(activity('ValidateCoatsShipment').output.resultSets[0].rows[0].source_file_name, ''), '""', '\""'), '"",', '""sourceWebUrl"":""', replace(coalesce(activity('ValidateCoatsShipment').output.resultSets[0].rows[0].source_web_url, ''), '""', '\""'), '"",', '""shipmentFileId"":""', string(activity('ValidateCoatsShipment').output.resultSets[0].rows[0].shipment_file_id), '"",', '""shipmentDate"":""', string(activity('ValidateCoatsShipment').output.resultSets[0].rows[0].shipment_date), '"",', '""trailerName"":""', replace(coalesce(activity('ValidateCoatsShipment').output.resultSets[0].rows[0].trailer_name, ''), '""', '\""'), '"",', '""pipelineRunId"":""', pipeline().RunId, '"",', '""blockingIssueCount"":', string(activity('ValidateCoatsShipment').output.resultSets[0].rows[0].blocking_issue_count), ',', '""issues"":', activity('ValidateCoatsShipment').output.resultSets[2].rows[0].issue_json, '}'))"
+                  value = "@json(concat('{', '""sourceFileName"":""', replace(coalesce(activity('ValidateCoatsShipment').output.resultSets[0].rows[0].source_file_name, ''), '""', '\""'), '"",', '""sourceWebUrl"":""', replace(coalesce(activity('ValidateCoatsShipment').output.resultSets[0].rows[0].source_web_url, ''), '""', '\""'), '"",', '""shipmentFileId"":""', string(activity('ValidateCoatsShipment').output.resultSets[0].rows[0].shipment_file_id), '"",', '""shipmentDate"":""', string(activity('ValidateCoatsShipment').output.resultSets[0].rows[0].shipment_date), '"",', '""trailerName"":""', replace(coalesce(activity('ValidateCoatsShipment').output.resultSets[0].rows[0].trailer_name, ''), '""', '\""'), '"",', '""pipelineRunId"":""', pipeline().RunId, '"",', '""pipelineDisplayPrefix"":""$pipelineDisplayPrefix"",', '""targetDatabase"":""$targetDatabase"",', '""stagingDatabase"":""$stagingDatabase"",', '""blockingIssueCount"":', string(activity('ValidateCoatsShipment').output.resultSets[0].rows[0].blocking_issue_count), ',', '""issues"":', activity('ValidateCoatsShipment').output.resultSets[2].rows[0].issue_json, '}'))"
                 }
               }
             },
@@ -663,14 +785,14 @@ Set-AdfResource -Config $config -ResourcePath "pipelines/$pipelineName" -Body @{
                 errorCode = "COATS_BLOCKING_VALIDATION"
                 message = @{
                   type = "Expression"
-                  value = "@concat('Coats Mexico shipment has ', string(activity('ValidateCoatsShipment').output.resultSets[0].rows[0].blocking_issue_count), ' blocking validation issue(s). Email notification sent; P21Import receipts were not created.')"
+                  value = "@concat('$pipelineDisplayPrefix', 'Coats Mexico shipment has ', string(activity('ValidateCoatsShipment').output.resultSets[0].rows[0].blocking_issue_count), ' blocking validation issue(s). Email notification sent; $targetDatabase receipts were not created.')"
                 }
               }
             }
           )
           ifFalseActivities = @(
             @{
-              name = "CreateP21ImportReceipts"
+              name = $receiptActivityName
               type = "Script"
               dependsOn = @()
               policy = @{
@@ -711,6 +833,38 @@ Set-AdfResource -Config $config -ResourcePath "pipelines/$pipelineName" -Body @{
                 scriptBlockExecutionTimeout = "00:10:00"
                 logSettings = @{
                   logDestination = "ActivityOutput"
+                }
+              }
+            },
+            @{
+              name = "SendSuccessEmail"
+              type = "WebActivity"
+              dependsOn = @(
+                @{
+                  activity = $successEmailDependencyName
+                  dependencyConditions = @("Succeeded")
+                }
+              )
+              policy = @{
+                timeout = "0.00:05:00"
+                retry = 1
+                retryIntervalInSeconds = 30
+                secureInput = $true
+                secureOutput = $false
+              }
+              typeProperties = @{
+                method = "POST"
+                url = $successEmailUrl
+                headers = @{
+                  "Content-Type" = "application/json"
+                }
+                body = @{
+                  type = "Expression"
+                  value = if ($Live) {
+                    "@json(concat('{', '""sourceFileName"":""', replace(coalesce(activity('ValidateCoatsShipment').output.resultSets[0].rows[0].source_file_name, ''), '""', '\""'), '"",', '""sourceWebUrl"":""', replace(coalesce(activity('ValidateCoatsShipment').output.resultSets[0].rows[0].source_web_url, ''), '""', '\""'), '"",', '""shipmentFileId"":""', string(activity('ValidateCoatsShipment').output.resultSets[0].rows[0].shipment_file_id), '"",', '""shipmentDate"":""', string(activity('ValidateCoatsShipment').output.resultSets[0].rows[0].shipment_date), '"",', '""trailerName"":""', replace(coalesce(activity('ValidateCoatsShipment').output.resultSets[0].rows[0].trailer_name, ''), '""', '\""'), '"",', '""pipelineRunId"":""', pipeline().RunId, '"",', '""pipelineDisplayPrefix"":""$pipelineDisplayPrefix"",', '""targetDatabase"":""$targetDatabase"",', '""stagingDatabase"":""$stagingDatabase"",', '""receipt"":', string(activity('$receiptActivityName').output.resultSets[0].rows[0]), ',', '""rawFileAttachmentName"":""', replace(concat('coats-mexico-raw-extract-', coalesce(activity('ValidateCoatsShipment').output.resultSets[0].rows[0].trailer_name, 'shipment'), '-', string(activity('ValidateCoatsShipment').output.resultSets[0].rows[0].shipment_date), '.csv'), '""', '\""'), '"",', '""rawFileRows"":', if(equals(activity('ExtractRawFileForEmail').output.resultSetCount, 0), '[]', string(activity('ExtractRawFileForEmail').output.resultSets[0].rows)), '}'))"
+                  } else {
+                    "@json(concat('{', '""sourceFileName"":""', replace(coalesce(activity('ValidateCoatsShipment').output.resultSets[0].rows[0].source_file_name, ''), '""', '\""'), '"",', '""sourceWebUrl"":""', replace(coalesce(activity('ValidateCoatsShipment').output.resultSets[0].rows[0].source_web_url, ''), '""', '\""'), '"",', '""shipmentFileId"":""', string(activity('ValidateCoatsShipment').output.resultSets[0].rows[0].shipment_file_id), '"",', '""shipmentDate"":""', string(activity('ValidateCoatsShipment').output.resultSets[0].rows[0].shipment_date), '"",', '""trailerName"":""', replace(coalesce(activity('ValidateCoatsShipment').output.resultSets[0].rows[0].trailer_name, ''), '""', '\""'), '"",', '""pipelineRunId"":""', pipeline().RunId, '"",', '""pipelineDisplayPrefix"":""$pipelineDisplayPrefix"",', '""targetDatabase"":""$targetDatabase"",', '""stagingDatabase"":""$stagingDatabase"",', '""receipt"":', string(activity('$receiptActivityName').output.resultSets[0].rows[0]), '}'))"
+                  }
                 }
               }
             }

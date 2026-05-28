@@ -1,0 +1,78 @@
+﻿{
+    "continuationToken":  null,
+    "value":  [
+                  {
+                      "activityName":  "RunProbe",
+                      "activityRunEnd":  "2026-05-19T21:04:58.142064+00:00",
+                      "activityRunId":  "b715afb4-6d08-4fbc-a1c9-287edc37fbbd",
+                      "activityRunStart":  "2026-05-19T21:04:36.753112+00:00",
+                      "activityType":  "Script",
+                      "durationInMs":  21388,
+                      "error":  {
+                                    "details":  [
+
+                                                ],
+                                    "errorCode":  "2011",
+                                    "failureType":  "UserError",
+                                    "message":  "Invalid object name \u0027classified\u0027.",
+                                    "target":  "RunProbe"
+                                },
+                      "executionDetails":  {
+                                               "integrationRuntime":  [
+                                                                          {
+                                                                              "location":  "West US",
+                                                                              "name":  "SQLServer",
+                                                                              "nodes":  [
+                                                                                            "KASVRW2K8FS"
+                                                                                        ],
+                                                                              "type":  "SelfHosted"
+                                                                          }
+                                                                      ]
+                                           },
+                      "id":  "/SUBSCRIPTIONS/6624EC13-3826-43B2-8E45-077F9051B88F/RESOURCEGROUPS/RG1/PROVIDERS/MICROSOFT.DATAFACTORY/FACTORIES/2026-04-01-DF1/pipelineruns/52d497d4-53c6-11f1-9e67-9cb150a3acae/activityruns/b715afb4-6d08-4fbc-a1c9-287edc37fbbd",
+                      "input":  {
+                                    "logSettings":  {
+                                                        "logDestination":  "ActivityOutput"
+                                                    },
+                                    "scriptBlockExecutionTimeout":  "00:10:00",
+                                    "scripts":  [
+                                                    {
+                                                        "text":  "USE P21Import;\nSET NOCOUNT ON;\n\nDECLARE @SupplierID int = 40408;\nDECLARE @ShipmentFileId uniqueidentifier = \u0027153F1972-A6FF-5247-B691-F2B0EBB446A7\u0027;\n\n;WITH missing AS (\n    SELECT DISTINCT p.shipment_pallet_line_id, p.PO_No, p.Item_ID\n    FROM dbo.coats_mexico_shipment_validation_issue AS i\n    JOIN dbo.coats_mexico_shipment_pallet_line AS p\n      ON p.shipment_file_id = i.shipment_file_id\n     AND p.source_sheet = i.source_sheet\n     AND p.source_row_number = i.source_row_number\n     AND ISNULL(p.Bin_ID, \u0027\u0027) = ISNULL(i.Bin_ID, \u0027\u0027)\n     AND ISNULL(p.Item_ID, \u0027\u0027) = ISNULL(i.Item_ID, \u0027\u0027)\n     AND ISNULL(p.PO_No, \u0027\u0027) = ISNULL(i.PO_No, \u0027\u0027)\n    WHERE i.shipment_file_id = @ShipmentFileId\n      AND i.issue_code = \u0027MISSING_PO_LINE\u0027\n), classified AS (\n    SELECT\n          m.shipment_pallet_line_id\n        , m.PO_No\n        , m.Item_ID\n        , supplier_matches = COUNT(DISTINCT ivs.inv_mast_uid)\n        , po_matches_any_status = COUNT(DISTINCT pol.po_line_uid)\n        , po_matches_open = COUNT(DISTINCT CASE WHEN pol.complete \u003c\u003e \u0027Y\u0027 THEN pol.po_line_uid END)\n        , po_matches_canceled = COUNT(DISTINCT CASE WHEN ISNULL(pol.cancel_flag, \u0027N\u0027) = \u0027Y\u0027 THEN pol.po_line_uid END)\n        , po_matches_complete_non_canceled = COUNT(DISTINCT CASE WHEN pol.complete = \u0027Y\u0027 AND ISNULL(pol.cancel_flag, \u0027N\u0027) \u003c\u003e \u0027Y\u0027 THEN pol.po_line_uid END)\n    FROM missing AS m\n    LEFT JOIN dbo.inventory_supplier AS ivs\n      ON ivs.supplier_id = @SupplierID\n     AND ivs.supplier_part_no = m.Item_ID\n    LEFT JOIN dbo.inv_mast AS ivm\n      ON ivm.inv_mast_uid = ivs.inv_mast_uid\n     AND ISNULL(ivm.delete_flag, \u0027N\u0027) \u003c\u003e \u0027Y\u0027\n    LEFT JOIN dbo.po_line AS pol\n      ON pol.po_no = m.PO_No\n     AND pol.inv_mast_uid = ivm.inv_mast_uid\n    GROUP BY m.shipment_pallet_line_id, m.PO_No, m.Item_ID\n)\nSELECT\n      bucket = CASE\n          WHEN supplier_matches = 0 THEN \u0027no_supplier_mapping\u0027\n          WHEN po_matches_any_status = 0 THEN \u0027mapped_supplier_but_no_po_line_any_status\u0027\n          WHEN po_matches_open = 0 AND po_matches_complete_non_canceled \u003e 0 THEN \u0027only_completed_non_canceled_po_line\u0027\n          WHEN po_matches_open = 0 AND po_matches_canceled \u003e 0 THEN \u0027only_canceled_po_line\u0027\n          ELSE \u0027other\u0027\n      END\n    , line_count = CONVERT(nvarchar(20), COUNT(*))\nFROM classified\nGROUP BY CASE\n          WHEN supplier_matches = 0 THEN \u0027no_supplier_mapping\u0027\n          WHEN po_matches_any_status = 0 THEN \u0027mapped_supplier_but_no_po_line_any_status\u0027\n          WHEN po_matches_open = 0 AND po_matches_complete_non_canceled \u003e 0 THEN \u0027only_completed_non_canceled_po_line\u0027\n          WHEN po_matches_open = 0 AND po_matches_canceled \u003e 0 THEN \u0027only_canceled_po_line\u0027\n          ELSE \u0027other\u0027\n      END\nORDER BY bucket;\n\nSELECT TOP (50)\n      PO_No\n    , Item_ID\n    , supplier_matches = CONVERT(nvarchar(20), supplier_matches)\n    , po_matches_any_status = CONVERT(nvarchar(20), po_matches_any_status)\n    , po_matches_open = CONVERT(nvarchar(20), po_matches_open)\n    , po_matches_canceled = CONVERT(nvarchar(20), po_matches_canceled)\n    , po_matches_complete_non_canceled = CONVERT(nvarchar(20), po_matches_complete_non_canceled)\nFROM classified\nORDER BY po_matches_any_status DESC, PO_No, Item_ID;",
+                                                        "type":  "Query"
+                                                    }
+                                                ]
+                                },
+                      "integrationRuntimeNames":  [
+                                                      "sqlserver"
+                                                  ],
+                      "iterationHash":  "",
+                      "linkedServiceName":  "",
+                      "output":  {
+                                     "billingReference":  {
+                                                              "activityType":  "PipelineActivity",
+                                                              "billableDuration":  [
+                                                                                       {
+                                                                                           "duration":  0.016666666666666666,
+                                                                                           "meterType":  "SelfhostedIR",
+                                                                                           "unit":  "Hours"
+                                                                                       }
+                                                                                   ]
+                                                          },
+                                     "durationInQueue":  {
+                                                             "integrationRuntimeQueue":  2
+                                                         },
+                                     "effectiveIntegrationRuntime":  "SQLServer",
+                                     "executionDuration":  1
+                                 },
+                      "pipelineName":  "Diag_Coats_Missing_Po_Line_Probe",
+                      "pipelineRunId":  "52d497d4-53c6-11f1-9e67-9cb150a3acae",
+                      "recoveryStatus":  "None",
+                      "resourceGroup":  "RG1",
+                      "retryAttempt":  null,
+                      "status":  "Failed",
+                      "userProperties":  {
+
+                                         }
+                  }
+              ]
+}

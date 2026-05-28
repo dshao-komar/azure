@@ -1,0 +1,78 @@
+﻿{
+    "continuationToken":  null,
+    "value":  [
+                  {
+                      "activityName":  "RunProbe",
+                      "activityRunEnd":  "2026-05-19T21:02:07.256798+00:00",
+                      "activityRunId":  "36e20a74-00b9-4853-828e-18d542145617",
+                      "activityRunStart":  "2026-05-19T21:01:55.329860+00:00",
+                      "activityType":  "Script",
+                      "durationInMs":  11926,
+                      "error":  {
+                                    "details":  [
+
+                                                ],
+                                    "errorCode":  "2011",
+                                    "failureType":  "UserError",
+                                    "message":  "Specified cast is not valid.",
+                                    "target":  "RunProbe"
+                                },
+                      "executionDetails":  {
+                                               "integrationRuntime":  [
+                                                                          {
+                                                                              "location":  "West US",
+                                                                              "name":  "SQLServer",
+                                                                              "nodes":  [
+                                                                                            "KASVRW2K8FS"
+                                                                                        ],
+                                                                              "type":  "SelfHosted"
+                                                                          }
+                                                                      ]
+                                           },
+                      "id":  "/SUBSCRIPTIONS/6624EC13-3826-43B2-8E45-077F9051B88F/RESOURCEGROUPS/RG1/PROVIDERS/MICROSOFT.DATAFACTORY/FACTORIES/2026-04-01-DF1/pipelineruns/f2e65546-53c5-11f1-8980-9cb150a3acae/activityruns/36e20a74-00b9-4853-828e-18d542145617",
+                      "input":  {
+                                    "logSettings":  {
+                                                        "logDestination":  "ActivityOutput"
+                                                    },
+                                    "scriptBlockExecutionTimeout":  "00:10:00",
+                                    "scripts":  [
+                                                    {
+                                                        "text":  "USE P21Import;\nSET NOCOUNT ON;\n\nDECLARE @SupplierID int = 40408;\nDECLARE @PO_No nvarchar(50) = N\u00276070052\u0027;\nDECLARE @SupplierPart nvarchar(100) = N\u002720290-BLACK\u0027;\nDECLARE @KomarItem nvarchar(100) = N\u002720290 BLACK\u0027;\n\nSELECT TOP (20)\n      \u0027staged_lines\u0027 AS result_name\n    , p.shipment_file_id\n    , f.source_file_name\n    , f.trailer_name\n    , p.shipment_pallet_line_id\n    , p.source_row_number\n    , p.Bin_ID\n    , p.Item_ID\n    , p.komar_item_id\n    , p.PO_No\n    , p.Invoiced_Qty\n    , p.po_line_uid\n    , p.cancel_flag\n    , p.missing_supplier_part_flag\n    , p.has_duplicate_supplier_part\nFROM dbo.coats_mexico_shipment_pallet_line AS p\nJOIN dbo.coats_mexico_shipment_file AS f\n  ON f.shipment_file_id = p.shipment_file_id\nWHERE p.PO_No = @PO_No\n  AND (p.Item_ID = @SupplierPart OR p.komar_item_id = @KomarItem)\nORDER BY p.created_at_utc DESC, p.shipment_pallet_line_id;\n\nSELECT\n      \u0027inventory_supplier_exact\u0027 AS result_name\n    , ivs.supplier_id\n    , ivs.supplier_part_no\n    , ivs.inv_mast_uid\n    , ivm.item_id\n    , ivm.delete_flag\nFROM dbo.inventory_supplier AS ivs\nJOIN dbo.inv_mast AS ivm\n  ON ivm.inv_mast_uid = ivs.inv_mast_uid\nWHERE ivs.supplier_id = @SupplierID\n  AND (ivs.supplier_part_no = @SupplierPart OR ivm.item_id = @KomarItem)\nORDER BY ivs.supplier_part_no, ivm.item_id;\n\nSELECT\n      \u0027po_line_for_item\u0027 AS result_name\n    , pol.po_no\n    , pol.po_line_uid\n    , pol.line_no\n    , pol.inv_mast_uid\n    , ivm.item_id\n    , pol.complete\n    , pol.cancel_flag\n    , pol.qty_ordered\n    , pol.qty_received\n    , pol.unit_of_measure\n    , ivm.default_purchasing_unit\nFROM dbo.po_line AS pol\nJOIN dbo.inv_mast AS ivm\n  ON ivm.inv_mast_uid = pol.inv_mast_uid\nWHERE pol.po_no = @PO_No\n  AND (ivm.item_id = @KomarItem OR EXISTS (\n      SELECT 1\n      FROM dbo.inventory_supplier AS ivs\n      WHERE ivs.inv_mast_uid = pol.inv_mast_uid\n        AND ivs.supplier_id = @SupplierID\n        AND ivs.supplier_part_no = @SupplierPart\n  ))\nORDER BY pol.po_line_uid;\n\nSELECT\n      \u0027validator_candidate_current\u0027 AS result_name\n    , p.shipment_pallet_line_id\n    , p.Item_ID\n    , p.PO_No\n    , pol.po_line_uid\n    , pol.complete\n    , pol.cancel_flag\n    , ivm.item_id\n    , ivs.supplier_part_no\nFROM dbo.coats_mexico_shipment_pallet_line AS p\nJOIN dbo.po_line AS pol\n  ON pol.po_no = p.PO_No\n AND (pol.complete \u003c\u003e \u0027Y\u0027 OR ISNULL(pol.cancel_flag, \u0027N\u0027) = \u0027Y\u0027)\nJOIN dbo.inv_mast AS ivm\n  ON ivm.inv_mast_uid = pol.inv_mast_uid\n AND ISNULL(ivm.delete_flag, \u0027N\u0027) \u003c\u003e \u0027Y\u0027\nJOIN dbo.inventory_supplier AS ivs\n  ON ivs.inv_mast_uid = ivm.inv_mast_uid\n AND ivs.supplier_id = @SupplierID\n AND ivs.supplier_part_no = p.Item_ID\nWHERE p.PO_No = @PO_No\n  AND p.Item_ID = @SupplierPart\nORDER BY p.shipment_pallet_line_id, pol.po_line_uid;\n\nSELECT TOP (20)\n      \u0027validation_issues\u0027 AS result_name\n    , i.shipment_file_id\n    , i.issue_code\n    , i.message\n    , i.source_row_number\n    , i.Bin_ID\n    , i.Item_ID\n    , i.PO_No\nFROM dbo.coats_mexico_shipment_validation_issue AS i\nWHERE i.PO_No = @PO_No\n  AND i.Item_ID = @SupplierPart\nORDER BY i.validation_issue_id DESC;",
+                                                        "type":  "Query"
+                                                    }
+                                                ]
+                                },
+                      "integrationRuntimeNames":  [
+                                                      "sqlserver"
+                                                  ],
+                      "iterationHash":  "",
+                      "linkedServiceName":  "",
+                      "output":  {
+                                     "billingReference":  {
+                                                              "activityType":  "PipelineActivity",
+                                                              "billableDuration":  [
+                                                                                       {
+                                                                                           "duration":  0.016666666666666666,
+                                                                                           "meterType":  "SelfhostedIR",
+                                                                                           "unit":  "Hours"
+                                                                                       }
+                                                                                   ]
+                                                          },
+                                     "durationInQueue":  {
+                                                             "integrationRuntimeQueue":  3
+                                                         },
+                                     "effectiveIntegrationRuntime":  "SQLServer",
+                                     "executionDuration":  0
+                                 },
+                      "pipelineName":  "Diag_Coats_Missing_Po_Line_Probe",
+                      "pipelineRunId":  "f2e65546-53c5-11f1-8980-9cb150a3acae",
+                      "recoveryStatus":  "None",
+                      "resourceGroup":  "RG1",
+                      "retryAttempt":  null,
+                      "status":  "Failed",
+                      "userProperties":  {
+
+                                         }
+                  }
+              ]
+}

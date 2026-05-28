@@ -1,0 +1,150 @@
+﻿{
+    "continuationToken":  null,
+    "value":  [
+                  {
+                      "activityName":  "RunProbe",
+                      "activityRunEnd":  "2026-05-20T16:07:21.506067+00:00",
+                      "activityRunId":  "8c0ff7e3-9df8-471a-8eca-f089d50add28",
+                      "activityRunStart":  "2026-05-20T16:07:03.978469+00:00",
+                      "activityType":  "Script",
+                      "durationInMs":  17527,
+                      "error":  {
+                                    "details":  "",
+                                    "errorCode":  "",
+                                    "failureType":  "",
+                                    "message":  "",
+                                    "target":  "RunProbe"
+                                },
+                      "executionDetails":  {
+                                               "integrationRuntime":  [
+                                                                          {
+                                                                              "location":  "West US",
+                                                                              "name":  "SQLServer",
+                                                                              "nodes":  [
+                                                                                            "KASVRW2K8FS"
+                                                                                        ],
+                                                                              "type":  "SelfHosted"
+                                                                          }
+                                                                      ]
+                                           },
+                      "id":  "/SUBSCRIPTIONS/6624EC13-3826-43B2-8E45-077F9051B88F/RESOURCEGROUPS/RG1/PROVIDERS/MICROSOFT.DATAFACTORY/FACTORIES/2026-04-01-DF1/pipelineruns/e7fc4e65-5465-11f1-beee-9cb150a3acae/activityruns/8c0ff7e3-9df8-471a-8eca-f089d50add28",
+                      "input":  {
+                                    "logSettings":  {
+                                                        "logDestination":  "ActivityOutput"
+                                                    },
+                                    "scriptBlockExecutionTimeout":  "00:10:00",
+                                    "scripts":  [
+                                                    {
+                                                        "text":  "USE P21Play;\nSET NOCOUNT ON;\nDECLARE @PoNo int=6070127, @PoLineNo int=8, @PoLineUid int=387337, @LocationId int=210, @ItemId varchar(40)=\u002711880 528SY\u0027;\n\nSELECT\n    section=\u0027oe_line_po_detail\u0027,\n    order_number=CONVERT(nvarchar(40), order_number),\n    line_number=CONVERT(nvarchar(40), line_number),\n    po_no=CONVERT(nvarchar(40), po_no),\n    po_line_number=CONVERT(nvarchar(40), po_line_number),\n    quantity_on_po=CONVERT(nvarchar(60), quantity_on_po),\n    completed,\n    cancel_flag,\n    delete_flag,\n    connection_type,\n    date_last_modified=CONVERT(nvarchar(30), date_last_modified, 126),\n    last_maintained_by\nFROM dbo.oe_line_po\nWHERE po_no=@PoNo AND po_line_number=@PoLineNo;\n\nSELECT\n    section=\u0027backorder_function_type_P\u0027,\n    row_count=CONVERT(nvarchar(20), COUNT(*)),\n    linked_qty_sum=CONVERT(nvarchar(60), COALESCE(SUM(linked_qty),0)),\n    original_linked_qty_sum=CONVERT(nvarchar(60), COALESCE(SUM(original_linked_qty),0))\nFROM dbo.p21_fnt_get_linkable_transactions(@LocationId,@ItemId,@PoNo,@PoLineNo,NULL,NULL,\u0027N\u0027,@PoLineUid,\u0027N\u0027,\u0027N\u0027,\u0027P\u0027,CONVERT(date, GETDATE()));\n\nSELECT\n    section=\u0027oe_line_state\u0027,\n    oh.order_no,\n    ol.line_no,\n    ol.oe_line_uid,\n    ol.complete,\n    qty_ordered=CONVERT(nvarchar(60), ol.qty_ordered),\n    qty_allocated=CONVERT(nvarchar(60), ol.qty_allocated),\n    qty_on_pick_tickets=CONVERT(nvarchar(60), ol.qty_on_pick_tickets),\n    qty_invoiced=CONVERT(nvarchar(60), ol.qty_invoiced),\n    qty_canceled=CONVERT(nvarchar(60), ol.qty_canceled),\n    qty_staged=CONVERT(nvarchar(60), ol.qty_staged),\n    date_last_modified=CONVERT(nvarchar(30), ol.date_last_modified, 126),\n    ol.last_maintained_by\nFROM dbo.oe_line_po AS olp\nJOIN dbo.oe_hdr AS oh ON oh.order_no=olp.order_number\nJOIN dbo.oe_line AS ol ON ol.order_no=olp.order_number AND ol.line_no=olp.line_number\nWHERE olp.po_no=@PoNo AND olp.po_line_number=@PoLineNo;\n\nSELECT\n    section=\u0027inv_loc_state\u0027,\n    qty_on_hand=CONVERT(nvarchar(60), qty_on_hand),\n    qty_allocated=CONVERT(nvarchar(60), qty_allocated),\n    qty_backordered=CONVERT(nvarchar(60), qty_backordered),\n    order_quantity=CONVERT(nvarchar(60), order_quantity),\n    date_last_modified=CONVERT(nvarchar(30), date_last_modified, 126),\n    last_maintained_by\nFROM dbo.inv_loc\nWHERE company_id=\u0027KA\u0027 AND location_id=@LocationId AND inv_mast_uid=(SELECT inv_mast_uid FROM dbo.inv_mast WHERE item_id=@ItemId);",
+                                                        "type":  "Query"
+                                                    }
+                                                ]
+                                },
+                      "integrationRuntimeNames":  [
+                                                      "sqlserver"
+                                                  ],
+                      "iterationHash":  "",
+                      "linkedServiceName":  "",
+                      "output":  {
+                                     "billingReference":  {
+                                                              "activityType":  "PipelineActivity",
+                                                              "billableDuration":  [
+                                                                                       {
+                                                                                           "duration":  0.016666666666666666,
+                                                                                           "meterType":  "SelfhostedIR",
+                                                                                           "unit":  "Hours"
+                                                                                       }
+                                                                                   ]
+                                                          },
+                                     "durationInQueue":  {
+                                                             "integrationRuntimeQueue":  1
+                                                         },
+                                     "effectiveIntegrationRuntime":  "SQLServer",
+                                     "executionDuration":  2,
+                                     "outputLogs":  "Changed database context to \u0027P21Play\u0027.\n",
+                                     "outputLogsLocation":  "",
+                                     "outputParameters":  {
+
+                                                          },
+                                     "outputTruncated":  false,
+                                     "recordsAffected":  0,
+                                     "resultSetCount":  4,
+                                     "resultSets":  [
+                                                        {
+                                                            "rowCount":  1,
+                                                            "rows":  [
+                                                                         {
+                                                                             "cancel_flag":  "N",
+                                                                             "completed":  "Y",
+                                                                             "connection_type":  "P",
+                                                                             "date_last_modified":  "2026-05-20T08:50:51.06Z",
+                                                                             "delete_flag":  "N",
+                                                                             "last_maintained_by":  "DSHAO",
+                                                                             "line_number":  "4",
+                                                                             "order_number":  "1283302",
+                                                                             "po_line_number":  "8",
+                                                                             "po_no":  "6070127",
+                                                                             "quantity_on_po":  "80.000000000",
+                                                                             "section":  "oe_line_po_detail"
+                                                                         }
+                                                                     ]
+                                                        },
+                                                        {
+                                                            "rowCount":  1,
+                                                            "rows":  [
+                                                                         {
+                                                                             "linked_qty_sum":  "0.000000000",
+                                                                             "original_linked_qty_sum":  "0.000000000",
+                                                                             "row_count":  "0",
+                                                                             "section":  "backorder_function_type_P"
+                                                                         }
+                                                                     ]
+                                                        },
+                                                        {
+                                                            "rowCount":  1,
+                                                            "rows":  [
+                                                                         {
+                                                                             "complete":  "N",
+                                                                             "date_last_modified":  "2026-04-30T12:34:11.05Z",
+                                                                             "last_maintained_by":  "MORTIZ",
+                                                                             "line_no":  4.0,
+                                                                             "oe_line_uid":  1391832,
+                                                                             "order_no":  "1283302",
+                                                                             "qty_allocated":  "0.000000000",
+                                                                             "qty_canceled":  "0.000000000",
+                                                                             "qty_invoiced":  "0.000000000",
+                                                                             "qty_on_pick_tickets":  "0.000000000",
+                                                                             "qty_ordered":  "80.000000000",
+                                                                             "qty_staged":  "0.000000000",
+                                                                             "section":  "oe_line_state"
+                                                                         }
+                                                                     ]
+                                                        },
+                                                        {
+                                                            "rowCount":  1,
+                                                            "rows":  [
+                                                                         {
+                                                                             "date_last_modified":  "2026-04-10T23:30:02.083Z",
+                                                                             "last_maintained_by":  "p21_rebuild_last_sale_date",
+                                                                             "order_quantity":  "0.000000000",
+                                                                             "qty_allocated":  "0.000000000",
+                                                                             "qty_backordered":  "80.000000000",
+                                                                             "qty_on_hand":  "80.000000000",
+                                                                             "section":  "inv_loc_state"
+                                                                         }
+                                                                     ]
+                                                        }
+                                                    ]
+                                 },
+                      "pipelineName":  "Diag_Coats_Link_Consumption_Probe",
+                      "pipelineRunId":  "e7fc4e65-5465-11f1-beee-9cb150a3acae",
+                      "recoveryStatus":  "None",
+                      "resourceGroup":  "RG1",
+                      "retryAttempt":  null,
+                      "status":  "Succeeded",
+                      "userProperties":  {
+
+                                         }
+                  }
+              ]
+}

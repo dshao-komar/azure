@@ -11,7 +11,9 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         return func.HttpResponse(validation_token, status_code=200, mimetype="text/plain")
 
     from coats_function_common import (
+        claim_drive_item_event,
         is_target_workbook,
+        recent_target_workbooks,
         resolve_drive_item,
         start_adf_pipeline,
     )
@@ -25,20 +27,24 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     for notification in payload.get("value", []):
         try:
             item = resolve_drive_item(notification)
-            if not item or not is_target_workbook(item):
-                continue
+            items = [item] if item and is_target_workbook(item) else []
+            if not item:
+                items = recent_target_workbooks(minutes=3)
 
-            parameters = {
-                "sharePointDriveId": item.get("parentReference", {}).get("driveId"),
-                "sharePointDriveItemId": item.get("id"),
-                "sourceFileName": item.get("name"),
-                "sourceWebUrl": item.get("webUrl"),
-                "sourceFolderPath": item.get("parentReference", {}).get("path"),
-                "graphSubscriptionId": notification.get("subscriptionId"),
-                "notificationReceivedUtc": datetime.now(timezone.utc).isoformat(),
-            }
-            run = start_adf_pipeline(parameters)
-            started_runs.append({"sourceFileName": item.get("name"), "run": run})
+            for target_item in items:
+                if not claim_drive_item_event(target_item):
+                    continue
+                parameters = {
+                    "sharePointDriveId": target_item.get("parentReference", {}).get("driveId"),
+                    "sharePointDriveItemId": target_item.get("id"),
+                    "sourceFileName": target_item.get("name"),
+                    "sourceWebUrl": target_item.get("webUrl"),
+                    "sourceFolderPath": target_item.get("parentReference", {}).get("path"),
+                    "graphSubscriptionId": notification.get("subscriptionId"),
+                    "notificationReceivedUtc": datetime.now(timezone.utc).isoformat(),
+                }
+                run = start_adf_pipeline(parameters)
+                started_runs.append({"sourceFileName": target_item.get("name"), "run": run})
         except Exception:
             logging.exception("Failed to process Graph notification.")
             raise

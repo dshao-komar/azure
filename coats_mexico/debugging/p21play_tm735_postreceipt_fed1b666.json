@@ -1,0 +1,175 @@
+﻿{
+    "continuationToken":  null,
+    "value":  [
+                  {
+                      "activityName":  "RunProbe",
+                      "activityRunEnd":  "2026-05-19T23:11:25.533943+00:00",
+                      "activityRunId":  "998c9250-53dd-4b7d-b718-b25198ce983b",
+                      "activityRunStart":  "2026-05-19T23:11:09.462796+00:00",
+                      "activityType":  "Script",
+                      "durationInMs":  16071,
+                      "error":  {
+                                    "details":  "",
+                                    "errorCode":  "",
+                                    "failureType":  "",
+                                    "message":  "",
+                                    "target":  "RunProbe"
+                                },
+                      "executionDetails":  {
+                                               "integrationRuntime":  [
+                                                                          {
+                                                                              "location":  "West US",
+                                                                              "name":  "SQLServer",
+                                                                              "nodes":  [
+                                                                                            "KASVRW2K8FS"
+                                                                                        ],
+                                                                              "type":  "SelfHosted"
+                                                                          }
+                                                                      ]
+                                           },
+                      "id":  "/SUBSCRIPTIONS/6624EC13-3826-43B2-8E45-077F9051B88F/RESOURCEGROUPS/RG1/PROVIDERS/MICROSOFT.DATAFACTORY/FACTORIES/2026-04-01-DF1/pipelineruns/fed1b666-53d7-11f1-820f-9cb150a3acae/activityruns/998c9250-53dd-4b7d-b718-b25198ce983b",
+                      "input":  {
+                                    "logSettings":  {
+                                                        "logDestination":  "ActivityOutput"
+                                                    },
+                                    "scriptBlockExecutionTimeout":  "00:10:00",
+                                    "scripts":  [
+                                                    {
+                                                        "text":  "USE P21Play;\nSET NOCOUNT ON;\nDECLARE @ShipmentFileId uniqueidentifier=\u0027f5c975af-1d81-5d36-9ff8-244fd38c9fc5\u0027;\nDECLARE @ContainerBuildingUid int=900;\nDECLARE @VesselReceiptsHdrUid int=762;\nDECLARE @VesselReceiptsContainerUid int=762;\nDECLARE @ContainerReceiptsHdrUid int=682;\n\nSELECT\n    receipt_build_rows = CONVERT(nvarchar(20), COUNT(*)),\n    line_count = CONVERT(nvarchar(20), MAX(line_count)),\n    total_qty = CONVERT(nvarchar(50), MAX(total_qty))\nFROM P21Import.dbo.coats_mexico_shipment_receipt_build\nWHERE shipment_file_id=@ShipmentFileId;\n\nSELECT entity_name=\u0027container_building\u0027, row_count=CONVERT(nvarchar(20), COUNT(*)) FROM dbo.container_building WHERE container_building_uid=@ContainerBuildingUid;\nSELECT entity_name=\u0027container_building_po\u0027, row_count=CONVERT(nvarchar(20), COUNT(*)), qty=CONVERT(nvarchar(50), SUM(po_container_unit_qty)) FROM dbo.container_building_po WHERE container_building_uid=@ContainerBuildingUid;\nSELECT entity_name=\u0027vessel_receipts_hdr\u0027, row_count=CONVERT(nvarchar(20), COUNT(*)) FROM dbo.vessel_receipts_hdr WHERE vessel_receipts_hdr_uid=@VesselReceiptsHdrUid;\nSELECT entity_name=\u0027vessel_receipts_container\u0027, row_count=CONVERT(nvarchar(20), COUNT(*)), row_status_flag=CONVERT(nvarchar(20), MAX(row_status_flag)) FROM dbo.vessel_receipts_container WHERE vessel_receipts_container_uid=@VesselReceiptsContainerUid;\nSELECT entity_name=\u0027vessel_receipts_line\u0027, row_count=CONVERT(nvarchar(20), COUNT(*)), qty=CONVERT(nvarchar(50), SUM(container_qty_received)) FROM dbo.vessel_receipts_line WHERE vessel_receipts_hdr_uid=@VesselReceiptsHdrUid;\nSELECT entity_name=\u0027container_receipts_hdr\u0027, row_count=CONVERT(nvarchar(20), COUNT(*)), row_status_flag=CONVERT(nvarchar(20), MAX(row_status_flag)) FROM dbo.container_receipts_hdr WHERE container_receipts_hdr_uid=@ContainerReceiptsHdrUid;\nSELECT entity_name=\u0027container_receipts_line\u0027, row_count=CONVERT(nvarchar(20), COUNT(*)), qty=CONVERT(nvarchar(50), SUM(qty_received)), transfer_flag_null_count=CONVERT(nvarchar(20), SUM(CASE WHEN transfer_flag IS NULL THEN 1 ELSE 0 END)) FROM dbo.container_receipts_line WHERE container_receipts_hdr_uid=@ContainerReceiptsHdrUid;\nSELECT staged_total=CONVERT(nvarchar(20), COUNT(*)), with_po_line_uid=CONVERT(nvarchar(20), SUM(CASE WHEN po_line_uid IS NOT NULL THEN 1 ELSE 0 END)), skipped_no_po_line=CONVERT(nvarchar(20), SUM(CASE WHEN po_line_uid IS NULL THEN 1 ELSE 0 END)) FROM P21Import.dbo.coats_mexico_shipment_pallet_line WHERE shipment_file_id=@ShipmentFileId;",
+                                                        "type":  "Query"
+                                                    }
+                                                ]
+                                },
+                      "integrationRuntimeNames":  [
+                                                      "sqlserver"
+                                                  ],
+                      "iterationHash":  "",
+                      "linkedServiceName":  "",
+                      "output":  {
+                                     "billingReference":  {
+                                                              "activityType":  "PipelineActivity",
+                                                              "billableDuration":  [
+                                                                                       {
+                                                                                           "duration":  0.016666666666666666,
+                                                                                           "meterType":  "SelfhostedIR",
+                                                                                           "unit":  "Hours"
+                                                                                       }
+                                                                                   ]
+                                                          },
+                                     "durationInQueue":  {
+                                                             "integrationRuntimeQueue":  6
+                                                         },
+                                     "effectiveIntegrationRuntime":  "SQLServer",
+                                     "executionDuration":  0,
+                                     "outputLogs":  "Changed database context to \u0027P21Play\u0027.\n",
+                                     "outputLogsLocation":  "",
+                                     "outputParameters":  {
+
+                                                          },
+                                     "outputTruncated":  false,
+                                     "recordsAffected":  0,
+                                     "resultSetCount":  9,
+                                     "resultSets":  [
+                                                        {
+                                                            "rowCount":  1,
+                                                            "rows":  [
+                                                                         {
+                                                                             "line_count":  "169",
+                                                                             "receipt_build_rows":  "1",
+                                                                             "total_qty":  "18873.695000000"
+                                                                         }
+                                                                     ]
+                                                        },
+                                                        {
+                                                            "rowCount":  1,
+                                                            "rows":  [
+                                                                         {
+                                                                             "entity_name":  "container_building",
+                                                                             "row_count":  "1"
+                                                                         }
+                                                                     ]
+                                                        },
+                                                        {
+                                                            "rowCount":  1,
+                                                            "rows":  [
+                                                                         {
+                                                                             "entity_name":  "container_building_po",
+                                                                             "qty":  "18873.695000000",
+                                                                             "row_count":  "169"
+                                                                         }
+                                                                     ]
+                                                        },
+                                                        {
+                                                            "rowCount":  1,
+                                                            "rows":  [
+                                                                         {
+                                                                             "entity_name":  "vessel_receipts_hdr",
+                                                                             "row_count":  "1"
+                                                                         }
+                                                                     ]
+                                                        },
+                                                        {
+                                                            "rowCount":  1,
+                                                            "rows":  [
+                                                                         {
+                                                                             "entity_name":  "vessel_receipts_container",
+                                                                             "row_count":  "1",
+                                                                             "row_status_flag":  "704"
+                                                                         }
+                                                                     ]
+                                                        },
+                                                        {
+                                                            "rowCount":  1,
+                                                            "rows":  [
+                                                                         {
+                                                                             "entity_name":  "vessel_receipts_line",
+                                                                             "qty":  "18873.695000000",
+                                                                             "row_count":  "169"
+                                                                         }
+                                                                     ]
+                                                        },
+                                                        {
+                                                            "rowCount":  1,
+                                                            "rows":  [
+                                                                         {
+                                                                             "entity_name":  "container_receipts_hdr",
+                                                                             "row_count":  "1",
+                                                                             "row_status_flag":  "971"
+                                                                         }
+                                                                     ]
+                                                        },
+                                                        {
+                                                            "rowCount":  1,
+                                                            "rows":  [
+                                                                         {
+                                                                             "entity_name":  "container_receipts_line",
+                                                                             "qty":  "18873.695000000",
+                                                                             "row_count":  "169",
+                                                                             "transfer_flag_null_count":  "169"
+                                                                         }
+                                                                     ]
+                                                        },
+                                                        {
+                                                            "rowCount":  1,
+                                                            "rows":  [
+                                                                         {
+                                                                             "skipped_no_po_line":  "19",
+                                                                             "staged_total":  "195",
+                                                                             "with_po_line_uid":  "176"
+                                                                         }
+                                                                     ]
+                                                        }
+                                                    ]
+                                 },
+                      "pipelineName":  "Diag_Coats_P21Play_Tm735_PostReceipt",
+                      "pipelineRunId":  "fed1b666-53d7-11f1-820f-9cb150a3acae",
+                      "recoveryStatus":  "None",
+                      "resourceGroup":  "RG1",
+                      "retryAttempt":  null,
+                      "status":  "Succeeded",
+                      "userProperties":  {
+
+                                         }
+                  }
+              ]
+}

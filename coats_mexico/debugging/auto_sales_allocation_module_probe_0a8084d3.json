@@ -1,0 +1,2652 @@
+﻿{
+  "continuationToken": null,
+  "value": [
+    {
+      "activityName": "RunQuery",
+      "activityRunEnd": "2026-05-18T22:30:23.122213+00:00",
+      "activityRunId": "af3cc781-f4f5-4e6c-b77c-ec1573c0054a",
+      "activityRunStart": "2026-05-18T22:29:40.844263+00:00",
+      "activityType": "Script",
+      "durationInMs": 42277,
+      "error": {
+        "details": "",
+        "errorCode": "",
+        "failureType": "",
+        "message": "",
+        "target": "RunQuery"
+      },
+      "executionDetails": {
+        "integrationRuntime": [
+          {
+            "location": "West US",
+            "name": "SQLServer",
+            "nodes": [
+              "INSPIRON_16"
+            ],
+            "type": "SelfHosted"
+          }
+        ]
+      },
+      "id": "/SUBSCRIPTIONS/6624EC13-3826-43B2-8E45-077F9051B88F/RESOURCEGROUPS/RG1/PROVIDERS/MICROSOFT.DATAFACTORY/FACTORIES/2026-04-01-DF1/pipelineruns/0a8084d3-5309-11f1-a694-9cb150a3acae/activityruns/af3cc781-f4f5-4e6c-b77c-ec1573c0054a",
+      "input": {
+        "logSettings": {
+          "logDestination": "ActivityOutput"
+        },
+        "scriptBlockExecutionTimeout": "00:10:00",
+        "scripts": [
+          {
+            "text": "USE P21;\nSET NOCOUNT ON;\nSET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;\nSELECT result_set='module_hits_container_oe', object_name=OBJECT_SCHEMA_NAME(m.object_id)+'.'+OBJECT_NAME(m.object_id), type_desc=o.type_desc\nFROM sys.sql_modules m JOIN sys.objects o ON o.object_id=m.object_id\nWHERE m.definition LIKE '%container_receipts%' AND (m.definition LIKE '%oe_line%' OR m.definition LIKE '%oe_hdr%' OR m.definition LIKE '%qty_allocated%' OR m.definition LIKE '%transfer_backorders%' OR m.definition LIKE '%oe_transfer_reserve_flag%')\nORDER BY object_name;\nSELECT result_set='module_hits_transfer_allocation', object_name=OBJECT_SCHEMA_NAME(m.object_id)+'.'+OBJECT_NAME(m.object_id), type_desc=o.type_desc\nFROM sys.sql_modules m JOIN sys.objects o ON o.object_id=m.object_id\nWHERE (m.definition LIKE '%oe_transfer_reserve_flag%' OR m.definition LIKE '%transfer_backorders%' OR m.definition LIKE '%qty_reserved%' OR m.definition LIKE '%qty_allocated%')\n  AND (m.definition LIKE '%transfer_line%' OR m.definition LIKE '%transfer_hdr%')\nORDER BY object_name;\nSELECT result_set='table_columns_backorder_reserve', table_name=t.name, column_id=CONVERT(varchar(20), c.column_id), column_name=c.name, type_name=ty.name\nFROM sys.tables t JOIN sys.schemas s ON s.schema_id=t.schema_id JOIN sys.columns c ON c.object_id=t.object_id JOIN sys.types ty ON ty.user_type_id=c.user_type_id\nWHERE s.name='dbo' AND (t.name LIKE '%transfer%backorder%' OR t.name LIKE '%reserve%' OR t.name LIKE '%alloc%')\nORDER BY t.name,c.column_id;",
+            "type": "Query"
+          }
+        ]
+      },
+      "integrationRuntimeNames": [
+        "sqlserver"
+      ],
+      "iterationHash": "",
+      "linkedServiceName": "",
+      "output": {
+        "billingReference": {
+          "activityType": "PipelineActivity",
+          "billableDuration": [
+            {
+              "duration": 0.016666666666666666,
+              "meterType": "SelfhostedIR",
+              "unit": "Hours"
+            }
+          ]
+        },
+        "durationInQueue": {
+          "integrationRuntimeQueue": 3
+        },
+        "effectiveIntegrationRuntime": "SQLServer",
+        "executionDuration": 31,
+        "outputLogs": "Changed database context to 'P21'.\n",
+        "outputLogsLocation": "",
+        "outputParameters": {},
+        "outputTruncated": false,
+        "recordsAffected": 0,
+        "resultSetCount": 3,
+        "resultSets": [
+          {
+            "rowCount": 9,
+            "rows": [
+              {
+                "object_name": "dbo.p21_find_tag_bin_qty_discrepancies",
+                "result_set": "module_hits_container_oe",
+                "type_desc": "SQL_STORED_PROCEDURE"
+              },
+              {
+                "object_name": "dbo.p21_fnt_OpenTDLsForTagDetailUID",
+                "result_set": "module_hits_container_oe",
+                "type_desc": "SQL_INLINE_TABLE_VALUED_FUNCTION"
+              },
+              {
+                "object_name": "dbo.p21_po_links_for_order_3793",
+                "result_set": "module_hits_container_oe",
+                "type_desc": "SQL_STORED_PROCEDURE"
+              },
+              {
+                "object_name": "dbo.p21_rescale_uom",
+                "result_set": "module_hits_container_oe",
+                "type_desc": "SQL_STORED_PROCEDURE"
+              },
+              {
+                "object_name": "dbo.p21_rfnavigator_process_sync_dump_batch",
+                "result_set": "module_hits_container_oe",
+                "type_desc": "SQL_STORED_PROCEDURE"
+              },
+              {
+                "object_name": "dbo.p21_sp_generate_future_stock_analysis",
+                "result_set": "module_hits_container_oe",
+                "type_desc": "SQL_STORED_PROCEDURE"
+              },
+              {
+                "object_name": "dbo.p21_view_dls_slab_info",
+                "result_set": "module_hits_container_oe",
+                "type_desc": "VIEW"
+              },
+              {
+                "object_name": "dbo.p21_view_rfnavigator_purchase_order",
+                "result_set": "module_hits_container_oe",
+                "type_desc": "VIEW"
+              },
+              {
+                "object_name": "dbo.p21_view_wireless_transaction_report",
+                "result_set": "module_hits_container_oe",
+                "type_desc": "VIEW"
+              }
+            ]
+          },
+          {
+            "rowCount": 82,
+            "rows": [
+              {
+                "object_name": "dbo.p21_commitment_schedule",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "SQL_STORED_PROCEDURE"
+              },
+              {
+                "object_name": "dbo.p21_commitment_schedule_224",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "SQL_STORED_PROCEDURE"
+              },
+              {
+                "object_name": "dbo.p21_commitment_schedule_3427",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "SQL_STORED_PROCEDURE"
+              },
+              {
+                "object_name": "dbo.p21_deallocate_transfer",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "SQL_STORED_PROCEDURE"
+              },
+              {
+                "object_name": "dbo.p21_delete_transfer_line",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "SQL_STORED_PROCEDURE"
+              },
+              {
+                "object_name": "dbo.p21_enable_lot",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "SQL_STORED_PROCEDURE"
+              },
+              {
+                "object_name": "dbo.p21_find_bin_allocations",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "SQL_STORED_PROCEDURE"
+              },
+              {
+                "object_name": "dbo.p21_find_lot_allocations",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "SQL_STORED_PROCEDURE"
+              },
+              {
+                "object_name": "dbo.p21_find_lot_bin_allocations",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "SQL_STORED_PROCEDURE"
+              },
+              {
+                "object_name": "dbo.p21_find_tag_allocations",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "SQL_STORED_PROCEDURE"
+              },
+              {
+                "object_name": "dbo.p21_fnt_commitment_schedule",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "SQL_INLINE_TABLE_VALUED_FUNCTION"
+              },
+              {
+                "object_name": "dbo.p21_fnt_eta_qty_in_194",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "SQL_INLINE_TABLE_VALUED_FUNCTION"
+              },
+              {
+                "object_name": "dbo.p21_fnt_eta_qty_out_194",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "SQL_INLINE_TABLE_VALUED_FUNCTION"
+              },
+              {
+                "object_name": "dbo.p21_fnt_get_open_inbound_transactions",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "SQL_TABLE_VALUED_FUNCTION"
+              },
+              {
+                "object_name": "dbo.p21_fnt_inv_issues_sub3",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "SQL_INLINE_TABLE_VALUED_FUNCTION"
+              },
+              {
+                "object_name": "dbo.p21_fnt_inv_issues_sub4",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "SQL_INLINE_TABLE_VALUED_FUNCTION"
+              },
+              {
+                "object_name": "dbo.p21_fnt_oe_xfer_reserve_qty",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "SQL_TABLE_VALUED_FUNCTION"
+              },
+              {
+                "object_name": "dbo.p21_fnt_oe_xfer_reserve_qty_by_to_loc",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "SQL_TABLE_VALUED_FUNCTION"
+              },
+              {
+                "object_name": "dbo.p21_fnt_OpenNonTransferDLBs",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "SQL_INLINE_TABLE_VALUED_FUNCTION"
+              },
+              {
+                "object_name": "dbo.p21_fnt_purchase_order_calc_nonstock",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "SQL_TABLE_VALUED_FUNCTION"
+              },
+              {
+                "object_name": "dbo.p21_fnt_tmi_summary",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "SQL_TABLE_VALUED_FUNCTION"
+              },
+              {
+                "object_name": "dbo.p21_get_852_detail",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "SQL_STORED_PROCEDURE"
+              },
+              {
+                "object_name": "dbo.p21_get_852_detail_162",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "SQL_STORED_PROCEDURE"
+              },
+              {
+                "object_name": "dbo.p21_get_first_anticipated_in_stock_date",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "SQL_STORED_PROCEDURE"
+              },
+              {
+                "object_name": "dbo.p21_get_first_anticipated_in_stock_date_b2b",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "SQL_STORED_PROCEDURE"
+              },
+              {
+                "object_name": "dbo.p21_get_rf_pick_list",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "SQL_STORED_PROCEDURE"
+              },
+              {
+                "object_name": "dbo.p21_gpor_main_to_table_sp",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "SQL_STORED_PROCEDURE"
+              },
+              {
+                "object_name": "dbo.p21_gpor_main_to_table_sp_lot",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "SQL_STORED_PROCEDURE"
+              },
+              {
+                "object_name": "dbo.p21_gpor_main_to_table_sp_lot_rdc",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "SQL_STORED_PROCEDURE"
+              },
+              {
+                "object_name": "dbo.p21_gpor_main_to_table_sp_rdc",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "SQL_STORED_PROCEDURE"
+              },
+              {
+                "object_name": "dbo.p21_grow_wwms",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "SQL_STORED_PROCEDURE"
+              },
+              {
+                "object_name": "dbo.p21_inventory_rebuild",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "VIEW"
+              },
+              {
+                "object_name": "dbo.p21_merge_inv_mast_records_mult",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "SQL_STORED_PROCEDURE"
+              },
+              {
+                "object_name": "dbo.p21_merge_inv_mast_records_mult_app",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "SQL_STORED_PROCEDURE"
+              },
+              {
+                "object_name": "dbo.p21_po_links_for_order",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "SQL_STORED_PROCEDURE"
+              },
+              {
+                "object_name": "dbo.p21_po_links_for_order_3793",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "SQL_STORED_PROCEDURE"
+              },
+              {
+                "object_name": "dbo.p21_qty_in_transit_rebuild",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "VIEW"
+              },
+              {
+                "object_name": "dbo.p21_qty_reserved_due_in_rebuild",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "VIEW"
+              },
+              {
+                "object_name": "dbo.p21_repair_tag_picking_criteria",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "SQL_STORED_PROCEDURE"
+              },
+              {
+                "object_name": "dbo.p21_rescale_uom",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "SQL_STORED_PROCEDURE"
+              },
+              {
+                "object_name": "dbo.p21_rescale_uom_inv_tran",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "SQL_STORED_PROCEDURE"
+              },
+              {
+                "object_name": "dbo.p21_rfnavigator_process_sync_dump_batch",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "SQL_STORED_PROCEDURE"
+              },
+              {
+                "object_name": "dbo.p21_sp_create_otb_tbo_gtor_entries",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "SQL_STORED_PROCEDURE"
+              },
+              {
+                "object_name": "dbo.p21_sp_generate_future_stock_analysis",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "SQL_STORED_PROCEDURE"
+              },
+              {
+                "object_name": "dbo.p21_tag_picking_criteria_issues",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "SQL_STORED_PROCEDURE"
+              },
+              {
+                "object_name": "dbo.p21_tag_related_document_line_issues",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "SQL_STORED_PROCEDURE"
+              },
+              {
+                "object_name": "dbo.p21_transfer_deallocation",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "SQL_STORED_PROCEDURE"
+              },
+              {
+                "object_name": "dbo.p21_transfer_receipts_view",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "VIEW"
+              },
+              {
+                "object_name": "dbo.p21_transfer_shipment_view",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "VIEW"
+              },
+              {
+                "object_name": "dbo.p21_transfer_view",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "VIEW"
+              },
+              {
+                "object_name": "dbo.p21_update_workbench_claim_transactions",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "SQL_STORED_PROCEDURE"
+              },
+              {
+                "object_name": "dbo.p21_view_alert_inv_InventoryReceipt",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "VIEW"
+              },
+              {
+                "object_name": "dbo.p21_view_alert_inv_InventoryReceipt_2165",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "VIEW"
+              },
+              {
+                "object_name": "dbo.p21_view_asap_transfers",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "VIEW"
+              },
+              {
+                "object_name": "dbo.p21_view_dls_slab_info",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "VIEW"
+              },
+              {
+                "object_name": "dbo.p21_view_find_bin_allocations",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "VIEW"
+              },
+              {
+                "object_name": "dbo.p21_view_find_bin_allocations_simple",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "VIEW"
+              },
+              {
+                "object_name": "dbo.p21_view_find_lot_allocations",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "VIEW"
+              },
+              {
+                "object_name": "dbo.p21_view_find_lot_allocations_simple",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "VIEW"
+              },
+              {
+                "object_name": "dbo.p21_view_find_lot_bin_allocations",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "VIEW"
+              },
+              {
+                "object_name": "dbo.p21_view_find_lot_bin_allocations_simple",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "VIEW"
+              },
+              {
+                "object_name": "dbo.p21_view_find_serial_allocations",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "VIEW"
+              },
+              {
+                "object_name": "dbo.p21_view_find_serial_allocations_simple",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "VIEW"
+              },
+              {
+                "object_name": "dbo.p21_view_find_serial_reservations",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "VIEW"
+              },
+              {
+                "object_name": "dbo.p21_view_find_tag_allocations",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "VIEW"
+              },
+              {
+                "object_name": "dbo.p21_view_find_tag_allocations_simple",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "VIEW"
+              },
+              {
+                "object_name": "dbo.p21_view_find_transfer_allocations",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "VIEW"
+              },
+              {
+                "object_name": "dbo.p21_view_find_transfer_shipment_allocations",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "VIEW"
+              },
+              {
+                "object_name": "dbo.p21_view_inv_issues_sub3b",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "VIEW"
+              },
+              {
+                "object_name": "dbo.p21_view_inv_issues_sub4b",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "VIEW"
+              },
+              {
+                "object_name": "dbo.p21_view_inv_tran",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "VIEW"
+              },
+              {
+                "object_name": "dbo.p21_view_inventory_alloc_cycle_count",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "VIEW"
+              },
+              {
+                "object_name": "dbo.p21_view_inventory_allocation_query_660",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "VIEW"
+              },
+              {
+                "object_name": "dbo.p21_view_items_with_open_inbound_transactions",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "VIEW"
+              },
+              {
+                "object_name": "dbo.p21_view_lot_bin_suggested_cycle_count",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "VIEW"
+              },
+              {
+                "object_name": "dbo.p21_view_pallet_info",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "VIEW"
+              },
+              {
+                "object_name": "dbo.p21_view_scp_get_transfer_info",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "VIEW"
+              },
+              {
+                "object_name": "dbo.p21_view_weboe_items_on_backorder",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "VIEW"
+              },
+              {
+                "object_name": "dbo.p21_view_wireless_transaction_report",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "VIEW"
+              },
+              {
+                "object_name": "dbo.pathguide_transfer_view",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "VIEW"
+              },
+              {
+                "object_name": "dbo.pathguide_transfer_view_no_notes",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "VIEW"
+              },
+              {
+                "object_name": "dbo.pathguide_update_lot_allocations",
+                "result_set": "module_hits_transfer_allocation",
+                "type_desc": "SQL_STORED_PROCEDURE"
+              }
+            ]
+          },
+          {
+            "rowCount": 300,
+            "rows": [
+              {
+                "column_id": "1",
+                "column_name": "anticipated_allocation_uid",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "anticipated_allocation",
+                "type_name": "int"
+              },
+              {
+                "column_id": "2",
+                "column_name": "location_id",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "anticipated_allocation",
+                "type_name": "int"
+              },
+              {
+                "column_id": "3",
+                "column_name": "inv_mast_uid",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "anticipated_allocation",
+                "type_name": "int"
+              },
+              {
+                "column_id": "4",
+                "column_name": "outbound_transaction_type_cd",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "anticipated_allocation",
+                "type_name": "int"
+              },
+              {
+                "column_id": "5",
+                "column_name": "outbound_transaction_no",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "anticipated_allocation",
+                "type_name": "int"
+              },
+              {
+                "column_id": "6",
+                "column_name": "outbound_line_no",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "anticipated_allocation",
+                "type_name": "int"
+              },
+              {
+                "column_id": "7",
+                "column_name": "outbound_sub_line_no",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "anticipated_allocation",
+                "type_name": "int"
+              },
+              {
+                "column_id": "8",
+                "column_name": "inbound_transaction_type_cd",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "anticipated_allocation",
+                "type_name": "int"
+              },
+              {
+                "column_id": "9",
+                "column_name": "inbound_transaction_no",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "anticipated_allocation",
+                "type_name": "int"
+              },
+              {
+                "column_id": "10",
+                "column_name": "inbound_line_no",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "anticipated_allocation",
+                "type_name": "int"
+              },
+              {
+                "column_id": "11",
+                "column_name": "inbound_sub_line_no",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "anticipated_allocation",
+                "type_name": "int"
+              },
+              {
+                "column_id": "12",
+                "column_name": "expected_inbound_date",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "anticipated_allocation",
+                "type_name": "datetime"
+              },
+              {
+                "column_id": "13",
+                "column_name": "worst_case_tbo_date_used",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "anticipated_allocation",
+                "type_name": "char"
+              },
+              {
+                "column_id": "14",
+                "column_name": "sku_qty_to_be_allocated",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "anticipated_allocation",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "15",
+                "column_name": "date_created",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "anticipated_allocation",
+                "type_name": "datetime"
+              },
+              {
+                "column_id": "16",
+                "column_name": "created_by",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "anticipated_allocation",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "17",
+                "column_name": "date_last_modified",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "anticipated_allocation",
+                "type_name": "datetime"
+              },
+              {
+                "column_id": "18",
+                "column_name": "last_maintained_by",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "anticipated_allocation",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "19",
+                "column_name": "hard_linked_flag",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "anticipated_allocation",
+                "type_name": "char"
+              },
+              {
+                "column_id": "20",
+                "column_name": "last_expected_inbound_flag",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "anticipated_allocation",
+                "type_name": "char"
+              },
+              {
+                "column_id": "1",
+                "column_name": "customer_uid",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "cpa_np_ic_allocations_working",
+                "type_name": "int"
+              },
+              {
+                "column_id": "2",
+                "column_name": "hierarchy_level_uid",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "cpa_np_ic_allocations_working",
+                "type_name": "int"
+              },
+              {
+                "column_id": "3",
+                "column_name": "hierarchy_key_uid",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "cpa_np_ic_allocations_working",
+                "type_name": "int"
+              },
+              {
+                "column_id": "4",
+                "column_name": "period_definition_uid",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "cpa_np_ic_allocations_working",
+                "type_name": "int"
+              },
+              {
+                "column_id": "5",
+                "column_name": "metric_date",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "cpa_np_ic_allocations_working",
+                "type_name": "datetime"
+              },
+              {
+                "column_id": "6",
+                "column_name": "cust_allocation",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "cpa_np_ic_allocations_working",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "1",
+                "column_name": "customer_item_reserve_uid",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "customer_item_reserve",
+                "type_name": "int"
+              },
+              {
+                "column_id": "2",
+                "column_name": "customer_id",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "customer_item_reserve",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "3",
+                "column_name": "company_id",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "customer_item_reserve",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "4",
+                "column_name": "item_reservation_uid",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "customer_item_reserve",
+                "type_name": "int"
+              },
+              {
+                "column_id": "5",
+                "column_name": "row_status_flag",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "customer_item_reserve",
+                "type_name": "int"
+              },
+              {
+                "column_id": "6",
+                "column_name": "date_created",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "customer_item_reserve",
+                "type_name": "datetime"
+              },
+              {
+                "column_id": "7",
+                "column_name": "created_by",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "customer_item_reserve",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "8",
+                "column_name": "date_last_modified",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "customer_item_reserve",
+                "type_name": "datetime"
+              },
+              {
+                "column_id": "9",
+                "column_name": "last_maintained_by",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "customer_item_reserve",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "1",
+                "column_name": "deallocate_trans_run_uid",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "deallocate_transactions_run",
+                "type_name": "int"
+              },
+              {
+                "column_id": "2",
+                "column_name": "deallocate_transactions_run_no",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "deallocate_transactions_run",
+                "type_name": "int"
+              },
+              {
+                "column_id": "3",
+                "column_name": "company_id",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "deallocate_transactions_run",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "4",
+                "column_name": "location_id",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "deallocate_transactions_run",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "5",
+                "column_name": "inv_mast_uid",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "deallocate_transactions_run",
+                "type_name": "int"
+              },
+              {
+                "column_id": "6",
+                "column_name": "transaction_no",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "deallocate_transactions_run",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "7",
+                "column_name": "line_no",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "deallocate_transactions_run",
+                "type_name": "int"
+              },
+              {
+                "column_id": "8",
+                "column_name": "qty_to_deallocate",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "deallocate_transactions_run",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "9",
+                "column_name": "document_type",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "deallocate_transactions_run",
+                "type_name": "char"
+              },
+              {
+                "column_id": "10",
+                "column_name": "lot_cd",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "deallocate_transactions_run",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "11",
+                "column_name": "lot_qty_to_deallocate",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "deallocate_transactions_run",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "12",
+                "column_name": "document_line_lot_uid",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "deallocate_transactions_run",
+                "type_name": "int"
+              },
+              {
+                "column_id": "13",
+                "column_name": "bin_cd",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "deallocate_transactions_run",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "14",
+                "column_name": "bin_qty_to_deallocate",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "deallocate_transactions_run",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "15",
+                "column_name": "document_line_bin_uid",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "deallocate_transactions_run",
+                "type_name": "int"
+              },
+              {
+                "column_id": "16",
+                "column_name": "lot_bin_qty_to_deallocate",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "deallocate_transactions_run",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "17",
+                "column_name": "document_line_lot_bin_xref_uid",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "deallocate_transactions_run",
+                "type_name": "int"
+              },
+              {
+                "column_id": "18",
+                "column_name": "date_created",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "deallocate_transactions_run",
+                "type_name": "datetime"
+              },
+              {
+                "column_id": "19",
+                "column_name": "created_by",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "deallocate_transactions_run",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "20",
+                "column_name": "date_last_modified",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "deallocate_transactions_run",
+                "type_name": "datetime"
+              },
+              {
+                "column_id": "21",
+                "column_name": "last_maintained_by",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "deallocate_transactions_run",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "22",
+                "column_name": "sub_line_no",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "deallocate_transactions_run",
+                "type_name": "int"
+              },
+              {
+                "column_id": "1",
+                "column_name": "edi_852_reserved_po_info_uid",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "edi_852_reserved_po_info",
+                "type_name": "int"
+              },
+              {
+                "column_id": "2",
+                "column_name": "company_id",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "edi_852_reserved_po_info",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "3",
+                "column_name": "customer_id",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "edi_852_reserved_po_info",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "4",
+                "column_name": "ship_to_id",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "edi_852_reserved_po_info",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "5",
+                "column_name": "reserved_po_no",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "edi_852_reserved_po_info",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "6",
+                "column_name": "date_created",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "edi_852_reserved_po_info",
+                "type_name": "datetime"
+              },
+              {
+                "column_id": "7",
+                "column_name": "created_by",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "edi_852_reserved_po_info",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "8",
+                "column_name": "date_last_modified",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "edi_852_reserved_po_info",
+                "type_name": "datetime"
+              },
+              {
+                "column_id": "9",
+                "column_name": "last_maintained_by",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "edi_852_reserved_po_info",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "1",
+                "column_name": "fsm_qty_allocated_variance_uid",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "fsm_qty_allocated_variance",
+                "type_name": "int"
+              },
+              {
+                "column_id": "2",
+                "column_name": "order_no",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "fsm_qty_allocated_variance",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "3",
+                "column_name": "sr_number",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "fsm_qty_allocated_variance",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "4",
+                "column_name": "service_inv_mast_uid",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "fsm_qty_allocated_variance",
+                "type_name": "int"
+              },
+              {
+                "column_id": "5",
+                "column_name": "part_inv_mast_uid",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "fsm_qty_allocated_variance",
+                "type_name": "int"
+              },
+              {
+                "column_id": "6",
+                "column_name": "wo_part_id",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "fsm_qty_allocated_variance",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "7",
+                "column_name": "line_no",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "fsm_qty_allocated_variance",
+                "type_name": "int"
+              },
+              {
+                "column_id": "8",
+                "column_name": "part_line_no",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "fsm_qty_allocated_variance",
+                "type_name": "int"
+              },
+              {
+                "column_id": "9",
+                "column_name": "p21_qty_allocated",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "fsm_qty_allocated_variance",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "10",
+                "column_name": "fsm_qty_used",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "fsm_qty_allocated_variance",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "11",
+                "column_name": "date_created",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "fsm_qty_allocated_variance",
+                "type_name": "datetime"
+              },
+              {
+                "column_id": "12",
+                "column_name": "created_by",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "fsm_qty_allocated_variance",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "13",
+                "column_name": "date_last_modified",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "fsm_qty_allocated_variance",
+                "type_name": "datetime"
+              },
+              {
+                "column_id": "14",
+                "column_name": "last_maintained_by",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "fsm_qty_allocated_variance",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "1",
+                "column_name": "from_acct_no",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "gl_alloc",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "2",
+                "column_name": "to_acct_no",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "gl_alloc",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "3",
+                "column_name": "percentage",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "gl_alloc",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "4",
+                "column_name": "delete_flag",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "gl_alloc",
+                "type_name": "char"
+              },
+              {
+                "column_id": "5",
+                "column_name": "date_created",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "gl_alloc",
+                "type_name": "datetime"
+              },
+              {
+                "column_id": "6",
+                "column_name": "date_last_modified",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "gl_alloc",
+                "type_name": "datetime"
+              },
+              {
+                "column_id": "7",
+                "column_name": "last_maintained_by",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "gl_alloc",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "8",
+                "column_name": "company_no",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "gl_alloc",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "11",
+                "column_name": "gl_alloc_uid",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "gl_alloc",
+                "type_name": "int"
+              },
+              {
+                "column_id": "12",
+                "column_name": "to_acct_company_no",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "gl_alloc",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "1",
+                "column_name": "inv_alloc_trans_uid",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "inv_alloc_trans",
+                "type_name": "int"
+              },
+              {
+                "column_id": "2",
+                "column_name": "cycle_count_no",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "inv_alloc_trans",
+                "type_name": "int"
+              },
+              {
+                "column_id": "3",
+                "column_name": "inv_mast_uid",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "inv_alloc_trans",
+                "type_name": "int"
+              },
+              {
+                "column_id": "4",
+                "column_name": "pick_transfer_no",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "inv_alloc_trans",
+                "type_name": "int"
+              },
+              {
+                "column_id": "5",
+                "column_name": "cancelled",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "inv_alloc_trans",
+                "type_name": "char"
+              },
+              {
+                "column_id": "6",
+                "column_name": "location_id",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "inv_alloc_trans",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "7",
+                "column_name": "allocated",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "inv_alloc_trans",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "8",
+                "column_name": "adjustment",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "inv_alloc_trans",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "9",
+                "column_name": "document_type",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "inv_alloc_trans",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "10",
+                "column_name": "uom",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "inv_alloc_trans",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "11",
+                "column_name": "document_no",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "inv_alloc_trans",
+                "type_name": "int"
+              },
+              {
+                "column_id": "12",
+                "column_name": "qty_on_hand",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "inv_alloc_trans",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "13",
+                "column_name": "date_created",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "inv_alloc_trans",
+                "type_name": "datetime"
+              },
+              {
+                "column_id": "14",
+                "column_name": "created_by",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "inv_alloc_trans",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "15",
+                "column_name": "date_last_modified",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "inv_alloc_trans",
+                "type_name": "datetime"
+              },
+              {
+                "column_id": "16",
+                "column_name": "last_maintained_by",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "inv_alloc_trans",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "1",
+                "column_name": "inv_group_loc_allocation_uid",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "inv_group_loc_allocation",
+                "type_name": "int"
+              },
+              {
+                "column_id": "2",
+                "column_name": "inv_group_hdr_uid",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "inv_group_loc_allocation",
+                "type_name": "int"
+              },
+              {
+                "column_id": "3",
+                "column_name": "location_id",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "inv_group_loc_allocation",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "4",
+                "column_name": "authorized_flag",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "inv_group_loc_allocation",
+                "type_name": "char"
+              },
+              {
+                "column_id": "5",
+                "column_name": "sequence_no",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "inv_group_loc_allocation",
+                "type_name": "int"
+              },
+              {
+                "column_id": "6",
+                "column_name": "aia_value",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "inv_group_loc_allocation",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "7",
+                "column_name": "row_status_flag",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "inv_group_loc_allocation",
+                "type_name": "int"
+              },
+              {
+                "column_id": "8",
+                "column_name": "date_created",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "inv_group_loc_allocation",
+                "type_name": "datetime"
+              },
+              {
+                "column_id": "9",
+                "column_name": "created_by",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "inv_group_loc_allocation",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "10",
+                "column_name": "date_last_modified",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "inv_group_loc_allocation",
+                "type_name": "datetime"
+              },
+              {
+                "column_id": "11",
+                "column_name": "last_maintained_by",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "inv_group_loc_allocation",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "1",
+                "column_name": "inv_loc_cust_reserve_uid",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "inv_loc_cust_reserve",
+                "type_name": "int"
+              },
+              {
+                "column_id": "2",
+                "column_name": "inv_mast_uid",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "inv_loc_cust_reserve",
+                "type_name": "int"
+              },
+              {
+                "column_id": "3",
+                "column_name": "location_id",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "inv_loc_cust_reserve",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "4",
+                "column_name": "item_reservation_uid",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "inv_loc_cust_reserve",
+                "type_name": "int"
+              },
+              {
+                "column_id": "5",
+                "column_name": "reserve_qty",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "inv_loc_cust_reserve",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "7",
+                "column_name": "row_status_flag",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "inv_loc_cust_reserve",
+                "type_name": "smallint"
+              },
+              {
+                "column_id": "8",
+                "column_name": "date_created",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "inv_loc_cust_reserve",
+                "type_name": "datetime"
+              },
+              {
+                "column_id": "9",
+                "column_name": "created_by",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "inv_loc_cust_reserve",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "10",
+                "column_name": "date_last_modified",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "inv_loc_cust_reserve",
+                "type_name": "datetime"
+              },
+              {
+                "column_id": "11",
+                "column_name": "last_maintained_by",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "inv_loc_cust_reserve",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "1",
+                "column_name": "location_id",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "location_allocation_info",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "2",
+                "column_name": "pick_time",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "location_allocation_info",
+                "type_name": "int"
+              },
+              {
+                "column_id": "3",
+                "column_name": "pick_time_uom",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "location_allocation_info",
+                "type_name": "int"
+              },
+              {
+                "column_id": "4",
+                "column_name": "expedite_time",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "location_allocation_info",
+                "type_name": "int"
+              },
+              {
+                "column_id": "5",
+                "column_name": "expedite_time_uom",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "location_allocation_info",
+                "type_name": "int"
+              },
+              {
+                "column_id": "6",
+                "column_name": "date_created",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "location_allocation_info",
+                "type_name": "datetime"
+              },
+              {
+                "column_id": "7",
+                "column_name": "date_last_modified",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "location_allocation_info",
+                "type_name": "datetime"
+              },
+              {
+                "column_id": "8",
+                "column_name": "last_maintained_by",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "location_allocation_info",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "1",
+                "column_name": "location_allocation_path_uid",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "location_allocation_path",
+                "type_name": "int"
+              },
+              {
+                "column_id": "2",
+                "column_name": "location_id",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "location_allocation_path",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "3",
+                "column_name": "company_id",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "location_allocation_path",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "4",
+                "column_name": "allocation_path",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "location_allocation_path",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "5",
+                "column_name": "sequence_no",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "location_allocation_path",
+                "type_name": "int"
+              },
+              {
+                "column_id": "6",
+                "column_name": "row_status_flag",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "location_allocation_path",
+                "type_name": "int"
+              },
+              {
+                "column_id": "7",
+                "column_name": "date_created",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "location_allocation_path",
+                "type_name": "datetime"
+              },
+              {
+                "column_id": "8",
+                "column_name": "created_by",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "location_allocation_path",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "9",
+                "column_name": "date_last_modified",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "location_allocation_path",
+                "type_name": "datetime"
+              },
+              {
+                "column_id": "10",
+                "column_name": "last_maintained_by",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "location_allocation_path",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "1",
+                "column_name": "lot_bin_dealloc_report_uid",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "lot_bin_dealloc_report",
+                "type_name": "int"
+              },
+              {
+                "column_id": "2",
+                "column_name": "lot_or_bin",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "lot_bin_dealloc_report",
+                "type_name": "char"
+              },
+              {
+                "column_id": "3",
+                "column_name": "document_no",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "lot_bin_dealloc_report",
+                "type_name": "int"
+              },
+              {
+                "column_id": "4",
+                "column_name": "line_no",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "lot_bin_dealloc_report",
+                "type_name": "int"
+              },
+              {
+                "column_id": "5",
+                "column_name": "sub_line_no",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "lot_bin_dealloc_report",
+                "type_name": "int"
+              },
+              {
+                "column_id": "6",
+                "column_name": "document_type",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "lot_bin_dealloc_report",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "7",
+                "column_name": "lot_bin_cd",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "lot_bin_dealloc_report",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "8",
+                "column_name": "inv_mast_uid",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "lot_bin_dealloc_report",
+                "type_name": "int"
+              },
+              {
+                "column_id": "9",
+                "column_name": "location_id",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "lot_bin_dealloc_report",
+                "type_name": "int"
+              },
+              {
+                "column_id": "10",
+                "column_name": "unit_qty",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "lot_bin_dealloc_report",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "11",
+                "column_name": "unit_of_measure",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "lot_bin_dealloc_report",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "12",
+                "column_name": "date_created",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "lot_bin_dealloc_report",
+                "type_name": "datetime"
+              },
+              {
+                "column_id": "13",
+                "column_name": "created_by",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "lot_bin_dealloc_report",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "14",
+                "column_name": "date_last_modified",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "lot_bin_dealloc_report",
+                "type_name": "datetime"
+              },
+              {
+                "column_id": "15",
+                "column_name": "last_maintained_by",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "lot_bin_dealloc_report",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "1",
+                "column_name": "p21_unallocate_orders_bin_info_uid",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "p21_unallocate_orders_bin_info",
+                "type_name": "int"
+              },
+              {
+                "column_id": "2",
+                "column_name": "document_line_bin_uid",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "p21_unallocate_orders_bin_info",
+                "type_name": "int"
+              },
+              {
+                "column_id": "3",
+                "column_name": "qty_applied",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "p21_unallocate_orders_bin_info",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "4",
+                "column_name": "unit_quantity",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "p21_unallocate_orders_bin_info",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "5",
+                "column_name": "qty_to_change",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "p21_unallocate_orders_bin_info",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "6",
+                "column_name": "company_id",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "p21_unallocate_orders_bin_info",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "7",
+                "column_name": "location_id",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "p21_unallocate_orders_bin_info",
+                "type_name": "int"
+              },
+              {
+                "column_id": "8",
+                "column_name": "bin",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "p21_unallocate_orders_bin_info",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "9",
+                "column_name": "transaction_number",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "p21_unallocate_orders_bin_info",
+                "type_name": "int"
+              },
+              {
+                "column_id": "10",
+                "column_name": "inv_mast_uid",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "p21_unallocate_orders_bin_info",
+                "type_name": "int"
+              },
+              {
+                "column_id": "11",
+                "column_name": "qty_allocated",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "p21_unallocate_orders_bin_info",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "12",
+                "column_name": "processed",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "p21_unallocate_orders_bin_info",
+                "type_name": "smallint"
+              },
+              {
+                "column_id": "1",
+                "column_name": "p21_unallocate_orders_lot_bin_info_uid",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "p21_unallocate_orders_lot_bin_info",
+                "type_name": "int"
+              },
+              {
+                "column_id": "2",
+                "column_name": "document_line_lot_bin_xref_uid",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "p21_unallocate_orders_lot_bin_info",
+                "type_name": "int"
+              },
+              {
+                "column_id": "3",
+                "column_name": "qty_applied",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "p21_unallocate_orders_lot_bin_info",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "4",
+                "column_name": "unit_quantity",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "p21_unallocate_orders_lot_bin_info",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "5",
+                "column_name": "qty_to_change",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "p21_unallocate_orders_lot_bin_info",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "6",
+                "column_name": "company_id",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "p21_unallocate_orders_lot_bin_info",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "7",
+                "column_name": "location_id",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "p21_unallocate_orders_lot_bin_info",
+                "type_name": "int"
+              },
+              {
+                "column_id": "8",
+                "column_name": "lot_cd",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "p21_unallocate_orders_lot_bin_info",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "9",
+                "column_name": "bin_cd",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "p21_unallocate_orders_lot_bin_info",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "10",
+                "column_name": "transaction_number",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "p21_unallocate_orders_lot_bin_info",
+                "type_name": "int"
+              },
+              {
+                "column_id": "11",
+                "column_name": "inv_mast_uid",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "p21_unallocate_orders_lot_bin_info",
+                "type_name": "int"
+              },
+              {
+                "column_id": "12",
+                "column_name": "qty_allocated",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "p21_unallocate_orders_lot_bin_info",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "13",
+                "column_name": "processed",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "p21_unallocate_orders_lot_bin_info",
+                "type_name": "smallint"
+              },
+              {
+                "column_id": "1",
+                "column_name": "p21_unallocate_orders_lot_info_uid",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "p21_unallocate_orders_lot_info",
+                "type_name": "int"
+              },
+              {
+                "column_id": "2",
+                "column_name": "document_line_lot_uid",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "p21_unallocate_orders_lot_info",
+                "type_name": "int"
+              },
+              {
+                "column_id": "3",
+                "column_name": "qty_applied",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "p21_unallocate_orders_lot_info",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "4",
+                "column_name": "unit_quantity",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "p21_unallocate_orders_lot_info",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "5",
+                "column_name": "qty_to_change",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "p21_unallocate_orders_lot_info",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "6",
+                "column_name": "company_id",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "p21_unallocate_orders_lot_info",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "7",
+                "column_name": "location_id",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "p21_unallocate_orders_lot_info",
+                "type_name": "int"
+              },
+              {
+                "column_id": "8",
+                "column_name": "lot",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "p21_unallocate_orders_lot_info",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "9",
+                "column_name": "transaction_number",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "p21_unallocate_orders_lot_info",
+                "type_name": "int"
+              },
+              {
+                "column_id": "10",
+                "column_name": "qty_allocated",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "p21_unallocate_orders_lot_info",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "11",
+                "column_name": "inv_mast_uid",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "p21_unallocate_orders_lot_info",
+                "type_name": "int"
+              },
+              {
+                "column_id": "12",
+                "column_name": "sku_cost",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "p21_unallocate_orders_lot_info",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "13",
+                "column_name": "processed",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "p21_unallocate_orders_lot_info",
+                "type_name": "smallint"
+              },
+              {
+                "column_id": "1",
+                "column_name": "p21_unallocate_orders_order_line_info_uid",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "p21_unallocate_orders_order_line_info",
+                "type_name": "int"
+              },
+              {
+                "column_id": "2",
+                "column_name": "oe_line_uid",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "p21_unallocate_orders_order_line_info",
+                "type_name": "int"
+              },
+              {
+                "column_id": "3",
+                "column_name": "qty_allocated",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "p21_unallocate_orders_order_line_info",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "4",
+                "column_name": "scheduled",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "p21_unallocate_orders_order_line_info",
+                "type_name": "char"
+              },
+              {
+                "column_id": "5",
+                "column_name": "order_no",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "p21_unallocate_orders_order_line_info",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "6",
+                "column_name": "line_no",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "p21_unallocate_orders_order_line_info",
+                "type_name": "int"
+              },
+              {
+                "column_id": "7",
+                "column_name": "location_id",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "p21_unallocate_orders_order_line_info",
+                "type_name": "int"
+              },
+              {
+                "column_id": "8",
+                "column_name": "period",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "p21_unallocate_orders_order_line_info",
+                "type_name": "int"
+              },
+              {
+                "column_id": "9",
+                "column_name": "year_for_period",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "p21_unallocate_orders_order_line_info",
+                "type_name": "int"
+              },
+              {
+                "column_id": "10",
+                "column_name": "unit_cost_amt",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "p21_unallocate_orders_order_line_info",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "11",
+                "column_name": "inv_mast_uid",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "p21_unallocate_orders_order_line_info",
+                "type_name": "int"
+              },
+              {
+                "column_id": "12",
+                "column_name": "processed",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "p21_unallocate_orders_order_line_info",
+                "type_name": "smallint"
+              },
+              {
+                "column_id": "1",
+                "column_name": "p21_unallocate_orders_order_line_schedule_info_uid",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "p21_unallocate_orders_order_line_schedule_info",
+                "type_name": "int"
+              },
+              {
+                "column_id": "2",
+                "column_name": "oe_line_schedule_uid",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "p21_unallocate_orders_order_line_schedule_info",
+                "type_name": "int"
+              },
+              {
+                "column_id": "3",
+                "column_name": "allocated_qty",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "p21_unallocate_orders_order_line_schedule_info",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "4",
+                "column_name": "oe_line_uid",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "p21_unallocate_orders_order_line_schedule_info",
+                "type_name": "int"
+              },
+              {
+                "column_id": "5",
+                "column_name": "order_no",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "p21_unallocate_orders_order_line_schedule_info",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "6",
+                "column_name": "line_no",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "p21_unallocate_orders_order_line_schedule_info",
+                "type_name": "int"
+              },
+              {
+                "column_id": "7",
+                "column_name": "location_id",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "p21_unallocate_orders_order_line_schedule_info",
+                "type_name": "int"
+              },
+              {
+                "column_id": "8",
+                "column_name": "period",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "p21_unallocate_orders_order_line_schedule_info",
+                "type_name": "int"
+              },
+              {
+                "column_id": "9",
+                "column_name": "year_for_period",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "p21_unallocate_orders_order_line_schedule_info",
+                "type_name": "int"
+              },
+              {
+                "column_id": "10",
+                "column_name": "unit_cost_amt",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "p21_unallocate_orders_order_line_schedule_info",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "11",
+                "column_name": "inv_mast_uid",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "p21_unallocate_orders_order_line_schedule_info",
+                "type_name": "int"
+              },
+              {
+                "column_id": "12",
+                "column_name": "processed",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "p21_unallocate_orders_order_line_schedule_info",
+                "type_name": "smallint"
+              },
+              {
+                "column_id": "1",
+                "column_name": "service_line_part_allocation_integration_response_audit_uid",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "service_line_part_allocation_integration_response_audit",
+                "type_name": "bigint"
+              },
+              {
+                "column_id": "2",
+                "column_name": "msg_uid",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "service_line_part_allocation_integration_response_audit",
+                "type_name": "uniqueidentifier"
+              },
+              {
+                "column_id": "3",
+                "column_name": "oe_line_uid",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "service_line_part_allocation_integration_response_audit",
+                "type_name": "int"
+              },
+              {
+                "column_id": "4",
+                "column_name": "order_no",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "service_line_part_allocation_integration_response_audit",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "5",
+                "column_name": "line_no",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "service_line_part_allocation_integration_response_audit",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "6",
+                "column_name": "part_line_no",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "service_line_part_allocation_integration_response_audit",
+                "type_name": "int"
+              },
+              {
+                "column_id": "7",
+                "column_name": "item_id",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "service_line_part_allocation_integration_response_audit",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "8",
+                "column_name": "integration_cd",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "service_line_part_allocation_integration_response_audit",
+                "type_name": "int"
+              },
+              {
+                "column_id": "9",
+                "column_name": "date_created",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "service_line_part_allocation_integration_response_audit",
+                "type_name": "datetime"
+              },
+              {
+                "column_id": "1",
+                "column_name": "service_line_part_allocation_integration_trigger_audit_uid",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "service_line_part_allocation_integration_trigger_audit",
+                "type_name": "bigint"
+              },
+              {
+                "column_id": "2",
+                "column_name": "msg_uid",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "service_line_part_allocation_integration_trigger_audit",
+                "type_name": "uniqueidentifier"
+              },
+              {
+                "column_id": "3",
+                "column_name": "oe_line_uid",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "service_line_part_allocation_integration_trigger_audit",
+                "type_name": "int"
+              },
+              {
+                "column_id": "4",
+                "column_name": "order_no",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "service_line_part_allocation_integration_trigger_audit",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "5",
+                "column_name": "line_no",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "service_line_part_allocation_integration_trigger_audit",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "6",
+                "column_name": "part_line_no",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "service_line_part_allocation_integration_trigger_audit",
+                "type_name": "int"
+              },
+              {
+                "column_id": "7",
+                "column_name": "item_id",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "service_line_part_allocation_integration_trigger_audit",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "8",
+                "column_name": "integration_cd",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "service_line_part_allocation_integration_trigger_audit",
+                "type_name": "int"
+              },
+              {
+                "column_id": "9",
+                "column_name": "date_created",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "service_line_part_allocation_integration_trigger_audit",
+                "type_name": "datetime"
+              },
+              {
+                "column_id": "10",
+                "column_name": "xml_msg",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "service_line_part_allocation_integration_trigger_audit",
+                "type_name": "xml"
+              },
+              {
+                "column_id": "1",
+                "column_name": "shopping_cart_allocation_uid",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "shopping_cart_allocation",
+                "type_name": "int"
+              },
+              {
+                "column_id": "2",
+                "column_name": "web_reference_no",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "shopping_cart_allocation",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "3",
+                "column_name": "inv_mast_uid",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "shopping_cart_allocation",
+                "type_name": "int"
+              },
+              {
+                "column_id": "4",
+                "column_name": "source_loc_id",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "shopping_cart_allocation",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "5",
+                "column_name": "requested_qty",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "shopping_cart_allocation",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "6",
+                "column_name": "allocated_qty",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "shopping_cart_allocation",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "7",
+                "column_name": "unit_of_measure",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "shopping_cart_allocation",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "8",
+                "column_name": "component_flag",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "shopping_cart_allocation",
+                "type_name": "char"
+              },
+              {
+                "column_id": "9",
+                "column_name": "row_status_flag",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "shopping_cart_allocation",
+                "type_name": "int"
+              },
+              {
+                "column_id": "10",
+                "column_name": "date_created",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "shopping_cart_allocation",
+                "type_name": "datetime"
+              },
+              {
+                "column_id": "11",
+                "column_name": "created_by",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "shopping_cart_allocation",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "12",
+                "column_name": "date_last_modified",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "shopping_cart_allocation",
+                "type_name": "datetime"
+              },
+              {
+                "column_id": "13",
+                "column_name": "last_maintained_by",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "shopping_cart_allocation",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "1",
+                "column_name": "transfer_backorders_uid",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "transfer_backorders",
+                "type_name": "int"
+              },
+              {
+                "column_id": "2",
+                "column_name": "source_location_id",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "transfer_backorders",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "3",
+                "column_name": "destination_location_id",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "transfer_backorders",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "4",
+                "column_name": "inv_mast_uid",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "transfer_backorders",
+                "type_name": "int"
+              },
+              {
+                "column_id": "5",
+                "column_name": "qty_backordered",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "transfer_backorders",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "6",
+                "column_name": "date_created",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "transfer_backorders",
+                "type_name": "datetime"
+              },
+              {
+                "column_id": "7",
+                "column_name": "date_last_modified",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "transfer_backorders",
+                "type_name": "datetime"
+              },
+              {
+                "column_id": "8",
+                "column_name": "last_maintained_by",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "transfer_backorders",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "9",
+                "column_name": "source",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "transfer_backorders",
+                "type_name": "int"
+              },
+              {
+                "column_id": "10",
+                "column_name": "type",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "transfer_backorders",
+                "type_name": "int"
+              },
+              {
+                "column_id": "11",
+                "column_name": "po_no",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "transfer_backorders",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "12",
+                "column_name": "po_line_no",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "transfer_backorders",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "13",
+                "column_name": "item_revision_uid",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "transfer_backorders",
+                "type_name": "int"
+              },
+              {
+                "column_id": "14",
+                "column_name": "transfer_no",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "transfer_backorders",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "15",
+                "column_name": "lock_transaction",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "transfer_backorders",
+                "type_name": "char"
+              },
+              {
+                "column_id": "1",
+                "column_name": "transfer_backorders_detail_uid",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "transfer_backorders_detail",
+                "type_name": "int"
+              },
+              {
+                "column_id": "2",
+                "column_name": "transfer_backorders_uid",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "transfer_backorders_detail",
+                "type_name": "int"
+              },
+              {
+                "column_id": "3",
+                "column_name": "transfer_no",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "transfer_backorders_detail",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "4",
+                "column_name": "date_created",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "transfer_backorders_detail",
+                "type_name": "datetime"
+              },
+              {
+                "column_id": "5",
+                "column_name": "created_by",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "transfer_backorders_detail",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "6",
+                "column_name": "date_last_modified",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "transfer_backorders_detail",
+                "type_name": "datetime"
+              },
+              {
+                "column_id": "7",
+                "column_name": "last_maintained_by",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "transfer_backorders_detail",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "1",
+                "column_name": "transfer_backorders_uid",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "transfer_backorders_notepad",
+                "type_name": "int"
+              },
+              {
+                "column_id": "2",
+                "column_name": "notepad_class_id",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "transfer_backorders_notepad",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "3",
+                "column_name": "topic",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "transfer_backorders_notepad",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "4",
+                "column_name": "note",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "transfer_backorders_notepad",
+                "type_name": "text"
+              },
+              {
+                "column_id": "5",
+                "column_name": "activation_date",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "transfer_backorders_notepad",
+                "type_name": "datetime"
+              },
+              {
+                "column_id": "6",
+                "column_name": "expiration_date",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "transfer_backorders_notepad",
+                "type_name": "datetime"
+              },
+              {
+                "column_id": "7",
+                "column_name": "entry_date",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "transfer_backorders_notepad",
+                "type_name": "datetime"
+              },
+              {
+                "column_id": "8",
+                "column_name": "mandatory_flag",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "transfer_backorders_notepad",
+                "type_name": "char"
+              },
+              {
+                "column_id": "9",
+                "column_name": "delete_flag",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "transfer_backorders_notepad",
+                "type_name": "char"
+              },
+              {
+                "column_id": "10",
+                "column_name": "date_created",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "transfer_backorders_notepad",
+                "type_name": "datetime"
+              },
+              {
+                "column_id": "11",
+                "column_name": "created_by",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "transfer_backorders_notepad",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "12",
+                "column_name": "date_last_modified",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "transfer_backorders_notepad",
+                "type_name": "datetime"
+              },
+              {
+                "column_id": "13",
+                "column_name": "last_maintained_by",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "transfer_backorders_notepad",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "14",
+                "column_name": "transfer_backorders_notepad_uid",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "transfer_backorders_notepad",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "1",
+                "column_name": "workbench_allocation_dflt_uid",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "workbench_allocation_dflt",
+                "type_name": "int"
+              },
+              {
+                "column_id": "2",
+                "column_name": "workbench_uid",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "workbench_allocation_dflt",
+                "type_name": "int"
+              },
+              {
+                "column_id": "3",
+                "column_name": "included_zones",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "workbench_allocation_dflt",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "4",
+                "column_name": "excluded_zones",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "workbench_allocation_dflt",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "5",
+                "column_name": "split_picks_flag",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "workbench_allocation_dflt",
+                "type_name": "char"
+              },
+              {
+                "column_id": "6",
+                "column_name": "minimize_picks_flag",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "workbench_allocation_dflt",
+                "type_name": "char"
+              },
+              {
+                "column_id": "7",
+                "column_name": "date_created",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "workbench_allocation_dflt",
+                "type_name": "datetime"
+              },
+              {
+                "column_id": "8",
+                "column_name": "created_by",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "workbench_allocation_dflt",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "9",
+                "column_name": "date_last_modified",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "workbench_allocation_dflt",
+                "type_name": "datetime"
+              },
+              {
+                "column_id": "10",
+                "column_name": "last_maintained_by",
+                "result_set": "table_columns_backorder_reserve",
+                "table_name": "workbench_allocation_dflt",
+                "type_name": "varchar"
+              }
+            ]
+          }
+        ]
+      },
+      "pipelineName": "Diag_Coats_Auto_Sales_Allocation",
+      "pipelineRunId": "0a8084d3-5309-11f1-a694-9cb150a3acae",
+      "recoveryStatus": "None",
+      "resourceGroup": "RG1",
+      "retryAttempt": null,
+      "status": "Succeeded",
+      "userProperties": {}
+    }
+  ]
+}

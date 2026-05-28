@@ -1,0 +1,127 @@
+﻿{
+  "continuationToken": null,
+  "value": [
+    {
+      "activityName": "RunQuery",
+      "activityRunEnd": "2026-05-18T22:39:52.090471+00:00",
+      "activityRunId": "cb73e972-0f97-4a2a-9658-4baa3f2b8473",
+      "activityRunStart": "2026-05-18T22:39:38.589738+00:00",
+      "activityType": "Script",
+      "durationInMs": 13500,
+      "error": {
+        "details": "",
+        "errorCode": "",
+        "failureType": "",
+        "message": "",
+        "target": "RunQuery"
+      },
+      "executionDetails": {
+        "integrationRuntime": [
+          {
+            "location": "West US",
+            "name": "SQLServer",
+            "nodes": [
+              "KASVRW2K8FS"
+            ],
+            "type": "SelfHosted"
+          }
+        ]
+      },
+      "id": "/SUBSCRIPTIONS/6624EC13-3826-43B2-8E45-077F9051B88F/RESOURCEGROUPS/RG1/PROVIDERS/MICROSOFT.DATAFACTORY/FACTORIES/2026-04-01-DF1/pipelineruns/6ebe16eb-530a-11f1-b3d8-9cb150a3acae/activityruns/cb73e972-0f97-4a2a-9658-4baa3f2b8473",
+      "input": {
+        "logSettings": {
+          "logDestination": "ActivityOutput"
+        },
+        "scriptBlockExecutionTimeout": "00:10:00",
+        "scripts": [
+          {
+            "text": "USE P21;\nSET NOCOUNT ON;\nSET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;\nDECLARE @Target int=682,@Good int=681,@Loc decimal(19,0)=210;\nDROP TABLE IF EXISTS #scope; CREATE TABLE #scope(sample_name varchar(20), crh_uid int); INSERT #scope VALUES('TARGET',@Target),('KNOWN_GOOD',@Good);\n;WITH lines AS (\n SELECT s.sample_name, crl.container_receipts_hdr_uid, crl.container_receipts_line_uid, crl.complete_po_line_flag, pol.inv_mast_uid, im.item_id, crl.qty_received\n FROM #scope s JOIN container_receipts_line crl ON crl.container_receipts_hdr_uid=s.crh_uid JOIN vessel_receipts_line vl ON vl.vessel_receipts_line_uid=crl.vessel_receipts_line_uid JOIN po_line pol ON pol.po_line_uid=vl.po_line_uid JOIN inv_mast im ON im.inv_mast_uid=pol.inv_mast_uid\n), demand AS (\n SELECT l.sample_name,l.complete_po_line_flag,l.inv_mast_uid,l.item_id,l.qty_received,\n        demand=SUM(CASE WHEN COALESCE(ol.complete,'N')='N' AND COALESCE(oh.rma_flag,'N')='N' THEN CASE WHEN COALESCE(ol.qty_ordered,0)-COALESCE(ol.qty_allocated,0)-COALESCE(ol.qty_on_pick_tickets,0)-COALESCE(ol.qty_invoiced,0)>0 THEN COALESCE(ol.qty_ordered,0)-COALESCE(ol.qty_allocated,0)-COALESCE(ol.qty_on_pick_tickets,0)-COALESCE(ol.qty_invoiced,0) ELSE 0 END ELSE 0 END),\n        avail=MAX(COALESCE(il.qty_on_hand,0)-COALESCE(il.qty_allocated,0))\n FROM lines l LEFT JOIN oe_line ol ON ol.inv_mast_uid=l.inv_mast_uid AND ol.ship_loc_id=@Loc LEFT JOIN oe_hdr oh ON oh.order_no=ol.order_no LEFT JOIN p21_view_inv_loc il ON il.inv_mast_uid=l.inv_mast_uid AND il.location_id=@Loc\n GROUP BY l.sample_name,l.complete_po_line_flag,l.inv_mast_uid,l.item_id,l.qty_received\n)\nSELECT result_set='gap_by_complete_po_line_flag', sample_name, complete_po_line_flag, line_count=CONVERT(varchar(50),COUNT(*)), receipt_qty=CONVERT(varchar(50),SUM(qty_received)), items_with_demand=CONVERT(varchar(50),SUM(CASE WHEN demand>0 THEN 1 ELSE 0 END)), items_with_avail=CONVERT(varchar(50),SUM(CASE WHEN avail>0 THEN 1 ELSE 0 END)), items_with_both=CONVERT(varchar(50),SUM(CASE WHEN demand>0 AND avail>0 THEN 1 ELSE 0 END))\nFROM demand GROUP BY sample_name,complete_po_line_flag ORDER BY sample_name,complete_po_line_flag;",
+            "type": "Query"
+          }
+        ]
+      },
+      "integrationRuntimeNames": [
+        "sqlserver"
+      ],
+      "iterationHash": "",
+      "linkedServiceName": "",
+      "output": {
+        "billingReference": {
+          "activityType": "PipelineActivity",
+          "billableDuration": [
+            {
+              "duration": 0.016666666666666666,
+              "meterType": "SelfhostedIR",
+              "unit": "Hours"
+            }
+          ]
+        },
+        "durationInQueue": {
+          "integrationRuntimeQueue": 4
+        },
+        "effectiveIntegrationRuntime": "SQLServer",
+        "executionDuration": 1,
+        "outputLogs": "Changed database context to 'P21'.\n",
+        "outputLogsLocation": "",
+        "outputParameters": {},
+        "outputTruncated": false,
+        "recordsAffected": 0,
+        "resultSetCount": 1,
+        "resultSets": [
+          {
+            "rowCount": 4,
+            "rows": [
+              {
+                "complete_po_line_flag": "N",
+                "items_with_avail": "4",
+                "items_with_both": "0",
+                "items_with_demand": "2",
+                "line_count": "16",
+                "receipt_qty": "5706.181000000",
+                "result_set": "gap_by_complete_po_line_flag",
+                "sample_name": "KNOWN_GOOD"
+              },
+              {
+                "complete_po_line_flag": "Y",
+                "items_with_avail": "30",
+                "items_with_both": "6",
+                "items_with_demand": "15",
+                "line_count": "68",
+                "receipt_qty": "6849.989000000",
+                "result_set": "gap_by_complete_po_line_flag",
+                "sample_name": "KNOWN_GOOD"
+              },
+              {
+                "complete_po_line_flag": "N",
+                "items_with_avail": "9",
+                "items_with_both": "7",
+                "items_with_demand": "13",
+                "line_count": "18",
+                "receipt_qty": "4918.723000000",
+                "result_set": "gap_by_complete_po_line_flag",
+                "sample_name": "TARGET"
+              },
+              {
+                "complete_po_line_flag": "Y",
+                "items_with_avail": "98",
+                "items_with_both": "55",
+                "items_with_demand": "72",
+                "line_count": "164",
+                "receipt_qty": "17104.940000000",
+                "result_set": "gap_by_complete_po_line_flag",
+                "sample_name": "TARGET"
+              }
+            ]
+          }
+        ]
+      },
+      "pipelineName": "Diag_Coats_Auto_Sales_Allocation",
+      "pipelineRunId": "6ebe16eb-530a-11f1-b3d8-9cb150a3acae",
+      "recoveryStatus": "None",
+      "resourceGroup": "RG1",
+      "retryAttempt": null,
+      "status": "Succeeded",
+      "userProperties": {}
+    }
+  ]
+}

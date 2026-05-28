@@ -1,0 +1,107 @@
+﻿{
+  "continuationToken": null,
+  "value": [
+    {
+      "activityName": "RunQuery",
+      "activityRunEnd": "2026-05-18T22:29:01.205240+00:00",
+      "activityRunId": "c1eddfa0-392a-4748-88b2-26ae87bed6ff",
+      "activityRunStart": "2026-05-18T22:28:43.731469+00:00",
+      "activityType": "Script",
+      "durationInMs": 17473,
+      "error": {
+        "details": "",
+        "errorCode": "",
+        "failureType": "",
+        "message": "",
+        "target": "RunQuery"
+      },
+      "executionDetails": {
+        "integrationRuntime": [
+          {
+            "location": "West US",
+            "name": "SQLServer",
+            "nodes": [
+              "KASVRW2K8FS"
+            ],
+            "type": "SelfHosted"
+          }
+        ]
+      },
+      "id": "/SUBSCRIPTIONS/6624EC13-3826-43B2-8E45-077F9051B88F/RESOURCEGROUPS/RG1/PROVIDERS/MICROSOFT.DATAFACTORY/FACTORIES/2026-04-01-DF1/pipelineruns/e8bf3588-5308-11f1-ad2b-9cb150a3acae/activityruns/c1eddfa0-392a-4748-88b2-26ae87bed6ff",
+      "input": {
+        "logSettings": {
+          "logDestination": "ActivityOutput"
+        },
+        "scriptBlockExecutionTimeout": "00:10:00",
+        "scripts": [
+          {
+            "text": "USE P21;\nSET NOCOUNT ON;\nSET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;\nDECLARE @d nvarchar(max) = (SELECT definition FROM sys.sql_modules WHERE object_id=OBJECT_ID('dbo.p21_create_container_receipt_records'));\n;WITH n AS (\n  SELECT 1 AS chunk_no, SUBSTRING(@d,1,3500) AS chunk_text UNION ALL\n  SELECT 2, SUBSTRING(@d,3501,3500) UNION ALL\n  SELECT 3, SUBSTRING(@d,7001,3500) UNION ALL\n  SELECT 4, SUBSTRING(@d,10501,3500) UNION ALL\n  SELECT 5, SUBSTRING(@d,14001,3500) UNION ALL\n  SELECT 6, SUBSTRING(@d,17501,3500) UNION ALL\n  SELECT 7, SUBSTRING(@d,21001,3500) UNION ALL\n  SELECT 8, SUBSTRING(@d,24501,3500)\n)\nSELECT result_set='p21_create_container_receipt_records_definition', chunk_no=CONVERT(varchar(20), chunk_no), chunk_text FROM n WHERE chunk_text IS NOT NULL AND LEN(chunk_text)>0 ORDER BY chunk_no;",
+            "type": "Query"
+          }
+        ]
+      },
+      "integrationRuntimeNames": [
+        "sqlserver"
+      ],
+      "iterationHash": "",
+      "linkedServiceName": "",
+      "output": {
+        "billingReference": {
+          "activityType": "PipelineActivity",
+          "billableDuration": [
+            {
+              "duration": 0.016666666666666666,
+              "meterType": "SelfhostedIR",
+              "unit": "Hours"
+            }
+          ]
+        },
+        "durationInQueue": {
+          "integrationRuntimeQueue": 6
+        },
+        "effectiveIntegrationRuntime": "SQLServer",
+        "executionDuration": 1,
+        "outputLogs": "Changed database context to 'P21'.\n",
+        "outputLogsLocation": "",
+        "outputParameters": {},
+        "outputTruncated": false,
+        "recordsAffected": 0,
+        "resultSetCount": 1,
+        "resultSets": [
+          {
+            "rowCount": 4,
+            "rows": [
+              {
+                "chunk_no": "1",
+                "chunk_text": "\r\n\r\nCREATE PROCEDURE p21_create_container_receipt_records\r\nAS\r\n  SET NOCOUNT ON\r\n\r\n  BEGIN\r\n\t  -- If we're in the middle of processing PO's through Container Receipts, and after saving \r\n\t  -- off a couple PO Receipts the app crashes before we had a chance to create Container\r\n\t  -- Receipt records, we're obviously going to have no history of those records.  This procedure\r\n\t  -- will attempt to find and create those missing records under the assumption that something \r\n\t  -- is indeed more useful than nothing.\r\n\t  BEGIN TRANSACTION\r\n\r\n      IF Object_id('tempdb..#container_receipt_records') IS NOT NULL\r\n        DROP TABLE #container_receipt_records\r\n\r\n      DECLARE @error INTEGER\r\n      DECLARE @li_CRLCounter INTEGER\r\n      DECLARE @li_CRHdrUID INTEGER\r\n      DECLARE @li_VRLUID INTEGER\r\n      DECLARE @ldc_QtyReceived DECIMAL(19, 9)\r\n      DECLARE @ldc_UnitSize DECIMAL(19, 6)\r\n      DECLARE @ls_UOM VARCHAR(8)\r\n      DECLARE @msg VARCHAR(255)\r\n      DECLARE @procname VARCHAR(255)\r\n\r\n\t  DECLARE @ld_current_timestamp datetime\r\n\t  SET @ld_current_timestamp = dbo.p21_fn_GetSystemDatetime(CURRENT_TIMESTAMP,NULL,NULL)\r\n\r\n      -- Create a temp table to store the items we need to add or update. \r\n      CREATE TABLE #container_receipt_records\r\n        (\r\n           container_receipts_hdr_uid     INTEGER NOT NULL,\r\n           vessel_receipts_container_name VARCHAR(255) NOT NULL,\r\n           inv_mast_uid                   INTEGER NOT NULL,\r\n           po_no                          DECIMAL(19, 0) NOT NULL,\r\n           po_line_no                     INTEGER NOT NULL,\r\n           qty_received                   DECIMAL(19, 9) NOT NULL,\r\n           unit_of_measure                VARCHAR(255) NOT NULL,\r\n           unit_size                      DECIMAL(19, 9) NOT NULL,\r\n           vessel_receipt_records         INTEGER NOT NULL,\r\n           vessel_receipts_line_uid       INTEGER NULL,\r\n           vessel_receipts_container_uid  INTEGER NULL\r\n        )\r\n\r\n      INSERT INTO #container_receipt_records\r\n                  (container_receipts_hdr_uid,\r\n                   vessel_receipts_container_name,\r\n                   inv_mast_uid,\r\n                   po_no,\r\n                   po_line_no,\r\n                   qty_received,\r\n                   unit_of_measure,\r\n                   unit_size,\r\n                   vessel_receipt_records)\r\n      -- Grab any Container Receipts that are tied to a PO Receipt, but do not actually exist in the database.\r\n      SELECT inventory_receipts_hdr.container_receipts_hdr_uid,\r\n             inventory_receipts_hdr.external_reference_no,\r\n             inventory_receipts_line.inv_mast_uid,\r\n             inventory_receipts_hdr.po_number,\r\n             inventory_receipts_line.po_line_number,\r\n             inventory_receipts_line.qty_received, -- qty_received for CRL is in SKU's\r\n             inventory_receipts_line.unit_of_measure,\r\n\t\t\t inventory_receipts_line.unit_size,\r\n\t\t\t drv_vrl_records.vessel_receipt_records\r\n      FROM   inventory_receipts_line\r\n             INNER JOIN inventory_receipts_hdr\r\n               ON inventory_receipts_line.receipt_number = inventory_receipts_hdr.receipt_number\r\n             LEFT JOIN container_receipts_hdr\r\n               ON inventory_receipts_hdr.container_receipts_hdr_uid = container_receipts_hdr.container_receipts_hdr_uid\r\n             LEFT JOIN (SELECT Count(*) vessel_receipt_records,\r\n                               po_line.inv_mast_uid,\r\n                               po_line.line_no,\r\n     ",
+                "result_set": "p21_create_container_receipt_records_definition"
+              },
+              {
+                "chunk_no": "2",
+                "chunk_text": "                          po_line.po_no,\r\n                               vessel_receipts_container.container_name\r\n                        FROM   vessel_receipts_line\r\n                               INNER JOIN po_line\r\n                                 ON po_line.po_line_uid = vessel_receipts_line.po_line_uid\r\n                               INNER JOIN po_hdr\r\n                                 ON po_line.po_no = po_hdr.po_no\r\n                               INNER JOIN vessel_receipts_container\r\n                                 ON vessel_receipts_container.vessel_receipts_container_uid = vessel_receipts_line.vessel_receipts_container_uid\r\n                        GROUP  BY po_line.inv_mast_uid,\r\n                                  po_line.line_no,\r\n                                  po_line.po_no,\r\n                                  vessel_receipts_container.container_name) AS drv_vrl_records\r\n               ON ( inventory_receipts_line.inv_mast_uid = drv_vrl_records.inv_mast_uid )\r\n                  AND ( inventory_receipts_line.po_line_number = drv_vrl_records.line_no )\r\n                  AND ( inventory_receipts_hdr.po_number = drv_vrl_records.po_no )\r\n                  AND ( inventory_receipts_hdr.external_reference_no = drv_vrl_records.container_name )\r\n      WHERE  inventory_receipts_hdr.container_receipts_hdr_uid IS NOT NULL\r\n             AND container_receipts_hdr.container_receipts_hdr_uid IS NULL\r\n             AND inventory_receipts_hdr.approved = 'Y'\r\n\r\n      -- We need to tie these PO Receipt records back to a correct vessel receipt line record.  It's possible that \r\n      -- a PO/PO Line could be associated with multiple vessel receipts.  If that's the case, then hopefully\r\n      -- the container name will help us determine which is the correct vessel.  However, if they have the same\r\n      -- container name (we don't force them to be unique in the app) then we have no way to know which was the\r\n      -- right vessel receipt line record.  The column vessel_receipt_records should tell us if we cannot\r\n      -- correctly link to a VRL record.  If we can't, just remove them.\r\n      DELETE FROM #container_receipt_records\r\n      WHERE  #container_receipt_records.vessel_receipt_records > 1\r\n\r\n      -- Now correctly update the records to their proper vessel_receipts_line/vessel_receipts_container records.\r\n      UPDATE #container_receipt_records\r\n      SET    vessel_receipts_line_uid = drv_vrl_records.vessel_receipts_line_uid,\r\n             vessel_receipts_container_uid = drv_vrl_records.vessel_receipts_container_uid\r\n      FROM   #container_receipt_records\r\n             LEFT JOIN (SELECT vessel_receipts_line.vessel_receipts_line_uid,\r\n                               vessel_receipts_line.vessel_receipts_container_uid,\r\n                               po_line.inv_mast_uid,\r\n                               po_line.line_no,\r\n                               po_line.po_no,\r\n                               vessel_receipts_container.container_name\r\n                        FROM   vessel_receipts_line\r\n                               INNER JOIN po_line\r\n                                 ON po_line.po_line_uid = vessel_receipts_line.po_line_uid\r\n                               INNER JOIN po_hdr\r\n                                 ON po_line.po_no = po_hdr.po_no\r\n                               INNER JOIN vessel_receipts_container\r\n                                 ON vessel_receipts_container.vessel_receipts_container_uid = vessel_receipts_line.vessel_receipts_c",
+                "result_set": "p21_create_container_receipt_records_definition"
+              },
+              {
+                "chunk_no": "3",
+                "chunk_text": "ontainer_uid\r\n                        GROUP  BY vessel_receipts_line.vessel_receipts_line_uid,\r\n                                  vessel_receipts_line.vessel_receipts_container_uid,\r\n                                  po_line.inv_mast_uid,\r\n                                  po_line.line_no,\r\n                                  po_line.po_no,\r\n                                  vessel_receipts_container.container_name) AS drv_vrl_records\r\n               ON ( #container_receipt_records.inv_mast_uid = drv_vrl_records.inv_mast_uid )\r\n                  AND ( #container_receipt_records.po_line_no = drv_vrl_records.line_no )\r\n                  AND ( #container_receipt_records.po_no = drv_vrl_records.po_no )\r\n                  AND ( #container_receipt_records.vessel_receipts_container_name = drv_vrl_records.container_name )\r\n\r\n      -- Go ahead with inserting the values into the container_receipts_hdr/container_receipts_line.\r\n      INSERT INTO container_receipts_hdr\r\n                  (container_receipts_hdr_uid,\r\n                   vessel_receipts_container_uid,\r\n                   date_received,\r\n                   period,\r\n                   year_for_period,\r\n                   row_status_flag,\r\n                   date_created,\r\n                   created_by,\r\n                   date_last_modified,\r\n                   last_maintained_by)\r\n      SELECT DISTINCT #container_receipt_records.container_receipts_hdr_uid,\r\n                      #container_receipt_records.vessel_receipts_container_uid,\r\n                      Dateadd(D, 0, Datediff(D, 0, inventory_receipts_hdr.date_created)),\r\n                      inventory_receipts_hdr.period,\r\n                      inventory_receipts_hdr.year_for_period,\r\n                      972, -- Approved row status\r\n                      @ld_current_timestamp,\r\n                      'p21_create_container_receipt_records',\r\n                      @ld_current_timestamp,\r\n                      'p21_create_container_receipt_records'\r\n      FROM   #container_receipt_records\r\n             INNER JOIN inventory_receipts_hdr\r\n               ON inventory_receipts_hdr.container_receipts_hdr_uid = #container_receipt_records.container_receipts_hdr_uid\r\n\r\n      DECLARE lc_CreateContainerReceiptLine CURSOR STATIC FORWARD_ONLY FOR\r\n        SELECT #container_receipt_records.container_receipts_hdr_uid,\r\n               #container_receipt_records.vessel_receipts_line_uid,\r\n               #container_receipt_records.qty_received,\r\n               #container_receipt_records.unit_of_measure,\r\n               #container_receipt_records.unit_size\r\n        FROM   #container_receipt_records\r\n        ORDER  BY #container_receipt_records.container_receipts_hdr_uid\r\n\r\n      OPEN lc_CreateContainerReceiptLine\r\n\r\n      IF ( @@ERROR = 0 )\r\n        BEGIN\r\n            FETCH NEXT FROM lc_CreateContainerReceiptLine INTO @li_CRHdrUID, @li_VRLUID, @ldc_QtyReceived, @ls_UOM, @ldc_UnitSize\r\n\r\n            WHILE @@FETCH_STATUS = 0\r\n              BEGIN\r\n                  EXECUTE @li_CRLCounter = P21_get_counter 'container_receipts_line', 1\r\n\r\n                  INSERT INTO container_receipts_line\r\n                              (container_receipts_line_uid,\r\n                               container_receipts_hdr_uid,\r\n                               vessel_receipts_line_uid,\r\n                               qty_received,\r\n                               unit_of_measure,\r\n                               unit_size,\r\n                               date_created,\r\n      ",
+                "result_set": "p21_create_container_receipt_records_definition"
+              },
+              {
+                "chunk_no": "4",
+                "chunk_text": "                         created_by,\r\n                               date_last_modified,\r\n                               last_maintained_by,\r\n                               complete_po_line_flag)\r\n                  SELECT @li_CRLCounter,\r\n                         @li_CRHdrUID,\r\n                         @li_VRLUID,\r\n                         @ldc_QtyReceived,\r\n                         @ls_UOM,\r\n                         @ldc_UnitSize,\r\n                         @ld_current_timestamp,\r\n                         'p21_create_container_receipt_records',\r\n                         @ld_current_timestamp,\r\n                         'p21_create_container_receipt_records',\r\n                         'N'\r\n\r\n                  FETCH NEXT FROM lc_CreateContainerReceiptLine INTO @li_CRHdrUID, @li_VRLUID, @ldc_QtyReceived, @ls_UOM, @ldc_UnitSize\r\n              END\r\n        END\r\n      ELSE\r\n        RAISERROR( 'Error: could not open cursor',\r\n                   16,\r\n                   1)\r\n\r\n      CLOSE lc_CreateContainerReceiptLine\r\n\r\n      DEALLOCATE lc_CreateContainerReceiptLine\r\n\r\n      SELECT @error = @@ERROR\r\n\r\n      IF ( @error <> 0 )\r\n        BEGIN\r\n            SELECT @procname = Object_name(@@PROCID)\r\n\r\n            SELECT @msg = @procname + ' : '\r\n\r\n            SELECT @msg = @msg + 'Error ' + Ltrim(Str(@error)) + ' when performing insert into container_receipts_line'\r\n\r\n            GOTO error_return\r\n        END\r\n\r\n      -- Update the vessel line container_qty_unloaded\r\n      UPDATE vessel_receipts_line\r\n      SET    container_qty_unloaded = vessel_receipts_line.container_qty_unloaded + #container_receipt_records.qty_received\r\n      FROM   vessel_receipts_line\r\n             INNER JOIN #container_receipt_records\r\n               ON #container_receipt_records.vessel_receipts_line_uid = vessel_receipts_line.vessel_receipts_line_uid\r\n\r\n      COMMIT TRANSACTION\r\n\r\n      RETURN 1\r\n\r\n      ERROR_RETURN:\r\n\t\t  --RAISERROR 50050 @msg\r\n    \t\t  RAISERROR (@msg,16,1)\r\n\t\t  ROLLBACK TRANSACTION\r\n\t\t  RETURN -1\r\n  END \r\n\r\n--$Author: Claudia.gonzalez $\r\n--$Date: 3/27/19 2:24p $\r\n--$Revision: 6 $\r\n--$Log: /Server/CommerceCenter/Z_Leemar (18.2)/Stored Procedures/p21_create_container_receipt_records.sql $\r\n-- \r\n-- 6     3/27/19 2:24p Claudia.gonzalez\r\n-- DEV: CEG\r\n-- DBA: CEG \r\n-- JIRA: P21CD-14008: Modify Stored Procedures for Timezone feature to use\r\n-- @current_timestamp variable\r\n-- b018_002_051346(familyA).sql\r\n-- \r\n-- 5     8/27/18 4:55p Syed.yunus\r\n-- Feature 69545: P21CD-11361 Modifying CURRENT_TIMESTAMP/GETDATE() to\r\n-- support timezone settings\r\n-- DBA: SYUNUS\r\n-- DEV: SYUNUS\r\n-- Script: b018_002_050038 Family\r\n-- \r\n-- 3     8/21/12 4:58p Bridgitte.hoganperry\r\n-- Update objects to 2012 syntax of RAISERROR\r\n-- dev:bhp\r\n-- b012_010_035290 family\r\n-- \r\n-- 1     11/30/11 11:09a Steve.rosendale\r\n-- DEV: RSM\r\n-- DBA: SAR\r\n-- Feature: 49584\r\n-- Script: b012_008_033434a.sql\r\n\r\n",
+                "result_set": "p21_create_container_receipt_records_definition"
+              }
+            ]
+          }
+        ]
+      },
+      "pipelineName": "Diag_Coats_Auto_Sales_Allocation",
+      "pipelineRunId": "e8bf3588-5308-11f1-ad2b-9cb150a3acae",
+      "recoveryStatus": "None",
+      "resourceGroup": "RG1",
+      "retryAttempt": null,
+      "status": "Succeeded",
+      "userProperties": {}
+    }
+  ]
+}

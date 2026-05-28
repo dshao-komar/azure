@@ -1,0 +1,299 @@
+﻿{
+    "continuationToken":  null,
+    "value":  [
+                  {
+                      "activityName":  "RunProbe",
+                      "activityRunEnd":  "2026-05-20T16:02:22.449969+00:00",
+                      "activityRunId":  "d1e80981-6ca5-4442-98f1-5f6a872661fe",
+                      "activityRunStart":  "2026-05-20T16:02:07.406046+00:00",
+                      "activityType":  "Script",
+                      "durationInMs":  15043,
+                      "error":  {
+                                    "details":  "",
+                                    "errorCode":  "",
+                                    "failureType":  "",
+                                    "message":  "",
+                                    "target":  "RunProbe"
+                                },
+                      "executionDetails":  {
+                                               "integrationRuntime":  [
+                                                                          {
+                                                                              "location":  "West US",
+                                                                              "name":  "SQLServer",
+                                                                              "nodes":  [
+                                                                                            "INSPIRON_16"
+                                                                                        ],
+                                                                              "type":  "SelfHosted"
+                                                                          }
+                                                                      ]
+                                           },
+                      "id":  "/SUBSCRIPTIONS/6624EC13-3826-43B2-8E45-077F9051B88F/RESOURCEGROUPS/RG1/PROVIDERS/MICROSOFT.DATAFACTORY/FACTORIES/2026-04-01-DF1/pipelineruns/39fdcbd7-5465-11f1-83e9-9cb150a3acae/activityruns/d1e80981-6ca5-4442-98f1-5f6a872661fe",
+                      "input":  {
+                                    "logSettings":  {
+                                                        "logDestination":  "ActivityOutput"
+                                                    },
+                                    "scriptBlockExecutionTimeout":  "00:10:00",
+                                    "scripts":  [
+                                                    {
+                                                        "text":  "USE P21Play;\nSET NOCOUNT ON;\n\nDECLARE @PoNo decimal(19,0)=6070127;\nDECLARE @ItemId nvarchar(40)=N\u002711880 528SY\u0027;\nDECLARE @LocationId decimal(19,0)=210;\nDECLARE @CompanyId varchar(8)=\u0027KA\u0027;\nDECLARE @InvMastUid int;\nDECLARE @PoLineUid int;\nDECLARE @PoLineNo int;\n\nSELECT TOP (1)\n      @InvMastUid = im.inv_mast_uid\nFROM dbo.inv_mast AS im\nWHERE im.item_id = @ItemId;\n\nSELECT TOP (1)\n      @PoLineUid = pol.po_line_uid\n    , @PoLineNo = pol.line_no\nFROM dbo.po_line AS pol\nWHERE pol.po_no = @PoNo\n  AND pol.inv_mast_uid = @InvMastUid\nORDER BY pol.po_line_uid;\n\nSELECT\n      section=\u0027inputs\u0027\n    , po_no=CONVERT(nvarchar(40), @PoNo)\n    , item_id=@ItemId\n    , inv_mast_uid=CONVERT(nvarchar(40), @InvMastUid)\n    , po_line_uid=CONVERT(nvarchar(40), @PoLineUid)\n    , po_line_no=CONVERT(nvarchar(40), @PoLineNo);\n\nSELECT TOP (1)\n      section=\u0027function_object\u0027\n    , object_id=CONVERT(nvarchar(40), OBJECT_ID(\u0027dbo.p21_fnt_get_linkable_transactions\u0027))\n    , object_type=o.type_desc\n    , create_date=CONVERT(nvarchar(30), o.create_date, 126)\n    , modify_date=CONVERT(nvarchar(30), o.modify_date, 126)\nFROM sys.objects AS o\nWHERE o.object_id = OBJECT_ID(\u0027dbo.p21_fnt_get_linkable_transactions\u0027);\n\nSELECT TOP (20)\n      section=\u0027definition_line\u0027\n    , line_no=CONVERT(nvarchar(20), ROW_NUMBER() OVER (ORDER BY (SELECT 1)))\n    , definition_line=value\nFROM STRING_SPLIT(CONVERT(nvarchar(max), OBJECT_DEFINITION(OBJECT_ID(\u0027dbo.p21_fnt_get_linkable_transactions\u0027))), CHAR(10))\nWHERE value LIKE \u0027%linked%\u0027\n   OR value LIKE \u0027%oe_line%\u0027\n   OR value LIKE \u0027%po_line%\u0027\n   OR value LIKE \u0027%backorder%\u0027\n   OR value LIKE \u0027%qty_allocated%\u0027;\n\nSELECT\n      section=\u0027po_line\u0027\n    , po_no=CONVERT(nvarchar(40), pol.po_no)\n    , po_line_uid=CONVERT(nvarchar(40), pol.po_line_uid)\n    , line_no=CONVERT(nvarchar(20), pol.line_no)\n    , complete=pol.complete\n    , cancel_flag=pol.cancel_flag\n    , qty_ordered=CONVERT(nvarchar(60), pol.qty_ordered)\n    , qty_received=CONVERT(nvarchar(60), pol.qty_received)\n    , unit_of_measure=pol.unit_of_measure\n    , inv_mast_uid=CONVERT(nvarchar(40), pol.inv_mast_uid)\n    , item_id=im.item_id\nFROM dbo.po_line AS pol\nJOIN dbo.inv_mast AS im ON im.inv_mast_uid=pol.inv_mast_uid\nWHERE pol.po_no=@PoNo AND pol.inv_mast_uid=@InvMastUid;\n\nSELECT\n      section=\u0027inv_loc\u0027\n    , location_id=CONVERT(nvarchar(40), il.location_id)\n    , qty_on_hand=CONVERT(nvarchar(60), il.qty_on_hand)\n    , qty_allocated=CONVERT(nvarchar(60), il.qty_allocated)\n    , qty_backordered=CONVERT(nvarchar(60), il.qty_backordered)\n    , order_quantity=CONVERT(nvarchar(60), il.order_quantity)\n    , qty_in_transit=CONVERT(nvarchar(60), il.qty_in_transit)\n    , date_last_modified=CONVERT(nvarchar(30), il.date_last_modified, 126)\nFROM dbo.inv_loc AS il\nWHERE il.company_id=@CompanyId\n  AND il.location_id=@LocationId\n  AND il.inv_mast_uid=@InvMastUid;\n\nSELECT TOP (50)\n      section=\u0027oe_line_po\u0027\n    , table_name=\u0027oe_line_po\u0027\n    , order_number=CONVERT(nvarchar(40), olp.order_number)\n    , line_number=CONVERT(nvarchar(40), olp.line_number)\n    , po_no=CONVERT(nvarchar(40), olp.po_no)\n    , po_line_number=CONVERT(nvarchar(40), olp.po_line_number)\n    , connection_type=CONVERT(nvarchar(40), olp.connection_type)\nFROM dbo.oe_line_po AS olp\nWHERE olp.po_no=@PoNo\n  AND (olp.po_line_number=@PoLineNo OR @PoLineNo IS NULL)\nORDER BY olp.order_number, olp.line_number;\n\nSELECT TOP (50)\n      section=\u0027linked_oe_lines\u0027\n    , oh.order_no\n    , ol.line_no\n    , oe_line_uid=CONVERT(nvarchar(40), ol.oe_line_uid)\n    , ol.complete\n    , oh.rma_flag\n    , ship_loc_id=CONVERT(nvarchar(40), ol.ship_loc_id)\n    , qty_ordered=CONVERT(nvarchar(60), ol.qty_ordered)\n    , qty_allocated=CONVERT(nvarchar(60), ol.qty_allocated)\n    , qty_on_pick_tickets=CONVERT(nvarchar(60), ol.qty_on_pick_tickets)\n    , qty_invoiced=CONVERT(nvarchar(60), ol.qty_invoiced)\n    , qty_canceled=CONVERT(nvarchar(60), ol.qty_canceled)\nFROM dbo.oe_line_po AS olp\nJOIN dbo.oe_hdr AS oh ON oh.order_no=olp.order_number\nJOIN dbo.oe_line AS ol ON ol.order_no=olp.order_number AND ol.line_no=olp.line_number\nWHERE olp.po_no=@PoNo\n  AND (olp.po_line_number=@PoLineNo OR @PoLineNo IS NULL)\nORDER BY oh.order_no, ol.line_no;\n\nSELECT TOP (50)\n      section=\u0027receipt_lines\u0027\n    , crh.container_receipts_hdr_uid\n    , crh.row_status_flag AS crh_status\n    , vrl.po_line_uid\n    , crl.container_receipts_line_uid\n    , qty_received=CONVERT(nvarchar(60), crl.qty_received)\n    , crl.transfer_flag\n    , crl.complete_po_line_flag\n    , vrc.container_name\n    , vrh.vessel_name\nFROM dbo.container_receipts_line AS crl\nJOIN dbo.container_receipts_hdr AS crh ON crh.container_receipts_hdr_uid=crl.container_receipts_hdr_uid\nJOIN dbo.vessel_receipts_line AS vrl ON vrl.vessel_receipts_line_uid=crl.vessel_receipts_line_uid\nJOIN dbo.vessel_receipts_container AS vrc ON vrc.vessel_receipts_container_uid=crh.vessel_receipts_container_uid\nJOIN dbo.vessel_receipts_hdr AS vrh ON vrh.vessel_receipts_hdr_uid=vrc.vessel_receipts_hdr_uid\nWHERE vrl.po_line_uid=@PoLineUid\nORDER BY crh.container_receipts_hdr_uid DESC;",
+                                                        "type":  "Query"
+                                                    }
+                                                ]
+                                },
+                      "integrationRuntimeNames":  [
+                                                      "sqlserver"
+                                                  ],
+                      "iterationHash":  "",
+                      "linkedServiceName":  "",
+                      "output":  {
+                                     "billingReference":  {
+                                                              "activityType":  "PipelineActivity",
+                                                              "billableDuration":  [
+                                                                                       {
+                                                                                           "duration":  0.016666666666666666,
+                                                                                           "meterType":  "SelfhostedIR",
+                                                                                           "unit":  "Hours"
+                                                                                       }
+                                                                                   ]
+                                                          },
+                                     "durationInQueue":  {
+                                                             "integrationRuntimeQueue":  8
+                                                         },
+                                     "effectiveIntegrationRuntime":  "SQLServer",
+                                     "executionDuration":  0,
+                                     "outputLogs":  "Changed database context to \u0027P21Play\u0027.\n",
+                                     "outputLogsLocation":  "",
+                                     "outputParameters":  {
+
+                                                          },
+                                     "outputTruncated":  false,
+                                     "recordsAffected":  0,
+                                     "resultSetCount":  8,
+                                     "resultSets":  [
+                                                        {
+                                                            "rowCount":  1,
+                                                            "rows":  [
+                                                                         {
+                                                                             "inv_mast_uid":  "1127",
+                                                                             "item_id":  "11880 528SY",
+                                                                             "po_line_no":  "8",
+                                                                             "po_line_uid":  "387337",
+                                                                             "po_no":  "6070127",
+                                                                             "section":  "inputs"
+                                                                         }
+                                                                     ]
+                                                        },
+                                                        {
+                                                            "rowCount":  1,
+                                                            "rows":  [
+                                                                         {
+                                                                             "create_date":  "2020-11-16T18:09:21.373Z",
+                                                                             "modify_date":  "2024-12-12T16:03:27.523Z",
+                                                                             "object_id":  "1524068736",
+                                                                             "object_type":  "SQL_TABLE_VALUED_FUNCTION",
+                                                                             "section":  "function_object"
+                                                                         }
+                                                                     ]
+                                                        },
+                                                        {
+                                                            "rowCount":  20,
+                                                            "rows":  [
+                                                                         {
+                                                                             "definition_line":  "    , [qty_allocated] [decimal](19, 9) NULL\r",
+                                                                             "line_no":  "1",
+                                                                             "section":  "definition_line"
+                                                                         },
+                                                                         {
+                                                                             "definition_line":  "    , [linked_qty] [decimal](38, 9) NULL\r",
+                                                                             "line_no":  "2",
+                                                                             "section":  "definition_line"
+                                                                         },
+                                                                         {
+                                                                             "definition_line":  "    , [oe_line_uid] [int] NULL\r",
+                                                                             "line_no":  "3",
+                                                                             "section":  "definition_line"
+                                                                         },
+                                                                         {
+                                                                             "definition_line":  "    , [po_line_no] [int] NULL\r",
+                                                                             "line_no":  "4",
+                                                                             "section":  "definition_line"
+                                                                         },
+                                                                         {
+                                                                             "definition_line":  "    , [po_line_uid] [int] NULL\r",
+                                                                             "line_no":  "5",
+                                                                             "section":  "definition_line"
+                                                                         },
+                                                                         {
+                                                                             "definition_line":  "    , [original_linked_qty] [decimal](38, 9) NULL\r",
+                                                                             "line_no":  "6",
+                                                                             "section":  "definition_line"
+                                                                         },
+                                                                         {
+                                                                             "definition_line":  "            ,[qty_allocated]\r",
+                                                                             "line_no":  "7",
+                                                                             "section":  "definition_line"
+                                                                         },
+                                                                         {
+                                                                             "definition_line":  "            ,[linked_qty]\r",
+                                                                             "line_no":  "8",
+                                                                             "section":  "definition_line"
+                                                                         },
+                                                                         {
+                                                                             "definition_line":  "            ,[oe_line_uid]\r",
+                                                                             "line_no":  "9",
+                                                                             "section":  "definition_line"
+                                                                         },
+                                                                         {
+                                                                             "definition_line":  "            ,[po_line_no]\r",
+                                                                             "line_no":  "10",
+                                                                             "section":  "definition_line"
+                                                                         },
+                                                                         {
+                                                                             "definition_line":  "            ,[po_line_uid]\r",
+                                                                             "line_no":  "11",
+                                                                             "section":  "definition_line"
+                                                                         },
+                                                                         {
+                                                                             "definition_line":  "            ,[original_linked_qty]\r",
+                                                                             "line_no":  "12",
+                                                                             "section":  "definition_line"
+                                                                         },
+                                                                         {
+                                                                             "definition_line":  "             oe_line.qty_ordered,\r",
+                                                                             "line_no":  "13",
+                                                                             "section":  "definition_line"
+                                                                         },
+                                                                         {
+                                                                             "definition_line":  "             oe_line.required_date,\r",
+                                                                             "line_no":  "14",
+                                                                             "section":  "definition_line"
+                                                                         },
+                                                                         {
+                                                                             "definition_line":  "             oe_line.qty_allocated,\r",
+                                                                             "line_no":  "15",
+                                                                             "section":  "definition_line"
+                                                                         },
+                                                                         {
+                                                                             "definition_line":  "             oe_line.qty_on_pick_tickets,\r",
+                                                                             "line_no":  "16",
+                                                                             "section":  "definition_line"
+                                                                         },
+                                                                         {
+                                                                             "definition_line":  "             oe_line.qty_invoiced,\r",
+                                                                             "line_no":  "17",
+                                                                             "section":  "definition_line"
+                                                                         },
+                                                                         {
+                                                                             "definition_line":  "             oe_line.line_no,\r",
+                                                                             "line_no":  "18",
+                                                                             "section":  "definition_line"
+                                                                         },
+                                                                         {
+                                                                             "definition_line":  "             oe_line.qty_canceled,\r",
+                                                                             "line_no":  "19",
+                                                                             "section":  "definition_line"
+                                                                         },
+                                                                         {
+                                                                             "definition_line":  "             oe_line.qty_staged,\r",
+                                                                             "line_no":  "20",
+                                                                             "section":  "definition_line"
+                                                                         }
+                                                                     ]
+                                                        },
+                                                        {
+                                                            "rowCount":  1,
+                                                            "rows":  [
+                                                                         {
+                                                                             "cancel_flag":  "N",
+                                                                             "complete":  "Y",
+                                                                             "inv_mast_uid":  "1127",
+                                                                             "item_id":  "11880 528SY",
+                                                                             "line_no":  "8",
+                                                                             "po_line_uid":  "387337",
+                                                                             "po_no":  "6070127",
+                                                                             "qty_ordered":  "80.000000000",
+                                                                             "qty_received":  "80.000000000",
+                                                                             "section":  "po_line",
+                                                                             "unit_of_measure":  "LB"
+                                                                         }
+                                                                     ]
+                                                        },
+                                                        {
+                                                            "rowCount":  1,
+                                                            "rows":  [
+                                                                         {
+                                                                             "date_last_modified":  "2026-04-10T23:30:02.083Z",
+                                                                             "location_id":  "210",
+                                                                             "order_quantity":  "0.000000000",
+                                                                             "qty_allocated":  "0.000000000",
+                                                                             "qty_backordered":  "80.000000000",
+                                                                             "qty_in_transit":  "0.000000000",
+                                                                             "qty_on_hand":  "80.000000000",
+                                                                             "section":  "inv_loc"
+                                                                         }
+                                                                     ]
+                                                        },
+                                                        {
+                                                            "rowCount":  1,
+                                                            "rows":  [
+                                                                         {
+                                                                             "connection_type":  "P",
+                                                                             "line_number":  "4",
+                                                                             "order_number":  "1283302",
+                                                                             "po_line_number":  "8",
+                                                                             "po_no":  "6070127",
+                                                                             "section":  "oe_line_po",
+                                                                             "table_name":  "oe_line_po"
+                                                                         }
+                                                                     ]
+                                                        },
+                                                        {
+                                                            "rowCount":  1,
+                                                            "rows":  [
+                                                                         {
+                                                                             "complete":  "N",
+                                                                             "line_no":  4.0,
+                                                                             "oe_line_uid":  "1391832",
+                                                                             "order_no":  "1283302",
+                                                                             "qty_allocated":  "0.000000000",
+                                                                             "qty_canceled":  "0.000000000",
+                                                                             "qty_invoiced":  "0.000000000",
+                                                                             "qty_on_pick_tickets":  "0.000000000",
+                                                                             "qty_ordered":  "80.000000000",
+                                                                             "rma_flag":  "N",
+                                                                             "section":  "linked_oe_lines",
+                                                                             "ship_loc_id":  "210"
+                                                                         }
+                                                                     ]
+                                                        },
+                                                        {
+                                                            "rowCount":  1,
+                                                            "rows":  [
+                                                                         {
+                                                                             "complete_po_line_flag":  "Y",
+                                                                             "container_name":  "TM735 2026-05-19",
+                                                                             "container_receipts_hdr_uid":  682,
+                                                                             "container_receipts_line_uid":  103082,
+                                                                             "crh_status":  972,
+                                                                             "po_line_uid":  387337,
+                                                                             "qty_received":  "80.000000000",
+                                                                             "section":  "receipt_lines",
+                                                                             "transfer_flag":  null,
+                                                                             "vessel_name":  "TM735 2026-05-19"
+                                                                         }
+                                                                     ]
+                                                        }
+                                                    ]
+                                 },
+                      "pipelineName":  "Diag_Coats_Linkable_Function_Probe",
+                      "pipelineRunId":  "39fdcbd7-5465-11f1-83e9-9cb150a3acae",
+                      "recoveryStatus":  "None",
+                      "resourceGroup":  "RG1",
+                      "retryAttempt":  null,
+                      "status":  "Succeeded",
+                      "userProperties":  {
+
+                                         }
+                  }
+              ]
+}

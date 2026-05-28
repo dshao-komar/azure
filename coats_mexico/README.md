@@ -38,7 +38,7 @@ A17 comment splits O-12, O-13
 Run this in `P21Import`:
 
 ```sql
-:r sql/001_create_coats_mexico_staging.sql
+:r sql/main/001_create_coats_mexico_staging.sql
 ```
 
 Then stage extractor JSON with:
@@ -51,7 +51,7 @@ EXEC dbo.usp_stage_coats_mexico_shipment_json @payload = @payload;
 Run validation from `P21Import` after replacing `@ShipmentFileId`:
 
 ```sql
-:r sql/002_validate_coats_mexico_staging_from_p21.sql
+:r sql/main/002_validate_coats_mexico_staging_from_p21.sql
 ```
 
 The validation script updates staged pallet lines with P21 lookup values and
@@ -65,7 +65,8 @@ The deployment script adds validation gating to the
 `StageCoatsShipmentJson`. `ValidateCoatsShipment` runs first. If it finds any
 `BLOCKING` issues, ADF calls `send-coats-validation-email` and then fails the
 run without creating receipt records. If there are no blocking issues,
-`CreateP21ImportReceipts` creates the P21Import receipt chain.
+`CreateP21ImportReceipts` creates the P21Import receipt chain and
+`send-coats-success-email` sends a success message.
 
 Required `.env` settings for blocking validation email:
 
@@ -78,10 +79,15 @@ COATS_VALIDATION_EMAIL_CC=<optional comma-separated recipients>
 The Graph app must have application `Mail.Send` permission and admin consent
 for `/users/{COATS_VALIDATION_EMAIL_FROM}/sendMail`.
 
+Purchasing-facing blocking messages are written as action items, for example
+missing PO line, duplicate supplier part, missing supplier part setup, or
+canceled PO line. Bin translation issues are marked as internal pipeline issues
+and are not presented as manual purchaser corrections.
+
 For manual execution, install the receipt procedure in `P21Import`:
 
 ```sql
-:r sql/004_create_coats_mexico_p21import_receipts.sql
+:r sql/main/004_create_coats_mexico_p21import_receipts.sql
 ```
 
 Then create the P21Import receipt chain for a staged shipment:
@@ -95,6 +101,8 @@ EXEC dbo.usp_create_coats_mexico_p21import_receipts
 The procedure creates `container_building`, `container_building_po`,
 `vessel_receipts_hdr`, `vessel_receipts_container`, `vessel_receipts_line`,
 `container_receipts_hdr`, and `container_receipts_line` rows in `P21Import`.
+Container receipt headers are created with `row_status_flag = 971` so they stay
+Unapproved in the P21 GUI.
 It records generated IDs in `dbo.coats_mexico_shipment_receipt_build` and skips
 `document_line_bin` insertion.
 

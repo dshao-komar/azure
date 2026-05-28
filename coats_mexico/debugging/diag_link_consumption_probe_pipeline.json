@@ -1,0 +1,36 @@
+﻿{
+    "properties":  {
+                       "activities":  [
+                                          {
+                                              "name":  "RunProbe",
+                                              "policy":  {
+                                                             "retryIntervalInSeconds":  30,
+                                                             "secureInput":  false,
+                                                             "retry":  0,
+                                                             "timeout":  "0.00:10:00",
+                                                             "secureOutput":  false
+                                                         },
+                                              "dependsOn":  [
+
+                                                            ],
+                                              "type":  "Script",
+                                              "linkedServiceName":  {
+                                                                        "referenceName":  "SqlServer1",
+                                                                        "type":  "LinkedServiceReference"
+                                                                    },
+                                              "typeProperties":  {
+                                                                     "logSettings":  {
+                                                                                         "logDestination":  "ActivityOutput"
+                                                                                     },
+                                                                     "scriptBlockExecutionTimeout":  "00:10:00",
+                                                                     "scripts":  [
+                                                                                     {
+                                                                                         "text":  "USE P21Play;\nSET NOCOUNT ON;\nDECLARE @PoNo int=6070127, @PoLineNo int=8, @PoLineUid int=387337, @LocationId int=210, @ItemId varchar(40)=\u002711880 528SY\u0027;\n\nSELECT\n    section=\u0027oe_line_po_detail\u0027,\n    order_number=CONVERT(nvarchar(40), order_number),\n    line_number=CONVERT(nvarchar(40), line_number),\n    po_no=CONVERT(nvarchar(40), po_no),\n    po_line_number=CONVERT(nvarchar(40), po_line_number),\n    quantity_on_po=CONVERT(nvarchar(60), quantity_on_po),\n    completed,\n    cancel_flag,\n    delete_flag,\n    connection_type,\n    date_last_modified=CONVERT(nvarchar(30), date_last_modified, 126),\n    last_maintained_by\nFROM dbo.oe_line_po\nWHERE po_no=@PoNo AND po_line_number=@PoLineNo;\n\nSELECT\n    section=\u0027backorder_function_type_P\u0027,\n    row_count=CONVERT(nvarchar(20), COUNT(*)),\n    linked_qty_sum=CONVERT(nvarchar(60), COALESCE(SUM(linked_qty),0)),\n    original_linked_qty_sum=CONVERT(nvarchar(60), COALESCE(SUM(original_linked_qty),0))\nFROM dbo.p21_fnt_get_linkable_transactions(@LocationId,@ItemId,@PoNo,@PoLineNo,NULL,NULL,\u0027N\u0027,@PoLineUid,\u0027N\u0027,\u0027N\u0027,\u0027P\u0027,CONVERT(date, GETDATE()));\n\nSELECT\n    section=\u0027oe_line_state\u0027,\n    oh.order_no,\n    ol.line_no,\n    ol.oe_line_uid,\n    ol.complete,\n    qty_ordered=CONVERT(nvarchar(60), ol.qty_ordered),\n    qty_allocated=CONVERT(nvarchar(60), ol.qty_allocated),\n    qty_on_pick_tickets=CONVERT(nvarchar(60), ol.qty_on_pick_tickets),\n    qty_invoiced=CONVERT(nvarchar(60), ol.qty_invoiced),\n    qty_canceled=CONVERT(nvarchar(60), ol.qty_canceled),\n    qty_staged=CONVERT(nvarchar(60), ol.qty_staged),\n    date_last_modified=CONVERT(nvarchar(30), ol.date_last_modified, 126),\n    ol.last_maintained_by\nFROM dbo.oe_line_po AS olp\nJOIN dbo.oe_hdr AS oh ON oh.order_no=olp.order_number\nJOIN dbo.oe_line AS ol ON ol.order_no=olp.order_number AND ol.line_no=olp.line_number\nWHERE olp.po_no=@PoNo AND olp.po_line_number=@PoLineNo;\n\nSELECT\n    section=\u0027inv_loc_state\u0027,\n    qty_on_hand=CONVERT(nvarchar(60), qty_on_hand),\n    qty_allocated=CONVERT(nvarchar(60), qty_allocated),\n    qty_backordered=CONVERT(nvarchar(60), qty_backordered),\n    order_quantity=CONVERT(nvarchar(60), order_quantity),\n    date_last_modified=CONVERT(nvarchar(30), date_last_modified, 126),\n    last_maintained_by\nFROM dbo.inv_loc\nWHERE company_id=\u0027KA\u0027 AND location_id=@LocationId AND inv_mast_uid=(SELECT inv_mast_uid FROM dbo.inv_mast WHERE item_id=@ItemId);",
+                                                                                         "type":  "Query"
+                                                                                     }
+                                                                                 ]
+                                                                 }
+                                          }
+                                      ]
+                   }
+}

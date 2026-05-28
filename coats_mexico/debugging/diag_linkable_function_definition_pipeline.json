@@ -1,0 +1,36 @@
+﻿{
+    "properties":  {
+                       "activities":  [
+                                          {
+                                              "name":  "RunProbe",
+                                              "policy":  {
+                                                             "retryIntervalInSeconds":  30,
+                                                             "secureInput":  false,
+                                                             "retry":  0,
+                                                             "timeout":  "0.00:10:00",
+                                                             "secureOutput":  false
+                                                         },
+                                              "dependsOn":  [
+
+                                                            ],
+                                              "type":  "Script",
+                                              "linkedServiceName":  {
+                                                                        "referenceName":  "SqlServer1",
+                                                                        "type":  "LinkedServiceReference"
+                                                                    },
+                                              "typeProperties":  {
+                                                                     "logSettings":  {
+                                                                                         "logDestination":  "ActivityOutput"
+                                                                                     },
+                                                                     "scriptBlockExecutionTimeout":  "00:10:00",
+                                                                     "scripts":  [
+                                                                                     {
+                                                                                         "text":  "USE P21Play;\nSET NOCOUNT ON;\n\nDECLARE @definition nvarchar(max)=OBJECT_DEFINITION(OBJECT_ID(\u0027dbo.p21_fnt_get_linkable_transactions\u0027));\nDECLARE @chunks int = CONVERT(int, CEILING(CONVERT(decimal(19,4), LEN(@definition)) / 3500.0));\n\nSELECT\n      parameter_id=CONVERT(nvarchar(20), p.parameter_id)\n    , parameter_name=p.name\n    , type_name=TYPE_NAME(p.user_type_id)\n    , max_length=CONVERT(nvarchar(20), p.max_length)\nFROM sys.parameters AS p\nWHERE p.object_id=OBJECT_ID(\u0027dbo.p21_fnt_get_linkable_transactions\u0027)\nORDER BY p.parameter_id;\n\n;WITH n AS (\n    SELECT TOP (@chunks)\n           rn = ROW_NUMBER() OVER (ORDER BY (SELECT NULL))\n    FROM sys.all_objects\n)\nSELECT\n      chunk_no=CONVERT(nvarchar(20), rn)\n    , chunk_text=SUBSTRING(@definition, ((rn - 1) * 3500) + 1, 3500)\nFROM n\nORDER BY rn;",
+                                                                                         "type":  "Query"
+                                                                                     }
+                                                                                 ]
+                                                                 }
+                                          }
+                                      ]
+                   }
+}

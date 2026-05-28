@@ -241,8 +241,8 @@ The first implementation should insert staged rows and validation results only. 
 Initial SQL implementation:
 
 ```text
-sql/001_create_coats_mexico_staging.sql
-sql/002_validate_coats_mexico_staging_from_p21.sql
+sql/main/001_create_coats_mexico_staging.sql
+sql/main/002_validate_coats_mexico_staging_from_p21.sql
 ```
 
 ## P21 Container Building
@@ -345,9 +345,9 @@ date_created = date_last_modified = current system datetime
 
 Use the existing counter pattern for `vessel_receipts_hdr_uid` and assign a unique `vessel_receipt_number` before insert.
 
-## P21 Container Receipts
+## P21 Container Receipts And Automatic Allocation
 
-Later implementation should create container receipt header and line records transactionally after vessel receipt records are created.
+The implemented pipeline creates container building, vessel receipt, and container receipt records transactionally after staging validation succeeds. In live mode, the receipt records are written to `P21`; in test mode, the receipt records can be written to `P21Play` while staging remains in `P21Import`.
 
 Use the existing `Coats transfer truck container receipts line insert step.sql` as a reference for line creation and counter allocation.
 
@@ -373,7 +373,7 @@ The only foreign-keyed business input in this header is `vessel_receipts_contain
 For the Coats flow, use:
 
 ```text
-row_status_flag = 972
+row_status_flag = 971
 created_by = last_maintained_by = operator login
 date_created = date_last_modified = current system datetime
 date_received = the receipt date used by the business flow
@@ -387,9 +387,55 @@ When simulating the full P21 insert chain in `P21Import`, create `vessel_receipt
 vessel_receipts_container_uid = vessel_receipts_hdr_uid
 container_name = trailer_name
 expected_arrival_date = estimated_arrival_date
-row_status_flag = 701
+row_status_flag = 704
 container_building_uid = the inserted container_building_uid
 container_packaging_weight = 0.0
+```
+
+Automatic sales order allocation depends on PO/SO linkage rows, not just the receipt rows. Manual GUI diagnostics showed this sequence:
+
+```text
+1. Before vessel receipt creation, sales order demand is linked to the original PO in oe_line_po with connection_type = P.
+2. During vessel receipt creation, P21 reduces the original P-link quantity and creates new oe_line_po rows with connection_type = V.
+3. The V-link rows use po_no = vessel_receipt_number and po_line_number = vessel_receipts_line.line_no.
+4. Before container receipt approval, the V-link rows remain completed = N.
+5. When purchasers approve/save the container receipt with Allocate Automatically and Mark Container Completely Received, P21 consumes the V-link rows, marks them completed = Y, and updates oe_line, oe_hdr, and inv_loc allocation quantities.
+```
+
+The ADF receipt procedure must therefore create the same pre-approval `oe_line_po` vessel links that the GUI creates:
+
+```text
+source rows: open oe_line_po rows for the original PO line
+source connection_type: P
+new connection_type: V
+new po_no: vessel_receipts_hdr.vessel_receipt_number
+new po_line_number: vessel_receipts_line.line_no
+new quantity_on_po: quantity moved from the original P-link, capped by received vessel line quantity
+new completed: N
+new delete_flag: N
+new cancel_flag: N
+```
+
+The procedure must also reduce the original `connection_type = P` rows by the moved quantity and set `completed = Y` when the remaining original linked quantity reaches zero.
+
+Do not directly update `oe_line`, `oe_hdr`, `inv_loc`, inventory allocation tables, or sales order allocation tables from the pipeline. Those downstream allocation changes must remain P21 behavior triggered by purchaser approval/save.
+
+Additional GUI-parity fields that were required for the working receipt path:
+
+```text
+vessel_receipts_hdr.est_avail_ship_date = estimated_arrival_date
+vessel_receipts_line.container_qty_unloaded = 0
+vessel_receipts_line.sku_vessel_line_lc_amt = 0
+vessel_receipts_line.reduce_po_line_qty_flag = N
+vessel_receipts_line.exclude_from_landed_cost_flag = N
+vessel_receipts_container.row_status_flag = 704
+```
+
+Validation note for restored test databases:
+
+```text
+MISSING_PO_LINE can be downgraded to INTERNAL only for explicit P21Play tests when the test database is older than the workbook's POs.
+Live validation should keep MISSING_PO_LINE blocking so missing PO demand is not silently skipped in production.
 ```
 
 ## Counter Verification
@@ -432,7 +478,10 @@ Required checks:
 8. Multi-pallet rows with usable comments split into pallet-level staged rows.
 9. Multi-pallet rows without usable comments fail validation.
 10. SQL validation flags missing supplier parts, duplicate supplier parts, missing PO lines, canceled PO lines, and invalid bins.
-11. No P21 production receipt tables are written in v1.
+11. Test receipt creation inserts only non-blocking validated lines into container building, vessel receipt, and container receipt tables.
+12. For lines with eligible open sales order demand, the procedure creates open `oe_line_po` V-link rows before approval.
+13. After purchaser approval/save in P21 with Allocate Automatically and Mark Container Completely Received, P21 marks the V-link rows completed and updates sales order allocation quantities.
+14. The pipeline does not directly write `oe_line`, `oe_hdr`, `inv_loc`, `document_line_bin`, or allocation tables.
 
 ## Assumptions
 
@@ -440,6 +489,6 @@ Mary will include shipment date and trailer name in the dropped filename.
 
 Estimated arrival date is the closest next Friday after the truck-left-Mexico shipment date.
 
-The first implementation stages and validates only.
+The first implementation originally staged and validated only; the current implementation can create P21 receipt records after validation succeeds.
 
-Automatic P21 writes require a later stored procedure wrapper and explicit validation signoff.
+Automatic allocation requires the `oe_line_po` V-link handoff described above. Creating transfers alone is not sufficient.

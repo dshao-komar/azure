@@ -1,0 +1,36 @@
+﻿{
+    "properties":  {
+                       "activities":  [
+                                          {
+                                              "name":  "RunProbe",
+                                              "policy":  {
+                                                             "retryIntervalInSeconds":  30,
+                                                             "secureInput":  false,
+                                                             "retry":  0,
+                                                             "timeout":  "0.00:10:00",
+                                                             "secureOutput":  false
+                                                         },
+                                              "dependsOn":  [
+
+                                                            ],
+                                              "type":  "Script",
+                                              "linkedServiceName":  {
+                                                                        "referenceName":  "SqlServer1",
+                                                                        "type":  "LinkedServiceReference"
+                                                                    },
+                                              "typeProperties":  {
+                                                                     "logSettings":  {
+                                                                                         "logDestination":  "ActivityOutput"
+                                                                                     },
+                                                                     "scriptBlockExecutionTimeout":  "00:10:00",
+                                                                     "scripts":  [
+                                                                                     {
+                                                                                         "text":  "USE P21Import;\nSET NOCOUNT ON;\nDECLARE @ShipmentFileId uniqueidentifier=\u0027f5c975af-1d81-5d36-9ff8-244fd38c9fc5\u0027;\nDECLARE @SupplierID int=40408;\n\n;WITH issue_lines AS (\n    SELECT DISTINCT\n          i.issue_code\n        , i.source_row_number\n        , i.Bin_ID\n        , i.Item_ID\n        , i.PO_No\n    FROM P21Import.dbo.coats_mexico_shipment_validation_issue AS i\n    WHERE i.shipment_file_id=@ShipmentFileId\n      AND i.severity=\u0027BLOCKING\u0027\n), detail AS (\n    SELECT\n          il.issue_code\n        , il.source_row_number\n        , il.Bin_ID\n        , il.Item_ID\n        , il.PO_No\n        , supplier_inv_mast_uid = MAX(CONVERT(nvarchar(40), ivs.inv_mast_uid))\n        , mapped_komar_item = MAX(ivm.item_id)\n        , supplier_match_count = COUNT(DISTINCT ivs.inv_mast_uid)\n        , matching_po_line_count = COUNT(DISTINCT pol_match.po_line_uid)\n        , po_line_count_on_po = COUNT(DISTINCT pol_any.po_line_uid)\n        , sample_po_items = STRING_AGG(CONVERT(nvarchar(max), ivm_any.item_id), \u0027, \u0027) WITHIN GROUP (ORDER BY ivm_any.item_id)\n    FROM issue_lines AS il\n    LEFT JOIN P21Play.dbo.inventory_supplier AS ivs\n      ON ivs.supplier_id=@SupplierID\n     AND ivs.supplier_part_no=il.Item_ID\n    LEFT JOIN P21Play.dbo.inv_mast AS ivm\n      ON ivm.inv_mast_uid=ivs.inv_mast_uid\n     AND ISNULL(ivm.delete_flag,\u0027N\u0027)\u003c\u003e\u0027Y\u0027\n    LEFT JOIN P21Play.dbo.po_line AS pol_match\n      ON pol_match.po_no=il.PO_No\n     AND pol_match.inv_mast_uid=ivm.inv_mast_uid\n    LEFT JOIN P21Play.dbo.po_line AS pol_any\n      ON pol_any.po_no=il.PO_No\n    LEFT JOIN P21Play.dbo.inv_mast AS ivm_any\n      ON ivm_any.inv_mast_uid=pol_any.inv_mast_uid\n    GROUP BY il.issue_code, il.source_row_number, il.Bin_ID, il.Item_ID, il.PO_No\n)\nSELECT\n      issue_code\n    , source_row_number = CONVERT(nvarchar(20), source_row_number)\n    , Bin_ID\n    , Item_ID\n    , PO_No\n    , supplier_match_count = CONVERT(nvarchar(20), supplier_match_count)\n    , supplier_inv_mast_uid\n    , mapped_komar_item\n    , matching_po_line_count = CONVERT(nvarchar(20), matching_po_line_count)\n    , po_line_count_on_po = CONVERT(nvarchar(20), po_line_count_on_po)\n    , sample_po_items = LEFT(sample_po_items, 500)\nFROM detail\nORDER BY issue_code, PO_No, Item_ID, source_row_number;",
+                                                                                         "type":  "Query"
+                                                                                     }
+                                                                                 ]
+                                                                 }
+                                          }
+                                      ]
+                   }
+}

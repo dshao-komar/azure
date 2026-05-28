@@ -1,0 +1,126 @@
+﻿{
+    "continuationToken":  null,
+    "value":  [
+                  {
+                      "activityName":  "RunProbe",
+                      "activityRunEnd":  "2026-05-19T22:46:24.128616+00:00",
+                      "activityRunId":  "81286729-544a-4989-a50a-7d50411aabab",
+                      "activityRunStart":  "2026-05-19T22:46:11.130523+00:00",
+                      "activityType":  "Script",
+                      "durationInMs":  12998,
+                      "error":  {
+                                    "details":  "",
+                                    "errorCode":  "",
+                                    "failureType":  "",
+                                    "message":  "",
+                                    "target":  "RunProbe"
+                                },
+                      "executionDetails":  {
+                                               "integrationRuntime":  [
+                                                                          {
+                                                                              "location":  "West US",
+                                                                              "name":  "SQLServer",
+                                                                              "nodes":  [
+                                                                                            "KASVRW2K8FS"
+                                                                                        ],
+                                                                              "type":  "SelfHosted"
+                                                                          }
+                                                                      ]
+                                           },
+                      "id":  "/SUBSCRIPTIONS/6624EC13-3826-43B2-8E45-077F9051B88F/RESOURCEGROUPS/RG1/PROVIDERS/MICROSOFT.DATAFACTORY/FACTORIES/2026-04-01-DF1/pipelineruns/822dc650-53d4-11f1-b274-9cb150a3acae/activityruns/81286729-544a-4989-a50a-7d50411aabab",
+                      "input":  {
+                                    "logSettings":  {
+                                                        "logDestination":  "ActivityOutput"
+                                                    },
+                                    "scriptBlockExecutionTimeout":  "00:10:00",
+                                    "scripts":  [
+                                                    {
+                                                        "text":  "USE P21Import;\nSET NOCOUNT ON;\nDECLARE @ShipmentFileId uniqueidentifier=\u0027f5c975af-1d81-5d36-9ff8-244fd38c9fc5\u0027;\nDECLARE @SupplierID int=40408;\n\nIF OBJECT_ID(\u0027tempdb..#cmp\u0027) IS NOT NULL DROP TABLE #cmp;\nCREATE TABLE #cmp(target_db nvarchar(20), bucket nvarchar(60), line_count int);\n\n;WITH lines AS (\n    SELECT shipment_pallet_line_id, PO_No, Item_ID\n    FROM P21Import.dbo.coats_mexico_shipment_pallet_line\n    WHERE shipment_file_id=@ShipmentFileId\n), c AS (\n    SELECT l.shipment_pallet_line_id, supplier_matches=COUNT(DISTINCT ivs.inv_mast_uid), po_any=COUNT(DISTINCT pol.po_line_uid), po_open=COUNT(DISTINCT CASE WHEN pol.complete \u003c\u003e \u0027Y\u0027 THEN pol.po_line_uid END), po_complete=COUNT(DISTINCT CASE WHEN pol.complete=\u0027Y\u0027 AND ISNULL(pol.cancel_flag,\u0027N\u0027)\u003c\u003e\u0027Y\u0027 THEN pol.po_line_uid END)\n    FROM lines l\n    LEFT JOIN P21Import.dbo.inventory_supplier ivs ON ivs.supplier_id=@SupplierID AND ivs.supplier_part_no=l.Item_ID\n    LEFT JOIN P21Import.dbo.inv_mast ivm ON ivm.inv_mast_uid=ivs.inv_mast_uid AND ISNULL(ivm.delete_flag,\u0027N\u0027)\u003c\u003e\u0027Y\u0027\n    LEFT JOIN P21Import.dbo.po_line pol ON pol.po_no=l.PO_No AND pol.inv_mast_uid=ivm.inv_mast_uid\n    GROUP BY l.shipment_pallet_line_id\n)\nINSERT #cmp\nSELECT \u0027P21Import\u0027, CASE WHEN supplier_matches=0 THEN \u0027missing_supplier\u0027 WHEN po_any=0 THEN \u0027missing_po_any_status\u0027 WHEN po_open=0 AND po_complete\u003e0 THEN \u0027completed_only\u0027 WHEN po_open\u003e0 THEN \u0027open_match\u0027 ELSE \u0027other\u0027 END, COUNT(*)\nFROM c GROUP BY CASE WHEN supplier_matches=0 THEN \u0027missing_supplier\u0027 WHEN po_any=0 THEN \u0027missing_po_any_status\u0027 WHEN po_open=0 AND po_complete\u003e0 THEN \u0027completed_only\u0027 WHEN po_open\u003e0 THEN \u0027open_match\u0027 ELSE \u0027other\u0027 END;\n\n;WITH lines AS (\n    SELECT shipment_pallet_line_id, PO_No, Item_ID\n    FROM P21Import.dbo.coats_mexico_shipment_pallet_line\n    WHERE shipment_file_id=@ShipmentFileId\n), c AS (\n    SELECT l.shipment_pallet_line_id, supplier_matches=COUNT(DISTINCT ivs.inv_mast_uid), po_any=COUNT(DISTINCT pol.po_line_uid), po_open=COUNT(DISTINCT CASE WHEN pol.complete \u003c\u003e \u0027Y\u0027 THEN pol.po_line_uid END), po_complete=COUNT(DISTINCT CASE WHEN pol.complete=\u0027Y\u0027 AND ISNULL(pol.cancel_flag,\u0027N\u0027)\u003c\u003e\u0027Y\u0027 THEN pol.po_line_uid END)\n    FROM lines l\n    LEFT JOIN P21Play.dbo.inventory_supplier ivs ON ivs.supplier_id=@SupplierID AND ivs.supplier_part_no=l.Item_ID\n    LEFT JOIN P21Play.dbo.inv_mast ivm ON ivm.inv_mast_uid=ivs.inv_mast_uid AND ISNULL(ivm.delete_flag,\u0027N\u0027)\u003c\u003e\u0027Y\u0027\n    LEFT JOIN P21Play.dbo.po_line pol ON pol.po_no=l.PO_No AND pol.inv_mast_uid=ivm.inv_mast_uid\n    GROUP BY l.shipment_pallet_line_id\n)\nINSERT #cmp\nSELECT \u0027P21Play\u0027, CASE WHEN supplier_matches=0 THEN \u0027missing_supplier\u0027 WHEN po_any=0 THEN \u0027missing_po_any_status\u0027 WHEN po_open=0 AND po_complete\u003e0 THEN \u0027completed_only\u0027 WHEN po_open\u003e0 THEN \u0027open_match\u0027 ELSE \u0027other\u0027 END, COUNT(*)\nFROM c GROUP BY CASE WHEN supplier_matches=0 THEN \u0027missing_supplier\u0027 WHEN po_any=0 THEN \u0027missing_po_any_status\u0027 WHEN po_open=0 AND po_complete\u003e0 THEN \u0027completed_only\u0027 WHEN po_open\u003e0 THEN \u0027open_match\u0027 ELSE \u0027other\u0027 END;\n\nSELECT target_db, bucket, line_count=CONVERT(nvarchar(20), line_count) FROM #cmp ORDER BY target_db, bucket;",
+                                                        "type":  "Query"
+                                                    }
+                                                ]
+                                },
+                      "integrationRuntimeNames":  [
+                                                      "sqlserver"
+                                                  ],
+                      "iterationHash":  "",
+                      "linkedServiceName":  "",
+                      "output":  {
+                                     "billingReference":  {
+                                                              "activityType":  "PipelineActivity",
+                                                              "billableDuration":  [
+                                                                                       {
+                                                                                           "duration":  0.016666666666666666,
+                                                                                           "meterType":  "SelfhostedIR",
+                                                                                           "unit":  "Hours"
+                                                                                       }
+                                                                                   ]
+                                                          },
+                                     "durationInQueue":  {
+                                                             "integrationRuntimeQueue":  3
+                                                         },
+                                     "effectiveIntegrationRuntime":  "SQLServer",
+                                     "executionDuration":  1,
+                                     "outputLogs":  "Changed database context to \u0027P21Import\u0027.\nWarning: Null value is eliminated by an aggregate or other SET operation.\nWarning: Null value is eliminated by an aggregate or other SET operation.\n",
+                                     "outputLogsLocation":  "",
+                                     "outputParameters":  {
+
+                                                          },
+                                     "outputTruncated":  false,
+                                     "recordsAffected":  0,
+                                     "resultSetCount":  1,
+                                     "resultSets":  [
+                                                        {
+                                                            "rowCount":  7,
+                                                            "rows":  [
+                                                                         {
+                                                                             "bucket":  "completed_only",
+                                                                             "line_count":  "151",
+                                                                             "target_db":  "P21Import"
+                                                                         },
+                                                                         {
+                                                                             "bucket":  "missing_po_any_status",
+                                                                             "line_count":  "17",
+                                                                             "target_db":  "P21Import"
+                                                                         },
+                                                                         {
+                                                                             "bucket":  "missing_supplier",
+                                                                             "line_count":  "1",
+                                                                             "target_db":  "P21Import"
+                                                                         },
+                                                                         {
+                                                                             "bucket":  "open_match",
+                                                                             "line_count":  "26",
+                                                                             "target_db":  "P21Import"
+                                                                         },
+                                                                         {
+                                                                             "bucket":  "missing_po_any_status",
+                                                                             "line_count":  "18",
+                                                                             "target_db":  "P21Play"
+                                                                         },
+                                                                         {
+                                                                             "bucket":  "missing_supplier",
+                                                                             "line_count":  "2",
+                                                                             "target_db":  "P21Play"
+                                                                         },
+                                                                         {
+                                                                             "bucket":  "open_match",
+                                                                             "line_count":  "175",
+                                                                             "target_db":  "P21Play"
+                                                                         }
+                                                                     ]
+                                                        }
+                                                    ]
+                                 },
+                      "pipelineName":  "Diag_Coats_Tm735_Validation_Target_Compare",
+                      "pipelineRunId":  "822dc650-53d4-11f1-b274-9cb150a3acae",
+                      "recoveryStatus":  "None",
+                      "resourceGroup":  "RG1",
+                      "retryAttempt":  null,
+                      "status":  "Succeeded",
+                      "userProperties":  {
+
+                                         }
+                  }
+              ]
+}

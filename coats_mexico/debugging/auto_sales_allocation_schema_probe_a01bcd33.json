@@ -1,0 +1,966 @@
+﻿{
+  "continuationToken": null,
+  "value": [
+    {
+      "activityName": "RunQuery",
+      "activityRunEnd": "2026-05-18T22:27:03.291211+00:00",
+      "activityRunId": "a59704cd-8d0a-4e6c-b1a3-7d553ad6a989",
+      "activityRunStart": "2026-05-18T22:26:42.209970+00:00",
+      "activityType": "Script",
+      "durationInMs": 21081,
+      "error": {
+        "details": "",
+        "errorCode": "",
+        "failureType": "",
+        "message": "",
+        "target": "RunQuery"
+      },
+      "executionDetails": {
+        "integrationRuntime": [
+          {
+            "location": "West US",
+            "name": "SQLServer",
+            "nodes": [
+              "INSPIRON_16"
+            ],
+            "type": "SelfHosted"
+          }
+        ]
+      },
+      "id": "/SUBSCRIPTIONS/6624EC13-3826-43B2-8E45-077F9051B88F/RESOURCEGROUPS/RG1/PROVIDERS/MICROSOFT.DATAFACTORY/FACTORIES/2026-04-01-DF1/pipelineruns/a01bcd33-5308-11f1-86ff-9cb150a3acae/activityruns/a59704cd-8d0a-4e6c-b1a3-7d553ad6a989",
+      "input": {
+        "logSettings": {
+          "logDestination": "ActivityOutput"
+        },
+        "scriptBlockExecutionTimeout": "00:10:00",
+        "scripts": [
+          {
+            "text": "USE P21;\nSET NOCOUNT ON;\nSET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;\nSELECT result_set='container_receipts_hdr_columns', column_id=CONVERT(varchar(20), c.column_id), column_name=c.name, type_name=ty.name, max_length=CONVERT(varchar(20), c.max_length), is_nullable=CONVERT(varchar(5), c.is_nullable)\nFROM sys.columns c JOIN sys.types ty ON ty.user_type_id=c.user_type_id WHERE c.object_id=OBJECT_ID('dbo.container_receipts_hdr') ORDER BY c.column_id;\nSELECT result_set='container_receipts_line_columns', column_id=CONVERT(varchar(20), c.column_id), column_name=c.name, type_name=ty.name, max_length=CONVERT(varchar(20), c.max_length), is_nullable=CONVERT(varchar(5), c.is_nullable)\nFROM sys.columns c JOIN sys.types ty ON ty.user_type_id=c.user_type_id WHERE c.object_id=OBJECT_ID('dbo.container_receipts_line') ORDER BY c.column_id;\nSELECT result_set='transfer_hdr_columns', column_id=CONVERT(varchar(20), c.column_id), column_name=c.name, type_name=ty.name, max_length=CONVERT(varchar(20), c.max_length), is_nullable=CONVERT(varchar(5), c.is_nullable)\nFROM sys.columns c JOIN sys.types ty ON ty.user_type_id=c.user_type_id WHERE c.object_id=OBJECT_ID('dbo.transfer_hdr') ORDER BY c.column_id;\nSELECT result_set='transfer_line_columns', column_id=CONVERT(varchar(20), c.column_id), column_name=c.name, type_name=ty.name, max_length=CONVERT(varchar(20), c.max_length), is_nullable=CONVERT(varchar(5), c.is_nullable)\nFROM sys.columns c JOIN sys.types ty ON ty.user_type_id=c.user_type_id WHERE c.object_id=OBJECT_ID('dbo.transfer_line') ORDER BY c.column_id;\nSELECT result_set='module_hits', object_name=OBJECT_SCHEMA_NAME(m.object_id)+'.'+OBJECT_NAME(m.object_id), type_desc=o.type_desc\nFROM sys.sql_modules m JOIN sys.objects o ON o.object_id=m.object_id\nWHERE m.definition LIKE '%container_receipts%' AND (m.definition LIKE '%alloc%' OR m.definition LIKE '%Allocate%' OR m.definition LIKE '%transfer%')\nORDER BY object_name;",
+            "type": "Query"
+          }
+        ]
+      },
+      "integrationRuntimeNames": [
+        "sqlserver"
+      ],
+      "iterationHash": "",
+      "linkedServiceName": "",
+      "output": {
+        "billingReference": {
+          "activityType": "PipelineActivity",
+          "billableDuration": [
+            {
+              "duration": 0.016666666666666666,
+              "meterType": "SelfhostedIR",
+              "unit": "Hours"
+            }
+          ]
+        },
+        "durationInQueue": {
+          "integrationRuntimeQueue": 5
+        },
+        "effectiveIntegrationRuntime": "SQLServer",
+        "executionDuration": 9,
+        "outputLogs": "Changed database context to 'P21'.\n",
+        "outputLogsLocation": "",
+        "outputParameters": {},
+        "outputTruncated": false,
+        "recordsAffected": 0,
+        "resultSetCount": 5,
+        "resultSets": [
+          {
+            "rowCount": 16,
+            "rows": [
+              {
+                "column_id": "1",
+                "column_name": "container_receipts_hdr_uid",
+                "is_nullable": "0",
+                "max_length": "4",
+                "result_set": "container_receipts_hdr_columns",
+                "type_name": "int"
+              },
+              {
+                "column_id": "2",
+                "column_name": "vessel_receipts_container_uid",
+                "is_nullable": "0",
+                "max_length": "4",
+                "result_set": "container_receipts_hdr_columns",
+                "type_name": "int"
+              },
+              {
+                "column_id": "3",
+                "column_name": "date_received",
+                "is_nullable": "0",
+                "max_length": "8",
+                "result_set": "container_receipts_hdr_columns",
+                "type_name": "datetime"
+              },
+              {
+                "column_id": "4",
+                "column_name": "period",
+                "is_nullable": "0",
+                "max_length": "5",
+                "result_set": "container_receipts_hdr_columns",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "5",
+                "column_name": "year_for_period",
+                "is_nullable": "0",
+                "max_length": "5",
+                "result_set": "container_receipts_hdr_columns",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "6",
+                "column_name": "row_status_flag",
+                "is_nullable": "0",
+                "max_length": "4",
+                "result_set": "container_receipts_hdr_columns",
+                "type_name": "int"
+              },
+              {
+                "column_id": "7",
+                "column_name": "date_created",
+                "is_nullable": "0",
+                "max_length": "8",
+                "result_set": "container_receipts_hdr_columns",
+                "type_name": "datetime"
+              },
+              {
+                "column_id": "8",
+                "column_name": "created_by",
+                "is_nullable": "0",
+                "max_length": "255",
+                "result_set": "container_receipts_hdr_columns",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "9",
+                "column_name": "date_last_modified",
+                "is_nullable": "0",
+                "max_length": "8",
+                "result_set": "container_receipts_hdr_columns",
+                "type_name": "datetime"
+              },
+              {
+                "column_id": "10",
+                "column_name": "last_maintained_by",
+                "is_nullable": "0",
+                "max_length": "255",
+                "result_set": "container_receipts_hdr_columns",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "11",
+                "column_name": "receiving_location_id",
+                "is_nullable": "1",
+                "max_length": "9",
+                "result_set": "container_receipts_hdr_columns",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "12",
+                "column_name": "currency_line_uid",
+                "is_nullable": "1",
+                "max_length": "4",
+                "result_set": "container_receipts_hdr_columns",
+                "type_name": "int"
+              },
+              {
+                "column_id": "13",
+                "column_name": "exchange_date",
+                "is_nullable": "1",
+                "max_length": "8",
+                "result_set": "container_receipts_hdr_columns",
+                "type_name": "datetime"
+              },
+              {
+                "column_id": "14",
+                "column_name": "rfnav_trans_no",
+                "is_nullable": "1",
+                "max_length": "4",
+                "result_set": "container_receipts_hdr_columns",
+                "type_name": "int"
+              },
+              {
+                "column_id": "15",
+                "column_name": "processing",
+                "is_nullable": "1",
+                "max_length": "1",
+                "result_set": "container_receipts_hdr_columns",
+                "type_name": "char"
+              },
+              {
+                "column_id": "16",
+                "column_name": "processing_by",
+                "is_nullable": "1",
+                "max_length": "255",
+                "result_set": "container_receipts_hdr_columns",
+                "type_name": "varchar"
+              }
+            ]
+          },
+          {
+            "rowCount": 15,
+            "rows": [
+              {
+                "column_id": "1",
+                "column_name": "container_receipts_line_uid",
+                "is_nullable": "0",
+                "max_length": "4",
+                "result_set": "container_receipts_line_columns",
+                "type_name": "int"
+              },
+              {
+                "column_id": "2",
+                "column_name": "container_receipts_hdr_uid",
+                "is_nullable": "0",
+                "max_length": "4",
+                "result_set": "container_receipts_line_columns",
+                "type_name": "int"
+              },
+              {
+                "column_id": "3",
+                "column_name": "vessel_receipts_line_uid",
+                "is_nullable": "0",
+                "max_length": "4",
+                "result_set": "container_receipts_line_columns",
+                "type_name": "int"
+              },
+              {
+                "column_id": "4",
+                "column_name": "qty_received",
+                "is_nullable": "0",
+                "max_length": "9",
+                "result_set": "container_receipts_line_columns",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "5",
+                "column_name": "unit_of_measure",
+                "is_nullable": "0",
+                "max_length": "255",
+                "result_set": "container_receipts_line_columns",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "6",
+                "column_name": "unit_size",
+                "is_nullable": "0",
+                "max_length": "9",
+                "result_set": "container_receipts_line_columns",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "7",
+                "column_name": "date_created",
+                "is_nullable": "0",
+                "max_length": "8",
+                "result_set": "container_receipts_line_columns",
+                "type_name": "datetime"
+              },
+              {
+                "column_id": "8",
+                "column_name": "created_by",
+                "is_nullable": "0",
+                "max_length": "255",
+                "result_set": "container_receipts_line_columns",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "9",
+                "column_name": "date_last_modified",
+                "is_nullable": "0",
+                "max_length": "8",
+                "result_set": "container_receipts_line_columns",
+                "type_name": "datetime"
+              },
+              {
+                "column_id": "10",
+                "column_name": "last_maintained_by",
+                "is_nullable": "0",
+                "max_length": "255",
+                "result_set": "container_receipts_line_columns",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "11",
+                "column_name": "complete_po_line_flag",
+                "is_nullable": "0",
+                "max_length": "1",
+                "result_set": "container_receipts_line_columns",
+                "type_name": "char"
+              },
+              {
+                "column_id": "12",
+                "column_name": "transfer_flag",
+                "is_nullable": "1",
+                "max_length": "1",
+                "result_set": "container_receipts_line_columns",
+                "type_name": "char"
+              },
+              {
+                "column_id": "13",
+                "column_name": "wrong_part_no_flag",
+                "is_nullable": "0",
+                "max_length": "1",
+                "result_set": "container_receipts_line_columns",
+                "type_name": "char"
+              },
+              {
+                "column_id": "14",
+                "column_name": "currency_line_uid",
+                "is_nullable": "1",
+                "max_length": "4",
+                "result_set": "container_receipts_line_columns",
+                "type_name": "int"
+              },
+              {
+                "column_id": "15",
+                "column_name": "exclude_from_landed_cost_flag",
+                "is_nullable": "0",
+                "max_length": "1",
+                "result_set": "container_receipts_line_columns",
+                "type_name": "char"
+              }
+            ]
+          },
+          {
+            "rowCount": 39,
+            "rows": [
+              {
+                "column_id": "1",
+                "column_name": "transfer_no",
+                "is_nullable": "0",
+                "max_length": "9",
+                "result_set": "transfer_hdr_columns",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "2",
+                "column_name": "planned_recpt_date",
+                "is_nullable": "0",
+                "max_length": "8",
+                "result_set": "transfer_hdr_columns",
+                "type_name": "datetime"
+              },
+              {
+                "column_id": "3",
+                "column_name": "from_location_id",
+                "is_nullable": "0",
+                "max_length": "9",
+                "result_set": "transfer_hdr_columns",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "4",
+                "column_name": "to_location_id",
+                "is_nullable": "0",
+                "max_length": "9",
+                "result_set": "transfer_hdr_columns",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "5",
+                "column_name": "buyer_id",
+                "is_nullable": "1",
+                "max_length": "16",
+                "result_set": "transfer_hdr_columns",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "6",
+                "column_name": "delete_flag",
+                "is_nullable": "0",
+                "max_length": "1",
+                "result_set": "transfer_hdr_columns",
+                "type_name": "char"
+              },
+              {
+                "column_id": "7",
+                "column_name": "shipping_date",
+                "is_nullable": "1",
+                "max_length": "8",
+                "result_set": "transfer_hdr_columns",
+                "type_name": "datetime"
+              },
+              {
+                "column_id": "8",
+                "column_name": "received_date",
+                "is_nullable": "1",
+                "max_length": "8",
+                "result_set": "transfer_hdr_columns",
+                "type_name": "datetime"
+              },
+              {
+                "column_id": "9",
+                "column_name": "date_created",
+                "is_nullable": "0",
+                "max_length": "8",
+                "result_set": "transfer_hdr_columns",
+                "type_name": "datetime"
+              },
+              {
+                "column_id": "10",
+                "column_name": "date_last_modified",
+                "is_nullable": "0",
+                "max_length": "8",
+                "result_set": "transfer_hdr_columns",
+                "type_name": "datetime"
+              },
+              {
+                "column_id": "11",
+                "column_name": "last_maintained_by",
+                "is_nullable": "0",
+                "max_length": "30",
+                "result_set": "transfer_hdr_columns",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "12",
+                "column_name": "shipped_flag",
+                "is_nullable": "1",
+                "max_length": "1",
+                "result_set": "transfer_hdr_columns",
+                "type_name": "char"
+              },
+              {
+                "column_id": "13",
+                "column_name": "complete_flag",
+                "is_nullable": "1",
+                "max_length": "1",
+                "result_set": "transfer_hdr_columns",
+                "type_name": "char"
+              },
+              {
+                "column_id": "14",
+                "column_name": "company_id",
+                "is_nullable": "0",
+                "max_length": "8",
+                "result_set": "transfer_hdr_columns",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "15",
+                "column_name": "approved",
+                "is_nullable": "1",
+                "max_length": "1",
+                "result_set": "transfer_hdr_columns",
+                "type_name": "char"
+              },
+              {
+                "column_id": "16",
+                "column_name": "printed",
+                "is_nullable": "1",
+                "max_length": "1",
+                "result_set": "transfer_hdr_columns",
+                "type_name": "char"
+              },
+              {
+                "column_id": "17",
+                "column_name": "printed_date",
+                "is_nullable": "1",
+                "max_length": "8",
+                "result_set": "transfer_hdr_columns",
+                "type_name": "datetime"
+              },
+              {
+                "column_id": "18",
+                "column_name": "transfer_date",
+                "is_nullable": "0",
+                "max_length": "8",
+                "result_set": "transfer_hdr_columns",
+                "type_name": "datetime"
+              },
+              {
+                "column_id": "19",
+                "column_name": "year_for_period",
+                "is_nullable": "1",
+                "max_length": "5",
+                "result_set": "transfer_hdr_columns",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "20",
+                "column_name": "period",
+                "is_nullable": "1",
+                "max_length": "5",
+                "result_set": "transfer_hdr_columns",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "21",
+                "column_name": "receipt_year",
+                "is_nullable": "1",
+                "max_length": "5",
+                "result_set": "transfer_hdr_columns",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "22",
+                "column_name": "receipt_period",
+                "is_nullable": "1",
+                "max_length": "5",
+                "result_set": "transfer_hdr_columns",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "23",
+                "column_name": "carrier_id",
+                "is_nullable": "1",
+                "max_length": "9",
+                "result_set": "transfer_hdr_columns",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "24",
+                "column_name": "shipping_route_uid",
+                "is_nullable": "1",
+                "max_length": "4",
+                "result_set": "transfer_hdr_columns",
+                "type_name": "int"
+              },
+              {
+                "column_id": "25",
+                "column_name": "retrieved_by_wms",
+                "is_nullable": "0",
+                "max_length": "1",
+                "result_set": "transfer_hdr_columns",
+                "type_name": "char"
+              },
+              {
+                "column_id": "26",
+                "column_name": "retrieved_by_wms_inbound",
+                "is_nullable": "0",
+                "max_length": "1",
+                "result_set": "transfer_hdr_columns",
+                "type_name": "char"
+              },
+              {
+                "column_id": "27",
+                "column_name": "created_by",
+                "is_nullable": "1",
+                "max_length": "255",
+                "result_set": "transfer_hdr_columns",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "28",
+                "column_name": "line_item_sort_sequence",
+                "is_nullable": "0",
+                "max_length": "4",
+                "result_set": "transfer_hdr_columns",
+                "type_name": "int"
+              },
+              {
+                "column_id": "29",
+                "column_name": "shipping_instructions",
+                "is_nullable": "1",
+                "max_length": "255",
+                "result_set": "transfer_hdr_columns",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "30",
+                "column_name": "oe_transfer_reserve_flag",
+                "is_nullable": "1",
+                "max_length": "1",
+                "result_set": "transfer_hdr_columns",
+                "type_name": "char"
+              },
+              {
+                "column_id": "31",
+                "column_name": "omit_transfer_usage_flag",
+                "is_nullable": "1",
+                "max_length": "1",
+                "result_set": "transfer_hdr_columns",
+                "type_name": "char"
+              },
+              {
+                "column_id": "32",
+                "column_name": "slab_flag",
+                "is_nullable": "0",
+                "max_length": "1",
+                "result_set": "transfer_hdr_columns",
+                "type_name": "char"
+              },
+              {
+                "column_id": "33",
+                "column_name": "ship_complete_flag",
+                "is_nullable": "0",
+                "max_length": "1",
+                "result_set": "transfer_hdr_columns",
+                "type_name": "char"
+              },
+              {
+                "column_id": "34",
+                "column_name": "created_from_oe_flag",
+                "is_nullable": "0",
+                "max_length": "1",
+                "result_set": "transfer_hdr_columns",
+                "type_name": "char"
+              },
+              {
+                "column_id": "35",
+                "column_name": "required_ship_date",
+                "is_nullable": "1",
+                "max_length": "8",
+                "result_set": "transfer_hdr_columns",
+                "type_name": "datetime"
+              },
+              {
+                "column_id": "36",
+                "column_name": "required_date",
+                "is_nullable": "0",
+                "max_length": "8",
+                "result_set": "transfer_hdr_columns",
+                "type_name": "datetime"
+              },
+              {
+                "column_id": "37",
+                "column_name": "rfnav_stop_no",
+                "is_nullable": "1",
+                "max_length": "4",
+                "result_set": "transfer_hdr_columns",
+                "type_name": "int"
+              },
+              {
+                "column_id": "38",
+                "column_name": "scan_pack_uid",
+                "is_nullable": "1",
+                "max_length": "4",
+                "result_set": "transfer_hdr_columns",
+                "type_name": "int"
+              },
+              {
+                "column_id": "39",
+                "column_name": "source_type_cd",
+                "is_nullable": "1",
+                "max_length": "4",
+                "result_set": "transfer_hdr_columns",
+                "type_name": "int"
+              }
+            ]
+          },
+          {
+            "rowCount": 28,
+            "rows": [
+              {
+                "column_id": "1",
+                "column_name": "transfer_no",
+                "is_nullable": "0",
+                "max_length": "9",
+                "result_set": "transfer_line_columns",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "3",
+                "column_name": "qty_to_transfer",
+                "is_nullable": "0",
+                "max_length": "9",
+                "result_set": "transfer_line_columns",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "4",
+                "column_name": "qty_transferred",
+                "is_nullable": "1",
+                "max_length": "9",
+                "result_set": "transfer_line_columns",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "5",
+                "column_name": "qty_received",
+                "is_nullable": "1",
+                "max_length": "9",
+                "result_set": "transfer_line_columns",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "6",
+                "column_name": "delete_flag",
+                "is_nullable": "0",
+                "max_length": "1",
+                "result_set": "transfer_line_columns",
+                "type_name": "char"
+              },
+              {
+                "column_id": "7",
+                "column_name": "date_created",
+                "is_nullable": "0",
+                "max_length": "8",
+                "result_set": "transfer_line_columns",
+                "type_name": "datetime"
+              },
+              {
+                "column_id": "8",
+                "column_name": "date_last_modified",
+                "is_nullable": "0",
+                "max_length": "8",
+                "result_set": "transfer_line_columns",
+                "type_name": "datetime"
+              },
+              {
+                "column_id": "9",
+                "column_name": "last_maintained_by",
+                "is_nullable": "0",
+                "max_length": "30",
+                "result_set": "transfer_line_columns",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "10",
+                "column_name": "order_type",
+                "is_nullable": "1",
+                "max_length": "1",
+                "result_set": "transfer_line_columns",
+                "type_name": "char"
+              },
+              {
+                "column_id": "11",
+                "column_name": "unit_of_measure",
+                "is_nullable": "0",
+                "max_length": "8",
+                "result_set": "transfer_line_columns",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "12",
+                "column_name": "cost",
+                "is_nullable": "1",
+                "max_length": "9",
+                "result_set": "transfer_line_columns",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "13",
+                "column_name": "unit_size",
+                "is_nullable": "0",
+                "max_length": "9",
+                "result_set": "transfer_line_columns",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "14",
+                "column_name": "unit_quantity",
+                "is_nullable": "0",
+                "max_length": "9",
+                "result_set": "transfer_line_columns",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "15",
+                "column_name": "line_no",
+                "is_nullable": "0",
+                "max_length": "4",
+                "result_set": "transfer_line_columns",
+                "type_name": "int"
+              },
+              {
+                "column_id": "16",
+                "column_name": "qty_reserved",
+                "is_nullable": "1",
+                "max_length": "9",
+                "result_set": "transfer_line_columns",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "17",
+                "column_name": "sku_other_charge",
+                "is_nullable": "0",
+                "max_length": "9",
+                "result_set": "transfer_line_columns",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "18",
+                "column_name": "sku_markup",
+                "is_nullable": "0",
+                "max_length": "9",
+                "result_set": "transfer_line_columns",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "19",
+                "column_name": "row_status",
+                "is_nullable": "0",
+                "max_length": "1",
+                "result_set": "transfer_line_columns",
+                "type_name": "tinyint"
+              },
+              {
+                "column_id": "20",
+                "column_name": "inv_mast_uid",
+                "is_nullable": "0",
+                "max_length": "4",
+                "result_set": "transfer_line_columns",
+                "type_name": "int"
+              },
+              {
+                "column_id": "21",
+                "column_name": "line_type",
+                "is_nullable": "1",
+                "max_length": "1",
+                "result_set": "transfer_line_columns",
+                "type_name": "char"
+              },
+              {
+                "column_id": "22",
+                "column_name": "created_by",
+                "is_nullable": "1",
+                "max_length": "255",
+                "result_set": "transfer_line_columns",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "23",
+                "column_name": "sku_freight_amount",
+                "is_nullable": "0",
+                "max_length": "9",
+                "result_set": "transfer_line_columns",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "24",
+                "column_name": "units_requested",
+                "is_nullable": "1",
+                "max_length": "9",
+                "result_set": "transfer_line_columns",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "25",
+                "column_name": "omit_transfer_usage_flag",
+                "is_nullable": "1",
+                "max_length": "1",
+                "result_set": "transfer_line_columns",
+                "type_name": "char"
+              },
+              {
+                "column_id": "26",
+                "column_name": "customer_part_number",
+                "is_nullable": "1",
+                "max_length": "40",
+                "result_set": "transfer_line_columns",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "27",
+                "column_name": "printed_flag",
+                "is_nullable": "1",
+                "max_length": "1",
+                "result_set": "transfer_line_columns",
+                "type_name": "char"
+              },
+              {
+                "column_id": "28",
+                "column_name": "unit_cost_override_amt",
+                "is_nullable": "1",
+                "max_length": "9",
+                "result_set": "transfer_line_columns",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "29",
+                "column_name": "projected_receipt_cost",
+                "is_nullable": "1",
+                "max_length": "9",
+                "result_set": "transfer_line_columns",
+                "type_name": "decimal"
+              }
+            ]
+          },
+          {
+            "rowCount": 15,
+            "rows": [
+              {
+                "object_name": "dbo.p21_create_container_receipt_records",
+                "result_set": "module_hits",
+                "type_desc": "SQL_STORED_PROCEDURE"
+              },
+              {
+                "object_name": "dbo.p21_find_tag_bin_qty_discrepancies",
+                "result_set": "module_hits",
+                "type_desc": "SQL_STORED_PROCEDURE"
+              },
+              {
+                "object_name": "dbo.p21_fnt_OpenTDLsForTagDetailUID",
+                "result_set": "module_hits",
+                "type_desc": "SQL_INLINE_TABLE_VALUED_FUNCTION"
+              },
+              {
+                "object_name": "dbo.p21_move_hard_allocations",
+                "result_set": "module_hits",
+                "type_desc": "SQL_STORED_PROCEDURE"
+              },
+              {
+                "object_name": "dbo.p21_po_links_for_order_3793",
+                "result_set": "module_hits",
+                "type_desc": "SQL_STORED_PROCEDURE"
+              },
+              {
+                "object_name": "dbo.p21_poreceiving_report_new_view",
+                "result_set": "module_hits",
+                "type_desc": "VIEW"
+              },
+              {
+                "object_name": "dbo.p21_rescale_uom",
+                "result_set": "module_hits",
+                "type_desc": "SQL_STORED_PROCEDURE"
+              },
+              {
+                "object_name": "dbo.p21_rfnavigator_process_sync_dump_batch",
+                "result_set": "module_hits",
+                "type_desc": "SQL_STORED_PROCEDURE"
+              },
+              {
+                "object_name": "dbo.p21_sp_generate_future_stock_analysis",
+                "result_set": "module_hits",
+                "type_desc": "SQL_STORED_PROCEDURE"
+              },
+              {
+                "object_name": "dbo.p21_view_asap_transfer_receipt",
+                "result_set": "module_hits",
+                "type_desc": "VIEW"
+              },
+              {
+                "object_name": "dbo.p21_view_container_receipts_line_ext",
+                "result_set": "module_hits",
+                "type_desc": "VIEW"
+              },
+              {
+                "object_name": "dbo.p21_view_dls_slab_info",
+                "result_set": "module_hits",
+                "type_desc": "VIEW"
+              },
+              {
+                "object_name": "dbo.p21_view_lc_invhdr_receipts",
+                "result_set": "module_hits",
+                "type_desc": "VIEW"
+              },
+              {
+                "object_name": "dbo.p21_view_lc_invline_receipts",
+                "result_set": "module_hits",
+                "type_desc": "VIEW"
+              },
+              {
+                "object_name": "dbo.p21_view_wireless_transaction_report",
+                "result_set": "module_hits",
+                "type_desc": "VIEW"
+              }
+            ]
+          }
+        ]
+      },
+      "pipelineName": "Diag_Coats_Auto_Sales_Allocation",
+      "pipelineRunId": "a01bcd33-5308-11f1-86ff-9cb150a3acae",
+      "recoveryStatus": "None",
+      "resourceGroup": "RG1",
+      "retryAttempt": null,
+      "status": "Succeeded",
+      "userProperties": {}
+    }
+  ]
+}

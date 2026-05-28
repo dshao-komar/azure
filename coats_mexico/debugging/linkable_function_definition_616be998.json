@@ -1,0 +1,78 @@
+﻿{
+    "continuationToken":  null,
+    "value":  [
+                  {
+                      "activityName":  "RunProbe",
+                      "activityRunEnd":  "2026-05-20T16:03:20.226479+00:00",
+                      "activityRunId":  "f53bc73e-99e2-45d7-bc56-971ae6ec6757",
+                      "activityRunStart":  "2026-05-20T16:03:10.972242+00:00",
+                      "activityType":  "Script",
+                      "durationInMs":  9254,
+                      "error":  {
+                                    "details":  [
+
+                                                ],
+                                    "errorCode":  "2011",
+                                    "failureType":  "UserError",
+                                    "message":  "The number of rows provided for a TOP or FETCH clauses row count parameter must be an integer.",
+                                    "target":  "RunProbe"
+                                },
+                      "executionDetails":  {
+                                               "integrationRuntime":  [
+                                                                          {
+                                                                              "location":  "West US",
+                                                                              "name":  "SQLServer",
+                                                                              "nodes":  [
+                                                                                            "INSPIRON_16"
+                                                                                        ],
+                                                                              "type":  "SelfHosted"
+                                                                          }
+                                                                      ]
+                                           },
+                      "id":  "/SUBSCRIPTIONS/6624EC13-3826-43B2-8E45-077F9051B88F/RESOURCEGROUPS/RG1/PROVIDERS/MICROSOFT.DATAFACTORY/FACTORIES/2026-04-01-DF1/pipelineruns/616be998-5465-11f1-865b-9cb150a3acae/activityruns/f53bc73e-99e2-45d7-bc56-971ae6ec6757",
+                      "input":  {
+                                    "logSettings":  {
+                                                        "logDestination":  "ActivityOutput"
+                                                    },
+                                    "scriptBlockExecutionTimeout":  "00:10:00",
+                                    "scripts":  [
+                                                    {
+                                                        "text":  "USE P21Play;\nSET NOCOUNT ON;\n\nDECLARE @definition nvarchar(max)=OBJECT_DEFINITION(OBJECT_ID(\u0027dbo.p21_fnt_get_linkable_transactions\u0027));\n\nSELECT\n      parameter_id=CONVERT(nvarchar(20), p.parameter_id)\n    , parameter_name=p.name\n    , type_name=TYPE_NAME(p.user_type_id)\n    , max_length=CONVERT(nvarchar(20), p.max_length)\nFROM sys.parameters AS p\nWHERE p.object_id=OBJECT_ID(\u0027dbo.p21_fnt_get_linkable_transactions\u0027)\nORDER BY p.parameter_id;\n\n;WITH n AS (\n    SELECT TOP (CEILING(LEN(@definition) / 3500.0))\n           rn = ROW_NUMBER() OVER (ORDER BY (SELECT NULL))\n    FROM sys.all_objects\n)\nSELECT\n      chunk_no=CONVERT(nvarchar(20), rn)\n    , chunk_text=SUBSTRING(@definition, ((rn - 1) * 3500) + 1, 3500)\nFROM n\nORDER BY rn;",
+                                                        "type":  "Query"
+                                                    }
+                                                ]
+                                },
+                      "integrationRuntimeNames":  [
+                                                      "sqlserver"
+                                                  ],
+                      "iterationHash":  "",
+                      "linkedServiceName":  "",
+                      "output":  {
+                                     "billingReference":  {
+                                                              "activityType":  "PipelineActivity",
+                                                              "billableDuration":  [
+                                                                                       {
+                                                                                           "duration":  0.016666666666666666,
+                                                                                           "meterType":  "SelfhostedIR",
+                                                                                           "unit":  "Hours"
+                                                                                       }
+                                                                                   ]
+                                                          },
+                                     "durationInQueue":  {
+                                                             "integrationRuntimeQueue":  1
+                                                         },
+                                     "effectiveIntegrationRuntime":  "SQLServer",
+                                     "executionDuration":  0
+                                 },
+                      "pipelineName":  "Diag_Coats_Linkable_Function_Definition",
+                      "pipelineRunId":  "616be998-5465-11f1-865b-9cb150a3acae",
+                      "recoveryStatus":  "None",
+                      "resourceGroup":  "RG1",
+                      "retryAttempt":  null,
+                      "status":  "Failed",
+                      "userProperties":  {
+
+                                         }
+                  }
+              ]
+}

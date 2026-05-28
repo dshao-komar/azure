@@ -1,0 +1,308 @@
+{
+  "continuationToken": null,
+  "value": [
+    {
+      "activityName": "PostRetestCheck",
+      "activityRunEnd": "2026-05-20T17:58:13.077803+00:00",
+      "activityRunId": "70eb69e3-ad90-49cb-aa0a-f95c0cd11f3a",
+      "activityRunStart": "2026-05-20T17:58:00.288003+00:00",
+      "activityType": "Script",
+      "durationInMs": 12789,
+      "error": {
+        "details": "",
+        "errorCode": "",
+        "failureType": "",
+        "message": "",
+        "target": "PostRetestCheck"
+      },
+      "executionDetails": {
+        "integrationRuntime": [
+          {
+            "location": "West US",
+            "name": "SQLServer",
+            "nodes": [
+              "KASVRW2K8FS"
+            ],
+            "type": "SelfHosted"
+          }
+        ]
+      },
+      "id": "/SUBSCRIPTIONS/6624EC13-3826-43B2-8E45-077F9051B88F/RESOURCEGROUPS/RG1/PROVIDERS/MICROSOFT.DATAFACTORY/FACTORIES/2026-04-01-DF1/pipelineruns/6bc053a2-5475-11f1-9698-9cb150a3acae/activityruns/70eb69e3-ad90-49cb-aa0a-f95c0cd11f3a",
+      "input": {
+        "logSettings": {
+          "logDestination": "ActivityOutput"
+        },
+        "scriptBlockExecutionTimeout": "00:05:00",
+        "scripts": [
+          {
+            "text": "USE P21Play;\nSET NOCOUNT ON;\nDECLARE @ShipmentFileId uniqueidentifier = 'f5c975af-1d81-5d36-9ff8-244fd38c9fc5';\nDECLARE @ContainerReceiptsHdrUid int = 682;\nDECLARE @VesselReceiptsHdrUid int = 762;\nDECLARE @ContainerBuildingUid int = 900;\n\n;WITH s AS (\n    SELECT po_line_uid, qty = SUM(CONVERT(decimal(19,9), Invoiced_Qty))\n    FROM P21Import.dbo.coats_mexico_shipment_pallet_line\n    WHERE shipment_file_id = @ShipmentFileId\n      AND po_line_uid IS NOT NULL\n      AND Invoiced_Qty IS NOT NULL\n    GROUP BY po_line_uid\n), expected AS (\n    SELECT line_count = COUNT(*), total_qty = SUM(qty)\n    FROM s\n), vlinks AS (\n    SELECT link_rows = COUNT(*), link_qty = COALESCE(SUM(CONVERT(decimal(19,9), quantity_on_po)),0)\n    FROM dbo.oe_line_po\n    WHERE po_no = @VesselReceiptsHdrUid\n      AND connection_type = 'V'\n      AND ISNULL(delete_flag,'N') = 'N'\n      AND ISNULL(cancel_flag,'N') = 'N'\n), open_vlinks AS (\n    SELECT open_link_rows = COUNT(*), open_link_qty = COALESCE(SUM(CONVERT(decimal(19,9), quantity_on_po)),0)\n    FROM dbo.oe_line_po\n    WHERE po_no = @VesselReceiptsHdrUid\n      AND connection_type = 'V'\n      AND ISNULL(delete_flag,'N') = 'N'\n      AND ISNULL(cancel_flag,'N') = 'N'\n      AND ISNULL(completed,'N') = 'N'\n), old_plinks AS (\n    SELECT open_original_po_link_rows = COUNT(*), open_original_po_link_qty = COALESCE(SUM(CONVERT(decimal(19,9), quantity_on_po)),0)\n    FROM dbo.oe_line_po AS olp\n    INNER JOIN dbo.po_line AS pol\n      ON pol.po_no = olp.po_no\n     AND pol.line_no = olp.po_line_number\n    INNER JOIN s\n      ON s.po_line_uid = pol.po_line_uid\n    WHERE olp.connection_type = 'P'\n      AND ISNULL(olp.delete_flag,'N') = 'N'\n      AND ISNULL(olp.cancel_flag,'N') = 'N'\n      AND ISNULL(olp.completed,'N') = 'N'\n)\nSELECT result_set='summary',\n       expected_lines = CONVERT(varchar(30), e.line_count),\n       expected_qty = CONVERT(varchar(40), e.total_qty),\n       cbp_rows = CONVERT(varchar(30), (SELECT COUNT(*) FROM dbo.container_building_po WHERE container_building_uid=@ContainerBuildingUid)),\n       vrl_rows = CONVERT(varchar(30), (SELECT COUNT(*) FROM dbo.vessel_receipts_line WHERE vessel_receipts_hdr_uid=@VesselReceiptsHdrUid)),\n       vrl_qty = CONVERT(varchar(40), (SELECT SUM(CONVERT(decimal(19,9), container_qty_received)) FROM dbo.vessel_receipts_line WHERE vessel_receipts_hdr_uid=@VesselReceiptsHdrUid)),\n       crl_rows = CONVERT(varchar(30), (SELECT COUNT(*) FROM dbo.container_receipts_line WHERE container_receipts_hdr_uid=@ContainerReceiptsHdrUid)),\n       crl_qty = CONVERT(varchar(40), (SELECT SUM(CONVERT(decimal(19,9), qty_received)) FROM dbo.container_receipts_line WHERE container_receipts_hdr_uid=@ContainerReceiptsHdrUid)),\n       vlink_rows = CONVERT(varchar(30), v.link_rows),\n       vlink_qty = CONVERT(varchar(40), v.link_qty),\n       open_vlink_rows = CONVERT(varchar(30), ov.open_link_rows),\n       open_vlink_qty = CONVERT(varchar(40), ov.open_link_qty),\n       open_original_po_link_rows = CONVERT(varchar(30), op.open_original_po_link_rows),\n       open_original_po_link_qty = CONVERT(varchar(40), op.open_original_po_link_qty)\nFROM expected e CROSS JOIN vlinks v CROSS JOIN open_vlinks ov CROSS JOIN old_plinks op;\n\nSELECT TOP (20) result_set='vessel_link_sample', order_number=CONVERT(varchar(30), order_number), line_number=CONVERT(varchar(30), line_number), po_no=CONVERT(varchar(30), po_no), po_line_number=CONVERT(varchar(30), po_line_number), quantity_on_po=CONVERT(varchar(40), quantity_on_po), completed, connection_type\nFROM dbo.oe_line_po\nWHERE po_no = @VesselReceiptsHdrUid\n  AND connection_type = 'V'\nORDER BY po_line_number, order_number, line_number;",
+            "type": "Query"
+          }
+        ]
+      },
+      "integrationRuntimeNames": [
+        "sqlserver"
+      ],
+      "iterationHash": "",
+      "linkedServiceName": "",
+      "output": {
+        "billingReference": {
+          "activityType": "PipelineActivity",
+          "billableDuration": [
+            {
+              "duration": 0.016666666666666666,
+              "meterType": "SelfhostedIR",
+              "unit": "Hours"
+            }
+          ]
+        },
+        "durationInQueue": {
+          "integrationRuntimeQueue": 5
+        },
+        "effectiveIntegrationRuntime": "SQLServer",
+        "executionDuration": 1,
+        "outputLogs": "Changed database context to 'P21Play'.\n",
+        "outputLogsLocation": "",
+        "outputParameters": {},
+        "outputTruncated": false,
+        "recordsAffected": 0,
+        "resultSetCount": 2,
+        "resultSets": [
+          {
+            "rowCount": 1,
+            "rows": [
+              {
+                "cbp_rows": "169",
+                "crl_qty": "18873.695000000",
+                "crl_rows": "169",
+                "expected_lines": "169",
+                "expected_qty": "18873.695000000",
+                "open_original_po_link_qty": "229.086000000",
+                "open_original_po_link_rows": "9",
+                "open_vlink_qty": "5437.298000000",
+                "open_vlink_rows": "104",
+                "result_set": "summary",
+                "vlink_qty": "5437.298000000",
+                "vlink_rows": "104",
+                "vrl_qty": "18873.695000000",
+                "vrl_rows": "169"
+              }
+            ]
+          },
+          {
+            "rowCount": 20,
+            "rows": [
+              {
+                "completed": "N",
+                "connection_type": "V",
+                "line_number": "1",
+                "order_number": "1279183",
+                "po_line_number": "1",
+                "po_no": "762",
+                "quantity_on_po": "46.000000000",
+                "result_set": "vessel_link_sample"
+              },
+              {
+                "completed": "N",
+                "connection_type": "V",
+                "line_number": "4",
+                "order_number": "1282257",
+                "po_line_number": "10",
+                "po_no": "762",
+                "quantity_on_po": "35.500000000",
+                "result_set": "vessel_link_sample"
+              },
+              {
+                "completed": "N",
+                "connection_type": "V",
+                "line_number": "7",
+                "order_number": "1283591",
+                "po_line_number": "100",
+                "po_no": "762",
+                "quantity_on_po": "8.000000000",
+                "result_set": "vessel_link_sample"
+              },
+              {
+                "completed": "N",
+                "connection_type": "V",
+                "line_number": "2",
+                "order_number": "1283695",
+                "po_line_number": "101",
+                "po_no": "762",
+                "quantity_on_po": "7.000000000",
+                "result_set": "vessel_link_sample"
+              },
+              {
+                "completed": "N",
+                "connection_type": "V",
+                "line_number": "6",
+                "order_number": "1283695",
+                "po_line_number": "102",
+                "po_no": "762",
+                "quantity_on_po": "7.000000000",
+                "result_set": "vessel_link_sample"
+              },
+              {
+                "completed": "N",
+                "connection_type": "V",
+                "line_number": "4",
+                "order_number": "1283695",
+                "po_line_number": "103",
+                "po_no": "762",
+                "quantity_on_po": "7.000000000",
+                "result_set": "vessel_link_sample"
+              },
+              {
+                "completed": "N",
+                "connection_type": "V",
+                "line_number": "8",
+                "order_number": "1283695",
+                "po_line_number": "104",
+                "po_no": "762",
+                "quantity_on_po": "7.000000000",
+                "result_set": "vessel_link_sample"
+              },
+              {
+                "completed": "N",
+                "connection_type": "V",
+                "line_number": "1",
+                "order_number": "1283695",
+                "po_line_number": "105",
+                "po_no": "762",
+                "quantity_on_po": "14.000000000",
+                "result_set": "vessel_link_sample"
+              },
+              {
+                "completed": "N",
+                "connection_type": "V",
+                "line_number": "5",
+                "order_number": "1283695",
+                "po_line_number": "106",
+                "po_no": "762",
+                "quantity_on_po": "14.000000000",
+                "result_set": "vessel_link_sample"
+              },
+              {
+                "completed": "N",
+                "connection_type": "V",
+                "line_number": "3",
+                "order_number": "1283695",
+                "po_line_number": "107",
+                "po_no": "762",
+                "quantity_on_po": "14.000000000",
+                "result_set": "vessel_link_sample"
+              },
+              {
+                "completed": "N",
+                "connection_type": "V",
+                "line_number": "7",
+                "order_number": "1283695",
+                "po_line_number": "108",
+                "po_no": "762",
+                "quantity_on_po": "14.000000000",
+                "result_set": "vessel_link_sample"
+              },
+              {
+                "completed": "N",
+                "connection_type": "V",
+                "line_number": "6",
+                "order_number": "1283612",
+                "po_line_number": "109",
+                "po_no": "762",
+                "quantity_on_po": "25.000000000",
+                "result_set": "vessel_link_sample"
+              },
+              {
+                "completed": "N",
+                "connection_type": "V",
+                "line_number": "2",
+                "order_number": "1282257",
+                "po_line_number": "11",
+                "po_no": "762",
+                "quantity_on_po": "42.000000000",
+                "result_set": "vessel_link_sample"
+              },
+              {
+                "completed": "N",
+                "connection_type": "V",
+                "line_number": "2",
+                "order_number": "1283612",
+                "po_line_number": "110",
+                "po_no": "762",
+                "quantity_on_po": "62.000000000",
+                "result_set": "vessel_link_sample"
+              },
+              {
+                "completed": "N",
+                "connection_type": "V",
+                "line_number": "5",
+                "order_number": "1283612",
+                "po_line_number": "111",
+                "po_no": "762",
+                "quantity_on_po": "31.000000000",
+                "result_set": "vessel_link_sample"
+              },
+              {
+                "completed": "N",
+                "connection_type": "V",
+                "line_number": "1",
+                "order_number": "1283308",
+                "po_line_number": "115",
+                "po_no": "762",
+                "quantity_on_po": "36.000000000",
+                "result_set": "vessel_link_sample"
+              },
+              {
+                "completed": "N",
+                "connection_type": "V",
+                "line_number": "19",
+                "order_number": "1282181",
+                "po_line_number": "12",
+                "po_no": "762",
+                "quantity_on_po": "25.000000000",
+                "result_set": "vessel_link_sample"
+              },
+              {
+                "completed": "N",
+                "connection_type": "V",
+                "line_number": "2",
+                "order_number": "1283770",
+                "po_line_number": "120",
+                "po_no": "762",
+                "quantity_on_po": "22.000000000",
+                "result_set": "vessel_link_sample"
+              },
+              {
+                "completed": "N",
+                "connection_type": "V",
+                "line_number": "4",
+                "order_number": "1283552",
+                "po_line_number": "121",
+                "po_no": "762",
+                "quantity_on_po": "15.000000000",
+                "result_set": "vessel_link_sample"
+              },
+              {
+                "completed": "N",
+                "connection_type": "V",
+                "line_number": "3",
+                "order_number": "1283770",
+                "po_line_number": "122",
+                "po_no": "762",
+                "quantity_on_po": "75.000000000",
+                "result_set": "vessel_link_sample"
+              }
+            ]
+          }
+        ]
+      },
+      "pipelineName": "Diag_Coats_P21Play_Post_Retest_Check",
+      "pipelineRunId": "6bc053a2-5475-11f1-9698-9cb150a3acae",
+      "recoveryStatus": "None",
+      "resourceGroup": "RG1",
+      "retryAttempt": null,
+      "status": "Succeeded",
+      "userProperties": {}
+    }
+  ]
+}

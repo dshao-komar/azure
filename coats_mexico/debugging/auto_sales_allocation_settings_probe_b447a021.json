@@ -1,0 +1,482 @@
+﻿{
+  "continuationToken": null,
+  "value": [
+    {
+      "activityName": "RunQuery",
+      "activityRunEnd": "2026-05-18T22:42:02.086591+00:00",
+      "activityRunId": "dbd57dae-6680-4da2-81d9-707f8df273d6",
+      "activityRunStart": "2026-05-18T22:41:35.066660+00:00",
+      "activityType": "Script",
+      "durationInMs": 27019,
+      "error": {
+        "details": "",
+        "errorCode": "",
+        "failureType": "",
+        "message": "",
+        "target": "RunQuery"
+      },
+      "executionDetails": {
+        "integrationRuntime": [
+          {
+            "location": "West US",
+            "name": "SQLServer",
+            "nodes": [
+              "INSPIRON_16"
+            ],
+            "type": "SelfHosted"
+          }
+        ]
+      },
+      "id": "/SUBSCRIPTIONS/6624EC13-3826-43B2-8E45-077F9051B88F/RESOURCEGROUPS/RG1/PROVIDERS/MICROSOFT.DATAFACTORY/FACTORIES/2026-04-01-DF1/pipelineruns/b447a021-530a-11f1-b126-9cb150a3acae/activityruns/dbd57dae-6680-4da2-81d9-707f8df273d6",
+      "input": {
+        "logSettings": {
+          "logDestination": "ActivityOutput"
+        },
+        "scriptBlockExecutionTimeout": "00:10:00",
+        "scripts": [
+          {
+            "text": "USE P21;\nSET NOCOUNT ON; SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;\nSELECT result_set='settings_columns', table_name=t.name, column_name=c.name\nFROM sys.tables t JOIN sys.schemas s ON s.schema_id=t.schema_id JOIN sys.columns c ON c.object_id=t.object_id\nWHERE s.name='dbo' AND (c.name LIKE '%alloc%' OR c.name LIKE '%reserve%' OR c.name LIKE '%backorder%' OR c.name LIKE '%commit%') AND (t.name LIKE '%system%' OR t.name LIKE '%setting%' OR t.name LIKE '%company%' OR t.name LIKE '%location%' OR t.name LIKE '%inv_loc%' OR t.name LIKE '%oe%')\nORDER BY t.name,c.name;\nSELECT result_set='module_transfer_reserve_lines', object_name=OBJECT_SCHEMA_NAME(m.object_id)+'.'+OBJECT_NAME(m.object_id), snippet=SUBSTRING(m.definition, NULLIF(CHARINDEX('oe_transfer_reserve_flag',m.definition)-500,-500), 2000)\nFROM sys.sql_modules m WHERE m.definition LIKE '%oe_transfer_reserve_flag%';\nSELECT result_set='module_anticipated_lines', object_name=OBJECT_SCHEMA_NAME(m.object_id)+'.'+OBJECT_NAME(m.object_id), snippet=SUBSTRING(m.definition, NULLIF(CHARINDEX('anticipated_allocation',m.definition)-500,-500), 2000)\nFROM sys.sql_modules m WHERE m.definition LIKE '%anticipated_allocation%' AND (m.definition LIKE '%oe_line%' OR m.definition LIKE '%transfer%');",
+            "type": "Query"
+          }
+        ]
+      },
+      "integrationRuntimeNames": [
+        "sqlserver"
+      ],
+      "iterationHash": "",
+      "linkedServiceName": "",
+      "output": {
+        "billingReference": {
+          "activityType": "PipelineActivity",
+          "billableDuration": [
+            {
+              "duration": 0.016666666666666666,
+              "meterType": "SelfhostedIR",
+              "unit": "Hours"
+            }
+          ]
+        },
+        "durationInQueue": {
+          "integrationRuntimeQueue": 8
+        },
+        "effectiveIntegrationRuntime": "SQLServer",
+        "executionDuration": 13,
+        "outputLogs": "Changed database context to 'P21'.\n",
+        "outputLogsLocation": "",
+        "outputParameters": {},
+        "outputTruncated": false,
+        "recordsAffected": 0,
+        "resultSetCount": 3,
+        "resultSets": [
+          {
+            "rowCount": 60,
+            "rows": [
+              {
+                "column_name": "anticipated_allocation_uid",
+                "result_set": "settings_columns",
+                "table_name": "anticipated_allocation"
+              },
+              {
+                "column_name": "sku_qty_to_be_allocated",
+                "result_set": "settings_columns",
+                "table_name": "anticipated_allocation"
+              },
+              {
+                "column_name": "sp_alloc_from_stock_var_acct",
+                "result_set": "settings_columns",
+                "table_name": "company"
+              },
+              {
+                "column_name": "cust_allocation",
+                "result_set": "settings_columns",
+                "table_name": "cpa_np_ic_allocations_working"
+              },
+              {
+                "column_name": "inv_group_loc_allocation_uid",
+                "result_set": "settings_columns",
+                "table_name": "inv_group_loc_allocation"
+              },
+              {
+                "column_name": "on_backorder_flag",
+                "result_set": "settings_columns",
+                "table_name": "inv_loc"
+              },
+              {
+                "column_name": "qty_allocated",
+                "result_set": "settings_columns",
+                "table_name": "inv_loc"
+              },
+              {
+                "column_name": "qty_backordered",
+                "result_set": "settings_columns",
+                "table_name": "inv_loc"
+              },
+              {
+                "column_name": "qty_reserved_due_in",
+                "result_set": "settings_columns",
+                "table_name": "inv_loc"
+              },
+              {
+                "column_name": "inv_loc_cust_reserve_uid",
+                "result_set": "settings_columns",
+                "table_name": "inv_loc_cust_reserve"
+              },
+              {
+                "column_name": "reserve_qty",
+                "result_set": "settings_columns",
+                "table_name": "inv_loc_cust_reserve"
+              },
+              {
+                "column_name": "qty_allocated",
+                "result_set": "settings_columns",
+                "table_name": "inv_loc_gtor_ns"
+              },
+              {
+                "column_name": "qty_backordered",
+                "result_set": "settings_columns",
+                "table_name": "inv_loc_gtor_ns"
+              },
+              {
+                "column_name": "qty_reserved_due_in",
+                "result_set": "settings_columns",
+                "table_name": "inv_loc_gtor_ns"
+              },
+              {
+                "column_name": "old_qty_allocated",
+                "result_set": "settings_columns",
+                "table_name": "inv_loc_STK_initiator_audit"
+              },
+              {
+                "column_name": "qty_allocated",
+                "result_set": "settings_columns",
+                "table_name": "inv_loc_STK_initiator_audit"
+              },
+              {
+                "column_name": "old_qty_allocated",
+                "result_set": "settings_columns",
+                "table_name": "inv_loc_STK_target_audit"
+              },
+              {
+                "column_name": "qty_allocated",
+                "result_set": "settings_columns",
+                "table_name": "inv_loc_STK_target_audit"
+              },
+              {
+                "column_name": "item_commitment_detail_uid",
+                "result_set": "settings_columns",
+                "table_name": "item_commitment_location"
+              },
+              {
+                "column_name": "item_commitment_location_uid",
+                "result_set": "settings_columns",
+                "table_name": "item_commitment_location"
+              },
+              {
+                "column_name": "qty_committed",
+                "result_set": "settings_columns",
+                "table_name": "item_commitment_location"
+              },
+              {
+                "column_name": "total_commitment_amount",
+                "result_set": "settings_columns",
+                "table_name": "item_commitment_location"
+              },
+              {
+                "column_name": "auto_allocate_in_po_import_flag",
+                "result_set": "settings_columns",
+                "table_name": "location"
+              },
+              {
+                "column_name": "do_not_alloc_serial_to_ord_flag",
+                "result_set": "settings_columns",
+                "table_name": "location"
+              },
+              {
+                "column_name": "undershipment_allocation_flag",
+                "result_set": "settings_columns",
+                "table_name": "location"
+              },
+              {
+                "column_name": "wwms_show_bin_alloc_warning",
+                "result_set": "settings_columns",
+                "table_name": "location"
+              },
+              {
+                "column_name": "allocation_path",
+                "result_set": "settings_columns",
+                "table_name": "location_allocation_path"
+              },
+              {
+                "column_name": "location_allocation_path_uid",
+                "result_set": "settings_columns",
+                "table_name": "location_allocation_path"
+              },
+              {
+                "column_name": "cons_backorder_processing_flag",
+                "result_set": "settings_columns",
+                "table_name": "oe_hdr"
+              },
+              {
+                "column_name": "allocate_usage_to_original_item",
+                "result_set": "settings_columns",
+                "table_name": "oe_line"
+              },
+              {
+                "column_name": "item_commitment_detail_uid",
+                "result_set": "settings_columns",
+                "table_name": "oe_line"
+              },
+              {
+                "column_name": "original_qty_allocated",
+                "result_set": "settings_columns",
+                "table_name": "oe_line"
+              },
+              {
+                "column_name": "qty_allocated",
+                "result_set": "settings_columns",
+                "table_name": "oe_line"
+              },
+              {
+                "column_name": "routing_allocation_change",
+                "result_set": "settings_columns",
+                "table_name": "oe_line"
+              },
+              {
+                "column_name": "qty_allocated",
+                "result_set": "settings_columns",
+                "table_name": "oe_line_component"
+              },
+              {
+                "column_name": "qty_allocated_on_oe",
+                "result_set": "settings_columns",
+                "table_name": "oe_line_po_x_inv_receipts_line"
+              },
+              {
+                "column_name": "sku_qty_allocated",
+                "result_set": "settings_columns",
+                "table_name": "oe_line_room"
+              },
+              {
+                "column_name": "allocated_qty",
+                "result_set": "settings_columns",
+                "table_name": "oe_line_schedule"
+              },
+              {
+                "column_name": "suppress_backorder_on_pickticket",
+                "result_set": "settings_columns",
+                "table_name": "oe_system_parameters"
+              },
+              {
+                "column_name": "service_line_part_allocation_integration_response_audit_uid",
+                "result_set": "settings_columns",
+                "table_name": "service_line_part_allocation_integration_response_audit"
+              },
+              {
+                "column_name": "service_line_part_allocation_integration_trigger_audit_uid",
+                "result_set": "settings_columns",
+                "table_name": "service_line_part_allocation_integration_trigger_audit"
+              },
+              {
+                "column_name": "allocated_qty",
+                "result_set": "settings_columns",
+                "table_name": "shopping_cart_allocation"
+              },
+              {
+                "column_name": "shopping_cart_allocation_uid",
+                "result_set": "settings_columns",
+                "table_name": "shopping_cart_allocation"
+              },
+              {
+                "column_name": "calc_backorder_in_oe",
+                "result_set": "settings_columns",
+                "table_name": "system_parameters"
+              },
+              {
+                "column_name": "default_backorder_qty",
+                "result_set": "settings_columns",
+                "table_name": "system_parameters"
+              },
+              {
+                "column_name": "reserved1",
+                "result_set": "settings_columns",
+                "table_name": "system_parameters"
+              },
+              {
+                "column_name": "qty_allocated_new",
+                "result_set": "settings_columns",
+                "table_name": "temp_rescale_inv_loc_qty"
+              },
+              {
+                "column_name": "qty_allocated_old",
+                "result_set": "settings_columns",
+                "table_name": "temp_rescale_inv_loc_qty"
+              },
+              {
+                "column_name": "qty_backordered_new",
+                "result_set": "settings_columns",
+                "table_name": "temp_rescale_inv_loc_qty"
+              },
+              {
+                "column_name": "qty_backordered_old",
+                "result_set": "settings_columns",
+                "table_name": "temp_rescale_inv_loc_qty"
+              },
+              {
+                "column_name": "qty_reserved_due_in_new",
+                "result_set": "settings_columns",
+                "table_name": "temp_rescale_inv_loc_qty"
+              },
+              {
+                "column_name": "qty_reserved_due_in_old",
+                "result_set": "settings_columns",
+                "table_name": "temp_rescale_inv_loc_qty"
+              },
+              {
+                "column_name": "allocated_qty_new",
+                "result_set": "settings_columns",
+                "table_name": "temp_rescale_oe_line_schedule"
+              },
+              {
+                "column_name": "allocated_qty_old",
+                "result_set": "settings_columns",
+                "table_name": "temp_rescale_oe_line_schedule"
+              },
+              {
+                "column_name": "qty_allocated_new",
+                "result_set": "settings_columns",
+                "table_name": "temp_rescale_oe_line_unit_size"
+              },
+              {
+                "column_name": "qty_allocated_old",
+                "result_set": "settings_columns",
+                "table_name": "temp_rescale_oe_line_unit_size"
+              },
+              {
+                "column_name": "unit_qty_on_backorder",
+                "result_set": "settings_columns",
+                "table_name": "weboe_items_on_backorder_data"
+              },
+              {
+                "column_name": "new_qty_backorder",
+                "result_set": "settings_columns",
+                "table_name": "weboe_order_line_change_data"
+              },
+              {
+                "column_name": "old_qty_backorder",
+                "result_set": "settings_columns",
+                "table_name": "weboe_order_line_change_data"
+              },
+              {
+                "column_name": "workbench_allocation_dflt_uid",
+                "result_set": "settings_columns",
+                "table_name": "workbench_allocation_dflt"
+              }
+            ]
+          },
+          {
+            "rowCount": 4,
+            "rows": [
+              {
+                "object_name": "dbo.p21_fnt_oe_xfer_reserve_qty",
+                "result_set": "module_transfer_reserve_lines",
+                "snippet": "ransfer_hdr.to_location_id)\r\n\t\tINNER JOIN transfer_line (NOLOCK) ON (transfer_line.transfer_no = transfer_hdr.transfer_no)\r\n\t\t\t\t\t\t\t\t\t\t AND (transfer_line.inv_mast_uid = inv_loc.inv_mast_uid)\r\n\t\t\t\t\t\t\t\t\t\t AND ((( transfer_line.row_status <> 1 )\r\n\t\t\t\t\t\t\t\t\t\t AND (inv_loc.company_id = to_loc.company_id))\r\n\t\t\t\t\t\t\t\t\t\t  OR  ((transfer_line.row_status = 0)\r\n\t\t\t\t\t\t\t\t\t\t AND (inv_loc.company_id <> to_loc.company_id)))\r\n\t\t\t\t\t\t\t\t\t\t AND (transfer_line.delete_flag <> 'Y')\r\n\t\t\t\t\t\t\t\t\t\t AND (COALESCE(transfer_hdr.oe_transfer_reserve_flag, 'N') = 'Y')\r\n\r\n\t\tLEFT JOIN (SELECT\ttransfer_shipment_hdr.transfer_no\r\n\t\t\t\t\t\t\t,transfer_shipment_line.transfer_line_no\r\n\t\t\t\t\t\t\t,SUM(CASE\tWHEN transfer_shipment_line.sku_qty_received <= transfer_shipment_line.sku_qty_shipped \r\n\t\t\t\t\t\t\t\t\t\t\t\tAND transfer_shipment_line.row_status_flag = 974 THEN\r\n\t\t\t\t\t\t\t\t\t\t\ttransfer_shipment_line.sku_qty_received\r\n\t\t\t\t\t\t\t\t\t\tELSE\r\n\t\t\t\t\t\t\t\t\t\t\ttransfer_shipment_line.sku_qty_shipped \r\n\t\t\t\t\t\t\t\t END) AS transfer_shipment_quantity\r\n\t\t\t\t   FROM\ttransfer_shipment_line (NOLOCK)\r\n\t\t\t\t   INNER JOIN transfer_shipment_hdr (NOLOCK) ON (transfer_shipment_hdr.transfer_shipment_hdr_uid = transfer_shipment_line.transfer_shipment_hdr_uid)\r\n\t\t\t\t   GROUP BY transfer_shipment_hdr.transfer_no\r\n\t\t\t\t\t\t\t,transfer_shipment_line.transfer_line_no\r\n\t\t\t\t) AS drv_transfer_shipment ON (drv_transfer_shipment.transfer_no = transfer_hdr.transfer_no)\r\n\t\t\t\t\t\t\t\t\t\t  AND (drv_transfer_shipment.transfer_line_no = transfer_line.line_no)\r\n\t\tGROUP BY inv_loc.company_id\r\n\t\t\t\t,to_loc.company_id\r\n\t\t\t\t,inv_loc.location_id\r\n\t\t\t\t,inv_mast.inv_mast_uid\r\n\t\t\t\t,inv_mast.item_id\r\n\r\n\tRETURN\r\nEND\r\n\r\n--$Author: Bernie.pomidor $\r\n--$Revision: 4 $\r\n--$Date: 7/22/11 10:50a $\r\n--$Log: /Server/CommerceCenter/Wholesale (12.7)/Functions/p21_fnt_oe_xfer_reserve_qty.sql $\r\n-- \r\n-- 4     7/22/11 10:50a Bernie.pomidor\r\n-- DBA: BGP\r\n-- DEV: USA\r\n-- sum qty in transfer reserve group\r\n-- b012_006_032638\r\n-- \r\n-- 1     6/23/09 3:33p Bernie.pomidor\r\n-- DBA: BGP\r\n-- DEV: RSM\r\n-- new function\r\n-- ao"
+              },
+              {
+                "object_name": "dbo.p21_sp_create_otb_tbo_gtor_entries",
+                "result_set": "module_transfer_reserve_lines",
+                "snippet": "id )  \r\n\t\t\t\tLEFT JOIN (\t\tSELECT\t\toe_line_po.order_number,     \r\n\t\t\t\t\t\t\t\t\t\t\toe_line_po.line_number,   \r\n\t\t\t\t\t\t\t\t\t\t\tSUM(oe_line_po.quantity_on_po) qty_transferred   \r\n\t\t\t\t\t\t\t\tFROM\t\toe_line_po    \r\n\t\t\t\t\t\t\t\tINNER JOIN\ttransfer_hdr on transfer_hdr.transfer_no = oe_line_po.po_no  \r\n\t\t\t\t\t\t\t\tWHERE\t\toe_line_po.delete_flag = 'N'  \r\n\t\t\t\t\t\t\t\t\t\tAND oe_line_po.completed = 'N'  \r\n\t\t\t\t\t\t\t\t\t\tAND oe_line_po.cancel_flag = 'N'  \r\n\t\t\t\t\t\t\t\t\t\tAND oe_line_po.connection_type = 'T'  \r\n\t\t\t\t\t\t\t\t\t\tAND COALESCE(transfer_hdr.oe_transfer_reserve_flag, 'N') <> 'Y'  \r\n\t\t\t\t\t\t\t\tGROUP BY\toe_line_po.order_number,   \r\n\t\t\t\t\t\t\t\t\t\t\toe_line_po.line_number  \r\n\t\t\t\t\t\t)\t\tAS\t\t\tv_oe_line_po ON (v_oe_line_po.order_number = oe_line.order_no)  \r\n\t\t\t\t\t\t\t\t\t\t\t\t\t\tAND (v_oe_line_po.line_number = oe_line.line_no)  \r\n\t\t\t\tLEFT JOIN\tsystem_setting ss ON (ss.name = 'incl_stk_bo_on_chold_in_rqmt')   \r\n\t\t\t\t\t\t\t\t\t\t\tAND (ss.configuration_id = 0)  \r\n    \r\n       \r\n\t\t\t\tWHERE\t\toe_line.disposition = 'T'  \r\n\t\t\t\t\t  AND\toe_line.delete_flag = 'N'  \r\n\t\t\t\t\t  AND\toe_line.complete = 'N'   \r\n\t\t\t\t\t  AND\toe_line.source_loc_id = @al_SourceLocationID   \r\n\t\t\t\t\t  AND\toe_line.cancel_flag = 'N'  \r\n\t\t\t\t\t  AND\toe_hdr.delete_flag = 'N'  \r\n\t\t\t\t\t  AND\toe_hdr.completed = 'N'  \r\n\t\t\t\t\t  AND\toe_hdr.cancel_flag = 'N'  \r\n\t\t\t\t\t  AND\toe_hdr.approved = 'Y'  \r\n\t\t\t\t\t  AND\toe_hdr.projected_order = 'N'  \r\n\t\t\t\t\t  AND\t( NULL IS NULL OR oe_line.ship_loc_id = NULL )  \r\n\t\t\t\t\t  AND\t( ( oe_hdr.validation_status <> 'Hold' ) OR ( ( inv_loc.stockable = 'Y' ) AND ( COALESCE(ss.value,'N') = 'Y' ) ) )  \r\n\t\t\t\t\t  AND\t( oe_line.qty_ordered - oe_line.qty_allocated - oe_line.qty_on_pick_tickets - oe_line.qty_invoiced - oe_line.qty_canceled - oe_line.qty_staged) - COALESCE(v_oe_line_po.qty_transferred, 0) > 0  \r\n\t\t\t\t\t  AND\t( @al_InvMastUid IS NULL or inv_mast.inv_mast_uid = @al_InvMastUid)  \r\n  \r\n\t\t\t\t---------  \r\n\t\t\t\tUNION ALL  \r\n\t\t\t\t---------  \r\n  \r\n\t\t\t\tSELECT\t\tinv_mast.inv_mast_uid,  \r\n\t\t\t\t\t\t\tprod_order_hdr.source_location_id location_id,    \r\n\t\t\t\t\t\t\tprod_order_line_component.source_loc"
+              },
+              {
+                "object_name": "dbo.p21_fnt_oe_xfer_reserve_qty_by_to_loc",
+                "result_set": "module_transfer_reserve_lines",
+                "snippet": "r_hdr.to_location_id)\r\n\t\tINNER JOIN transfer_line  WITH (NOLOCK) ON (transfer_line.transfer_no = transfer_hdr.transfer_no)\r\n\t\t\t\t\t\t\t\t\t\t AND (transfer_line.inv_mast_uid = inv_loc.inv_mast_uid)\r\n\t\t\t\t\t\t\t\t\t\t AND ((( transfer_line.row_status <> 1 )\r\n\t\t\t\t\t\t\t\t\t\t AND (inv_loc.company_id = to_loc.company_id))\r\n\t\t\t\t\t\t\t\t\t\t  OR  ((transfer_line.row_status = 0)\r\n\t\t\t\t\t\t\t\t\t\t AND (inv_loc.company_id <> to_loc.company_id)))\r\n\t\t\t\t\t\t\t\t\t\t AND (transfer_line.delete_flag <> 'Y')\r\n\t\t\t\t\t\t\t\t\t\t AND (COALESCE(transfer_hdr.oe_transfer_reserve_flag, 'N') = 'Y')\r\n\r\n\t\tLEFT JOIN (SELECT\ttransfer_shipment_hdr.transfer_no\r\n\t\t\t\t\t\t\t,transfer_shipment_line.transfer_line_no\r\n\t\t\t\t\t\t\t,SUM(CASE\tWHEN transfer_shipment_line.sku_qty_received <= transfer_shipment_line.sku_qty_shipped \r\n\t\t\t\t\t\t\t\t\t\t\t\tAND transfer_shipment_line.row_status_flag = 974 THEN\r\n\t\t\t\t\t\t\t\t\t\t\ttransfer_shipment_line.sku_qty_received\r\n\t\t\t\t\t\t\t\t\t\tELSE\r\n\t\t\t\t\t\t\t\t\t\t\ttransfer_shipment_line.sku_qty_shipped \r\n\t\t\t\t\t\t\t\t END) AS transfer_shipment_quantity\r\n\t\t\t\t   FROM\ttransfer_shipment_line  WITH (NOLOCK)\r\n\t\t\t\t   INNER JOIN transfer_shipment_hdr  WITH (NOLOCK) ON (transfer_shipment_hdr.transfer_shipment_hdr_uid = transfer_shipment_line.transfer_shipment_hdr_uid)\r\n\t\t\t\t   GROUP BY transfer_shipment_hdr.transfer_no\r\n\t\t\t\t\t\t\t,transfer_shipment_line.transfer_line_no\r\n\t\t\t\t) AS drv_transfer_shipment ON (drv_transfer_shipment.transfer_no = transfer_hdr.transfer_no)\r\n\t\t\t\t\t\t\t\t\t\t  AND (drv_transfer_shipment.transfer_line_no = transfer_line.line_no)\r\n\t\tGROUP BY inv_loc.company_id\r\n\t\t\t\t,to_loc.company_id\r\n\t\t\t\t,inv_loc.location_id\r\n\t\t\t\t,inv_mast.inv_mast_uid\r\n\t\t\t\t,inv_mast.item_id\r\n\t\t\t\t,to_loc.location_id\r\n\r\n\tRETURN\r\nEND\r\n\r\n\r\n--$Author: Claudia.gonzalez $\r\n--$Date: 5/03/21 1:49p $\r\n--$Revision: 1 $\r\n--$Log: /Server/CommerceCenter/Z_Polecat (20.2)/Functions/p21_fnt_oe_xfer_reserve_qty_by_to_loc.sql $\r\n-- \r\n-- 1     5/03/21 1:49p Claudia.gonzalez\r\n-- DEV: BP\r\n-- DBA: CEG\r\n-- Scopus #1424506:Create new function (similar to\r\n-- p21_fnt_oe_xfer_reserve_qty) but will include"
+              },
+              {
+                "object_name": "dbo.p21_view_scp_get_transfer_info",
+                "result_set": "module_transfer_reserve_lines",
+                "snippet": "\r\n\r\nCREATE VIEW p21_view_scp_get_transfer_info\r\nAS\r\nSELECT  transfer_hdr.company_id\r\n\t   ,transfer_hdr.transfer_no\r\n\t   ,transfer_hdr.from_location_id\r\n\t   ,transfer_hdr.to_location_id\r\n\t   ,transfer_hdr.transfer_date\r\n\t   ,transfer_hdr.shipping_date\r\n\t   ,transfer_hdr.planned_recpt_date\r\n\t   ,transfer_hdr.oe_transfer_reserve_flag\r\n\t   ,transfer_hdr.carrier_id\r\n\t   ,address.name AS carrier_name\r\n\t   ,transfer_hdr.shipping_route_uid\r\n\t   ,shipping_route.route_code\r\n\t   ,shipping_route.route_description\r\n\t   ,transfer_hdr.complete_flag\r\n\t   ,transfer_hdr.delete_flag\r\n\t   ,transfer_line.line_no\r\n\t   ,transfer_line.inv_mast_uid\r\n\t   ,inv_mast.item_id\r\n\t   ,inv_mast.item_desc\r\n\t   ,transfer_line.unit_of_measure\r\n\t   ,CAST(transfer_line.qty_to_transfer / transfer_line.unit_size AS Dec(19,9)) AS unit_qty_to_transfer\r\n\t   ,CAST(transfer_line.qty_transferred / transfer_line.unit_size AS Dec(19,9)) AS unit_qty_shipped\r\n\t   ,CAST(transfer_line.qty_received / transfer_line.unit_size AS Dec(19,9)) AS unit_qty_received\r\n\t   ,CAST((transfer_line.qty_to_transfer - transfer_line.qty_transferred) / transfer_line.unit_size AS Dec(19,9)) AS unit_qty_remaining\r\n\t   ,item_revision.revision_level AS trans_revision_level\r\n\t   ,transfer_line.row_status AS row_status_flag\r\n\t   ,transfer_line.delete_flag AS line_delete_flag\r\n\t   ,transfer_line.date_created\r\n\t   ,transfer_line.date_last_modified\r\n FROM p21_view_transfer_hdr AS transfer_hdr\r\nINNER JOIN p21_view_transfer_line AS transfer_line ON transfer_line.transfer_no = transfer_hdr.transfer_no\r\nINNER JOIN (SELECT prod_order_line_component.inv_mast_uid\r\n\t\t\t  FROM p21_view_prod_order_line_component AS prod_order_line_component\r\n\t\t\t WHERE prod_order_line_component.complete <> 'Y'\r\n\t\t\t   AND prod_order_line_component.other_charge = 'N'\r\n\t\t\t   AND prod_order"
+              }
+            ]
+          },
+          {
+            "rowCount": 13,
+            "rows": [
+              {
+                "object_name": "dbo.p21_view_alert_oe_OrderEntry_875",
+                "result_set": "module_anticipated_lines",
+                "snippet": ") 'carrier'\r\n\t\t,COALESCE(item_revision.revision_level, '') 'revision'\r\n\t\t,COALESCE(contacts.direct_phone, '') 'contacts_direct_phone'\r\n\t\t,COALESCE(dbo.p21_fn_DatePart(oe_hdr.promise_date), '') 'header_promise_date'\r\n\t\t,COALESCE(sales_market_group.sales_market_group_id, '') 'sales_market_group_id'\r\n\t\t,COALESCE(oe_hdr.cancel_flag, '') 'cancel_flag'\r\n\t\t,COALESCE(users_taker.id, '') 'task_taker'\r\n\t\t-- 12.17 KMC 03/17/2016 - Feature 60789  \r\n\t\t,COALESCE(DATEDIFF(d, oe_line_promise_date.promise_date, anticipated_allocation.expected_delivery_date), 0) 'exp_delivery_date_days_after_prom_date'  \r\n\t\t,COALESCE(DATEDIFF(d, oe_line_promise_date.promise_date, anticipated_allocation.expected_inbound_date), 0) 'exp_in_stock_date_days_after_prom_date'\r\n\t\t,COALESCE(lost_sales.lost_sales_id, '') 'reason_cd'\r\n\t\t,COALESCE(lost_sales.lost_sales_desc, '') 'reason_cd_desc'\r\n\t\t,COALESCE(restricted_class.class_id, 'NULL') 'restricted_class_id'\r\n\t\t,COALESCE(restricted_class.class_description, '') 'restricted_class_description'\r\nFROM\tpending_alerts\r\nINNER JOIN oe_hdr ON (pending_alerts.trans_no_varchar = oe_hdr.order_no)\r\nINNER JOIN oe_line ON (oe_hdr.order_no = oe_line.order_no)\r\n--12.14 YCHEN 12/16/13 - Feature 56120: Exclude subtotal item (product_type = 'B') show up on OE alert notification.\r\n--INNER JOIN inv_mast ON (inv_mast.inv_mast_uid = oe_line.inv_mast_uid)\r\nINNER JOIN inv_mast ON (inv_mast.inv_mast_uid = oe_line.inv_mast_uid)\r\n\t\t\t\t   AND (inv_mast.product_type <> 'B') \r\nINNER JOIN customer ON (customer.customer_id = oe_hdr.customer_id)\r\n\t\t\t\t   AND (customer.company_id = oe_hdr.company_id)\r\nINNER JOIN supplier ON (oe_line.supplier_id = supplier.supplier_id)\r\nINNER JOIN inv_loc ON (inv_loc.inv_mast_uid = inv_mast.inv_mast_uid)\r\n\tAND (inv_loc.location_id = oe_line.source_loc_id)\r\nINNER JOIN oe_hdr_salesrep ON (oe_hdr_salesrep.order_number = oe_hdr.order_no)\r\n\t\t\t\t  AND (oe_hdr_salesrep.primary_salesrep = 'Y')\r\nLEFT JOIN contacts AS contacts_buyer ON (supplier.buyer_id = contacts_buyer.i"
+              },
+              {
+                "object_name": "dbo.p21_view_oe_line_anticipated_allocation_summary",
+                "result_set": "module_anticipated_lines",
+                "snippet": "\r\n\r\nCREATE VIEW p21_view_oe_line_anticipated_allocation_summary\r\nAS\r\nSELECT\tanticipated_allocation.outbound_transaction_no\t\tAS order_no\r\n\t\t,anticipated_allocation.outbound_line_no\t\t\tAS line_no\r\n\t\t,anticipated_allocation.inbound_transaction_type_cd\r\n\t\t,anticipated_allocation.inbound_transaction_no\r\n\t\t,anticipated_allocation.inbound_line_no\t\t\r\n\t\t,anticipated_allocation.expected_inbound_date\r\n\t\t,CASE \r\n\t\t\tWHEN EXISTS (\tSELECT *\r\n\t\t\t\t\t\t\tFROM anticipated_allocation AS open_requirement WITH (NOLOCK)\r\n\t\t\t\t\t\t\tWHERE open_requirement.outbound_transaction_type_cd = 706\r\n\t\t\t\t\t\t\t  AND open_requirement.outbound_transaction_no = anticipated_allocation.outbound_transaction_no\r\n\t\t\t\t\t\t\t  AND open_requirement.outbound_line_no = anticipated_allocation.outbound_line_no\r\n\t\t\t\t\t\t\t  AND open_requirement.inbound_transaction_type_cd = 3554\r\n\t\t\t\t\t\t) THEN\r\n\t\t\t\t'PARTIAL'\r\n\t\t\tWHEN EXISTS (\tSELECT *\r\n\t\t\t\t\t\t\tFROM anticipated_allocation AS multi_trans WITH (NOLOCK)\r\n\t\t\t\t\t\t\tWHERE multi_trans.outbound_transaction_type_cd = 706\r\n\t\t\t\t\t\t\t  AND multi_trans.outbound_transaction_no = anticipated_allocation.outbound_transaction_no\r\n\t\t\t\t\t\t\t  AND multi_trans.outbound_line_no = anticipated_allocation.outbound_line_no\r\n\t\t\t\t\t\t\t  AND multi_trans.anticipated_allocation_uid <> anticipated_allocation.anticipated_allocation_uid\r\n\t\t\t\t\t\t) THEN\r\n\t\t\t\t'MULTI'\r\n\t\t\tWHEN COALESCE(anticipated_allocation.worst_case_tbo_date_used, 'N') = 'Y' THEN\r\n\t\t\t\t'WORST CASE TBO'\r\n\t\t\tELSE\r\n\t\t\t\t'FULL'\r\n\t\tEND\tAS anticipated_allocation_status\r\n\t\t,COALESCE(oe_hdr.transit_days, ship_to.t"
+              },
+              {
+                "object_name": "dbo.p21_view_alert_oe_OrderEntry",
+                "result_set": "module_anticipated_lines",
+                "snippet": " 0) 'carrier'\r\n\t\t,COALESCE(item_revision.revision_level, '') 'revision'\r\n\t\t,COALESCE(contacts.direct_phone, '') 'contacts_direct_phone'\r\n\t\t,COALESCE(dbo.p21_fn_DatePart(oe_hdr.promise_date), '') 'header_promise_date'\r\n\t\t,COALESCE(sales_market_group.sales_market_group_id, '') 'sales_market_group_id'\r\n\t\t,COALESCE(oe_hdr.cancel_flag, '') 'cancel_flag'\r\n\t\t,COALESCE(users_taker.id, '') 'task_taker'\r\n\t\t-- 12.17 KMC 03/17/2016 - Feature 60789\r\n\t\t,COALESCE(DATEDIFF(d, oe_line_promise_date.promise_date, anticipated_allocation.expected_delivery_date), 0) 'exp_delivery_date_days_after_prom_date'  \r\n\t\t,COALESCE(DATEDIFF(d, oe_line_promise_date.promise_date, anticipated_allocation.expected_inbound_date), 0) 'exp_in_stock_date_days_after_prom_date'\r\n\t\t,COALESCE(lost_sales.lost_sales_id, '') 'reason_cd'\r\n\t\t,COALESCE(lost_sales.lost_sales_desc, '') 'reason_cd_desc'\r\n\t\t,COALESCE(restricted_class.class_id, 'NULL') 'restricted_class_id'\r\n\t\t,COALESCE(restricted_class.class_description, '') 'restricted_class_description'\r\n\t\t,COALESCE(territory.territory_id,'') 'territory_id'\r\n\t\t,dbo.p21_fn_validate_email_address(territory.email_address) 'territory_email'\r\n\t\t,dbo.p21_fn_validate_email_address(territory_grp.email_address) 'territory_group_email'\r\nFROM\tpending_alerts\r\nINNER JOIN oe_hdr ON (pending_alerts.trans_no_varchar = oe_hdr.order_no)\r\nINNER JOIN oe_line ON (oe_hdr.order_no = oe_line.order_no)\r\n--12.14 YCHEN 12/16/13 - Feature 56120: Exclude subtotal item (product_type = 'B') show up on OE alert notification.\r\n--INNER JOIN inv_mast ON (inv_mast.inv_mast_uid = oe_line.inv_mast_uid)\r\nINNER JOIN inv_mast ON (inv_mast.inv_mast_uid = oe_line.inv_mast_uid)\r\n\t\t\t\t   AND (inv_mast.product_type <> 'B') \r\nINNER JOIN customer ON (customer.customer_id = oe_hdr.customer_id)\r\n\t\t\t\t   AND (customer.company_id = oe_hdr.company_id)\r\nINNER JOIN supplier ON (oe_line.supplier_id = supplier.supplier_id)\r\nINNER JOIN inv_loc ON (inv_loc.inv_mast_uid = inv_mast.inv_mast_uid)\r\n\tAND (inv_loc.location_id = oe_lin"
+              },
+              {
+                "object_name": "dbo.p21_view_alert_oe_OrderEntry_3427",
+                "result_set": "module_anticipated_lines",
+                "snippet": "buyer_name'\r\n\t\t,COALESCE(item_revision.revision_level, '') 'revision'\r\n\t\t,COALESCE(contacts.direct_phone, '') 'contacts_direct_phone'\r\n\t\t,COALESCE(dbo.p21_fn_DatePart(oe_hdr.promise_date), '') 'header_promise_date'\r\n\t\t,COALESCE(sales_market_group.sales_market_group_id, '') 'sales_market_group_id'\r\n\t\t,COALESCE(oe_hdr.cancel_flag, '') 'cancel_flag'\r\n\t\t,COALESCE(users_taker.id, '') 'task_taker'\r\n\t\t-- 12.17 KMC 03/17/2016 - Feature 60789  \r\n\t\t,COALESCE(DATEDIFF(d, oe_line_promise_date.promise_date, anticipated_allocation.expected_delivery_date), 0) 'exp_delivery_date_days_after_prom_date'  \r\n\t\t,COALESCE(DATEDIFF(d, oe_line_promise_date.promise_date, anticipated_allocation.expected_inbound_date), 0) 'exp_in_stock_date_days_after_prom_date'\r\n\t\t,COALESCE(lost_sales.lost_sales_id, '') 'reason_cd'\r\n\t\t,COALESCE(lost_sales.lost_sales_desc, '') 'reason_cd_desc'\r\n\t\t,COALESCE(restricted_class.class_id, 'NULL') 'restricted_class_id'\r\n\t\t,COALESCE(restricted_class.class_description, '') 'restricted_class_description'\r\nFROM\tpending_alerts\r\nINNER JOIN oe_hdr ON (pending_alerts.trans_no_varchar = oe_hdr.order_no)\r\nINNER JOIN oe_line ON (oe_hdr.order_no = oe_line.order_no)\r\n--12.14 YCHEN 12/16/13 - Feature 56120: Exclude subtotal item (product_type = 'B') show up on OE alert notification.\r\n--INNER JOIN inv_mast ON (inv_mast.inv_mast_uid = oe_line.inv_mast_uid)\r\nINNER JOIN inv_mast ON (inv_mast.inv_mast_uid = oe_line.inv_mast_uid)\r\n\t\t\t\t   AND (inv_mast.product_type <> 'B') \r\nINNER JOIN customer ON (customer.customer_id = oe_hdr.customer_id)\r\n\t\t\t\t   AND (customer.company_id = oe_hdr.company_id)\r\nINNER JOIN supplier ON (oe_line.supplier_id = supplier.supplier_id)\r\nINNER JOIN inv_loc ON (inv_loc.inv_mast_uid = inv_mast.inv_mast_uid)\r\n\tAND (inv_loc.location_id = oe_line.source_loc_id)\r\nINNER JOIN oe_hdr_salesrep ON (oe_hdr_salesrep.order_number = oe_hdr.order_no)\r\n\t\t\t\t  AND (oe_hdr_salesrep.primary_salesrep = 'Y')\r\nLEFT JOIN contacts AS contacts_buyer ON (supplier.buyer_id = contacts_buyer.i"
+              },
+              {
+                "object_name": "dbo.p21_post_compute_anticipated_allocation_alerts",
+                "result_set": "module_anticipated_lines",
+                "snippet": "\r\n\r\nCREATE PROCEDURE p21_post_compute_anticipated_allocation_alerts\r\nWITH EXECUTE AS SELF\r\nAS\r\nBEGIN\r\n\r\n\tSET NOCOUNT ON\r\n\r\n\t--A user can setup alerts for when the expected delivery date generated by the anticipated allocation process\r\n\t--falls after the promise date.  Because expected delivery date can change outside of the P21 app as a result \r\n\t--of the nightly anticipated allocation process, we need a procedure to generate alerts after the proc runs.\r\n\r\n\tDECLARE @ExpDeliveryDateTokenUid INT\r\n\tDECLARE @AlertJobId\t\tUNIQUEIDENTIFIER\r\n\r\n\t--check that a user has an alert setup for the expected delivery date before we bother doing any work\r\n\tSELECT @ExpDeliveryDateTokenUid = token_uid\r\n\tFROM token\r\n\tWHERE name = 'exp_delivery_date_days_after_prom_date'\r\n\r\n\tDECLARE @ld_current_timestamp datetime\r\n\t\r\n\tSET @ld_current_timestamp = dbo.p21_fn_GetSystemDatetime(CURRENT_TIMESTAMP,NULL,NULL)\r\n\r\n\tIF EXISTS(\tSELECT * \r\n\t\t\t\tFROM alert_implementation_query\r\n\t\t\t\tINNER JOIN alert_implementation ON alert_implementation.alert_implementation_uid = alert_implementation_query.alert_implementation_uid\r\n\t\t\t\tWHERE alert_implementation_query.column_id = @ExpDeliveryDateTokenUid \r\n\t\t\t\t  AND alert_implementation.row_status_flag = 704\r\n\t\t\t\t  AND alert_implementation.activation_date <= @ld_current_timestamp\r\n\t\t\t\t  AND alert_implementation.expiration_date >= @ld_current_timestamp\r\n\t\t\t)\r\n\tBEGIN\r\n\t\t--Update the order line so the \"new line\" alert won't be fired.\r\n\t\tUPDATE oe_line\r\n\t\tSET date_last_modified = @ld_current_timestamp\r\n\t\tFROM oe_line\r\n"
+              },
+              {
+                "object_name": "dbo.p21_fnt_get_open_inbound_transactions",
+                "result_set": "module_anticipated_lines",
+                "snippet": "\r\n\r\nCREATE FUNCTION p21_fnt_get_open_inbound_transactions\r\n(\t@al_LocationId\tINT\r\n\t,@al_InvMastUid\tINT\r\n)\r\n\r\nRETURNS @InboundTransactions TABLE\r\n(\ttransaction_type_cd INT\r\n\t,transaction_no\t\tINT\r\n\t,line_no\t\t\tINT\r\n\t,sub_line_no\t\tINT\r\n\t,expected_date\t\tDATETIME\r\n\t,worst_case_tbo_date_used\tCHAR(1)\r\n\t,sku_qty_incoming\tINT\r\n)\r\nAS\r\nBEGIN\r\n\r\n--Note: Although the anticipated allocaiton funtionality would be more efficient if this logic were placed directly within\r\n--p21_compute_anticipated_allocation, these selects are likely to need bug fixes and tweaking in terms of how the transactions\r\n--are retrieved. This process will only run on-demand for a single item if the user specifically choose to do so (where a little \r\n--bit of inefficiency with passing the data around shouldn't really noticed), and overnight for all items, where performance \r\n--shouldn't be too great a concern as long as it finishes in less than 8 hours! To that end, at least for a while, please \r\n--keep this a separate function for ease of maintainability.\r\n\r\n--These values correspond to \"LinkQuantity\" constants in PB code (C.LinkQuantityPOCd, C.LinkQuantityTBOCd, etc.)\r\nDECLARE @TransactionType_PurchaseOrder INT\r\nDECLARE @TransactionType_ScheduledPO INT\r\nDECLARE @TransactionType_ProdOrder INT\r\nDECLARE @TransactionType_Transfer INT\r\nDECLARE @TransactionType_ProcessTransaction INT\r\nDECLARE @TransactionType_TransferBackorder INT\r\nDECLARE @TransactionType_VesselReceipt INT\r\nDECLARE @TransactionType_OpenRequirement INT\r\n\r\n\r\nSET @TransactionType_PurchaseOrder  = 916\r\nSET @TransactionType_ScheduledPO  = 3552\r\nSET @TransactionType_ProdOrder  = 980\r\nSET @TransactionType_Transfer  = 904\r\nSET @TransactionType_ProcessTransaction  = 1229\r\nSET @TransactionType_TransferBackorder  = 1230\r\nSET @TransactionType_VesselReceipt  = 1674\r\nSET @TransactionType_OpenRequirement  = 3554\r\n\r\n\r\nDECLARE @SysSetting_UseProdOrderRequiredDates CHAR(1)\r\nDECLARE @SysSetting_DefaultTransferDays INT\r\n\r\nSELECT @SysSett"
+              },
+              {
+                "object_name": "dbo.p21_view_alert_oe_OrderEntry_982",
+                "result_set": "module_anticipated_lines",
+                "snippet": ") 'carrier'\r\n\t\t,COALESCE(item_revision.revision_level, '') 'revision'\r\n\t\t,COALESCE(contacts.direct_phone, '') 'contacts_direct_phone'\r\n\t\t,COALESCE(dbo.p21_fn_DatePart(oe_hdr.promise_date), '') 'header_promise_date'\r\n\t\t,COALESCE(sales_market_group.sales_market_group_id, '') 'sales_market_group_id'\r\n\t\t,COALESCE(oe_hdr.cancel_flag, '') 'cancel_flag'\r\n\t\t,COALESCE(users_taker.id, '') 'task_taker'\r\n\t\t-- 12.17 KMC 03/17/2016 - Feature 60789  \r\n\t\t,COALESCE(DATEDIFF(d, oe_line_promise_date.promise_date, anticipated_allocation.expected_delivery_date), 0) 'exp_delivery_date_days_after_prom_date'  \r\n\t\t,COALESCE(DATEDIFF(d, oe_line_promise_date.promise_date, anticipated_allocation.expected_inbound_date), 0) 'exp_in_stock_date_days_after_prom_date'\r\n\t\t,COALESCE(lost_sales.lost_sales_id, '') 'reason_cd'\r\n\t\t,COALESCE(lost_sales.lost_sales_desc, '') 'reason_cd_desc'\r\n\t\t,COALESCE(restricted_class.class_id, 'NULL') 'restricted_class_id'\r\n\t\t,COALESCE(restricted_class.class_description, '') 'restricted_class_description'\r\nFROM\tpending_alerts\r\nINNER JOIN oe_hdr ON (pending_alerts.trans_no_varchar = oe_hdr.order_no)\r\nINNER JOIN oe_line ON (oe_hdr.order_no = oe_line.order_no)\r\nLEFT JOIN oe_line_982 ON (oe_line_982.oe_line_uid = oe_line.oe_line_uid) \r\n--12.14 YCHEN 12/16/13 - Feature 56120: Exclude subtotal item (product_type = 'B') show up on OE alert notification.\r\n--INNER JOIN inv_mast ON (inv_mast.inv_mast_uid = oe_line.inv_mast_uid)\r\nINNER JOIN inv_mast ON (inv_mast.inv_mast_uid = oe_line.inv_mast_uid)\r\n\t\t\t\t   AND (inv_mast.product_type <> 'B') \r\nINNER JOIN customer ON (customer.customer_id = oe_hdr.customer_id)\r\n\t\t\t\t   AND (customer.company_id = oe_hdr.company_id)\r\nINNER JOIN supplier ON (oe_line.supplier_id = supplier.supplier_id)\r\nINNER JOIN inv_loc ON (inv_loc.inv_mast_uid = inv_mast.inv_mast_uid)\r\n\tAND (inv_loc.location_id = oe_line.source_loc_id)\r\nINNER JOIN oe_hdr_salesrep ON (oe_hdr_salesrep.order_number = oe_hdr.order_no)\r\n\t\t\t\t  AND (oe_hdr_salesrep.primary_salesrep = 'Y')\r\nLE"
+              },
+              {
+                "object_name": "dbo.p21_compute_anticipated_allocation",
+                "result_set": "module_anticipated_lines",
+                "snippet": "\r\n\r\nCREATE PROCEDURE p21_compute_anticipated_allocation\r\n(\t@al_LocationId\tINT\r\n\t,@al_InvMastUid\tINT\r\n\t,@debug\tINT = 0\r\n)\r\nAS\r\nBEGIN\r\n\r\n--Build a list of anticipated allocations between outbound transactions (qty needed) and inbound transations (qty incoming) for \r\n--transactions that are not already \"hard\" linked.\r\n\r\n--Pass 0/null for either @al_InvMastUid or @al_locationId to compute for all items or all locations.\r\n\r\nCREATE TABLE #ItemLocationList\r\n(\trow_num\t\t\tINT IDENTITY\r\n\t,location_id\tINT\r\n\t,inv_mast_uid\tINT\r\n)\r\n\r\nCREATE TABLE #Outbound\r\n(\trow_num\t\t\tINT IDENTITY\r\n\t,transaction_type_cd\tINT\r\n\t,transaction_no\t\t\tINT\r\n\t,line_no\t\t\t\tINT\r\n\t,sub_line_no\t\t\tINT\r\n\t,required_date\t\tDATETIME\r\n\t,sku_qty_needed\t\tDECIMAL(19,9)\r\n\t,sku_qty_filled\t\tDECIMAL(19,9)\r\n)\r\n\r\nCREATE TABLE #Inbound\r\n(\trow_num\t\t\tINT IDENTITY\r\n\t,transaction_type_cd\tINT\r\n\t,transaction_no\t\t\tINT\r\n\t,line_no\t\t\t\tINT\r\n\t,sub_line_no\t\t\tINT\r\n\t,expected_date\t\tDATETIME\r\n\t,worst_case_tbo_date_used CHAR(1)\r\n\t,sku_qty_incoming\tDECIMAL(19,9)\r\n\t,sku_qty_used\t\tDECIMAL(19,9)\r\n)\r\n\r\nDECLARE @CurrentInvMastUid\tINT\r\nDECLARE @CurrentLocationId\tINT\r\nDECLARE @CurrentItemRow\t\tINT \r\nDECLARE @ItemRowCount\t\tINT\r\nDECLARE\t@CurrentOutboundRow\tINT\r\nDECLARE\t@OutboundRowCount\tINT\r\nDECLARE\t@InboundRow\t\t\tINT\r\nDECLARE @CurrentOutboundIsTBO\tCHAR(1)\r\nDECLARE\t@CurrentOutboundQtyRemaining\tDECIMAL(19,9)\r\nDECLARE\t@CurrentInboundQtyAvailable\t\tDECIMAL(19,9)\r\n\r\nSET @CurrentItemRow = 1\r\n\r\nDECLARE @TransactionType_SalesOrder INT\r\nDECLARE @TransactionType_Transfer INT\r\nDECLARE @TransactionType_Transfe"
+              },
+              {
+                "object_name": "dbo.p21_view_alert_oe_OrderEntry_265",
+                "result_set": "module_anticipated_lines",
+                "snippet": ") 'carrier'\r\n\t\t,COALESCE(item_revision.revision_level, '') 'revision'\r\n\t\t,COALESCE(contacts.direct_phone, '') 'contacts_direct_phone'\r\n\t\t,COALESCE(dbo.p21_fn_DatePart(oe_hdr.promise_date), '') 'header_promise_date'\r\n\t\t,COALESCE(sales_market_group.sales_market_group_id, '') 'sales_market_group_id'\r\n\t\t,COALESCE(oe_hdr.cancel_flag, '') 'cancel_flag'\r\n\t\t,COALESCE(users_taker.id, '') 'task_taker'\r\n\t\t-- 12.17 KMC 03/17/2016 - Feature 60789  \r\n\t\t,COALESCE(DATEDIFF(d, oe_line_promise_date.promise_date, anticipated_allocation.expected_delivery_date), 0) 'exp_delivery_date_days_after_prom_date'  \r\n\t\t,COALESCE(DATEDIFF(d, oe_line_promise_date.promise_date, anticipated_allocation.expected_inbound_date), 0) 'exp_in_stock_date_days_after_prom_date'\r\n\t\t,COALESCE(lost_sales.lost_sales_id, '') 'reason_cd'\r\n\t\t,COALESCE(lost_sales.lost_sales_desc, '') 'reason_cd_desc'\r\n\t\t,COALESCE(restricted_class.class_id, 'NULL') 'restricted_class_id'\r\n\t\t,COALESCE(restricted_class.class_description, '') 'restricted_class_description'\r\nFROM\tpending_alerts\r\nINNER JOIN oe_hdr ON (pending_alerts.trans_no_varchar = oe_hdr.order_no)\r\nINNER JOIN oe_line ON (oe_hdr.order_no = oe_line.order_no)\r\n--12.14 YCHEN 12/16/13 - Feature 56120: Exclude subtotal item (product_type = 'B') show up on OE alert notification.\r\n--INNER JOIN inv_mast ON (inv_mast.inv_mast_uid = oe_line.inv_mast_uid)\r\nINNER JOIN inv_mast ON (inv_mast.inv_mast_uid = oe_line.inv_mast_uid)\r\n\t\t\t\t   AND (inv_mast.product_type <> 'B') \r\nINNER JOIN customer ON (customer.customer_id = oe_hdr.customer_id)\r\n\t\tAND (customer.company_id = oe_hdr.company_id)\r\nINNER JOIN supplier ON (oe_line.supplier_id = supplier.supplier_id)\r\nINNER JOIN inv_loc ON (inv_loc.inv_mast_uid = inv_mast.inv_mast_uid)\r\n\tAND (inv_loc.location_id = oe_line.source_loc_id)\r\nINNER JOIN oe_hdr_salesrep ON (oe_hdr_salesrep.order_number = oe_hdr.order_no)\r\n\t\tAND (oe_hdr_salesrep.primary_salesrep = 'Y')\r\nLEFT JOIN contacts AS contacts_buyer ON (supplier.buyer_id = contacts_buyer.id)\r\n\t\tAND"
+              },
+              {
+                "object_name": "dbo.p21_fnt_get_open_outbound_transactions",
+                "result_set": "module_anticipated_lines",
+                "snippet": "\r\n\r\nCREATE FUNCTION p21_fnt_get_open_outbound_transactions\r\n(\t@al_LocationId\tINT\r\n\t,@al_InvMastUid\tINT\r\n)\r\n\r\nRETURNS @OutboundTransactions TABLE\r\n(\ttransaction_type_cd INT\r\n\t,transaction_no\t\tINT\r\n\t,line_no\t\t\tINT\r\n\t,sub_line_no\t\tINT\r\n\t,required_date\t\tDATETIME\r\n\t,sort_priority\t\tINT\r\n\t,sku_qty_needed\t\tDECIMAL(19,9)\r\n)\r\nAS\r\nBEGIN\r\n\r\n--Note: Although the anticipated allocaiton funtionality would be more efficient if this logic were placed directly within\r\n--p21_compute_anticipated_allocation, these selects are likely to need bug fixes and tweaking in terms of how the transactions\r\n--are retrieved. This process will only run on-demand for a single item if the user specifically choose to do so (where a little \r\n--bit of inefficiency with passing the data around shouldn't really noticed), and overnight for all items, where performance \r\n--shouldn't be too great a concern as long as it finishes in less than 8 hours! To that end, at least for a while, please \r\n--keep this a separate function for ease of maintainability.\r\n\r\n\r\n--These matches the sort order defined in d_inventory_allocation_line\r\nDECLARE @SortPriority_TransferBackorder INT\r\nDECLARE @SortPriority_SalesOrderTransfer INT\r\nDECLARE @SortPriority_ProdOrderTransfer INT\r\nDECLARE @SortPriority_SalesOrder INT \r\nDECLARE @SortPriority_ScheduledOrder INT\r\nDECLARE @SortPriority_ProdOrder INT\r\nDECLARE @SortPriority_ProcessTransaction INT\r\n\r\n\r\nSET  @SortPriority_TransferBackorder  = 1\r\nSET  @SortPriority_SalesOrderTransfer  = 2\r\nSET  @SortPriority_ProdOrderTransfer  = 3\r\nSET  @SortPriority_SalesOrder  = 4\r\nSET  @SortPriority_ScheduledOrder  = 5\r\nSET  @SortPriority_ProdOrder  = 6\r\nSET  @SortPriority_ProcessTransaction  = 7\r\n\r\n\r\n--These values don't really identify the transaction type, so much as the link type\r\n--i.e. we have a different type for scheduled order lines even though the transaction is really still a sales order\r\n--These values correspond to \"LinkQuantity\" constants in PB code (C.Link"
+              },
+              {
+                "object_name": "dbo.p21_view_scp_prod_order_inquiry_detail",
+                "result_set": "module_anticipated_lines",
+                "snippet": "r_purchasing_info.lead_time_safety_factor, 1)) + COALESCE(p21_view_supplier_purchasing_info.review_cycle, 0)), prod_order_line_component.expedite_date)\r\n\t\tELSE NULL\r\n\t END AS allocation_date\r\n\t,p21_view_prod_order_line_comp_anticipated_alloc_summary.inbound_transaction_type_cd\r\n\t,p21_view_prod_order_line_comp_anticipated_alloc_summary.inbound_transaction_no\r\n\t,p21_view_prod_order_line_comp_anticipated_alloc_summary.expected_inbound_date\r\n\t,p21_view_prod_order_line_comp_anticipated_alloc_summary.anticipated_allocation_status\r\nFROM prod_order_line_component WITH (NOLOCK)\r\nINNER JOIN prod_order_hdr WITH (NOLOCK) ON prod_order_hdr.prod_order_number = prod_order_line_component.prod_order_number\r\nINNER JOIN prod_order_line WITH (NOLOCK) ON prod_order_line.prod_order_number = prod_order_line_component.prod_order_number\r\n\t\t\t\t\t\t\t\t   AND prod_order_line.line_number = prod_order_line_component.line_number\r\nINNER JOIN inv_mast WITH (NOLOCK) ON inv_mast.inv_mast_uid = prod_order_line_component.inv_mast_uid\r\nINNER JOIN inv_mast AS assembly_inv_mast WITH (NOLOCK) ON assembly_inv_mast.inv_mast_uid = prod_order_line.inv_mast_uid\r\nINNER JOIN address AS address_supplier WITH (NOLOCK) ON address_supplier.id = prod_order_line_component.supplier_id\r\nINNER JOIN location WITH (NOLOCK) ON location.location_id = prod_order_line_component.source_location_id\r\nINNER JOIN inv_loc WITH (NOLOCK) ON inv_loc.location_id = prod_order_line_component.source_location_id\r\n\t\t\t\t\t\t   AND inv_loc.inv_mast_uid = prod_order_line_component.inv_mast_uid\r\nINNER JOIN system_setting AS drv_SysLeadTime WITH (NOLOCK) ON drv_SysLeadTime.name = 'factor_lead_time_expedite_date'\r\nLEFT JOIN prod_ord_line_po ON prod_ord_line_po.prod_order_number = prod_order_line_component.prod_order_number\r\n\t\t\t\t\t\t  AND prod_ord_line_po.line_number = prod_order_line_component.line_number\r\n\t\t\t\t\t\t  AND prod_ord_line_po.component_number = prod_order_line_component.component_number\r\n\t\t\t\t\t\t  AND prod_ord_line_po.connection_type = 'P'\r\n\t\t\t\t\t\t  A"
+              },
+              {
+                "object_name": "dbo.p21_view_alert_oe_OrderEntry_275",
+                "result_set": "module_anticipated_lines",
+                "snippet": ") 'carrier'\r\n\t\t,COALESCE(item_revision.revision_level, '') 'revision'\r\n\t\t,COALESCE(contacts.direct_phone, '') 'contacts_direct_phone'\r\n\t\t,COALESCE(dbo.p21_fn_DatePart(oe_hdr.promise_date), '') 'header_promise_date'\r\n\t\t,COALESCE(sales_market_group.sales_market_group_id, '') 'sales_market_group_id'\r\n\t\t,COALESCE(oe_hdr.cancel_flag, '') 'cancel_flag'\r\n\t\t,COALESCE(users_taker.id, '') 'task_taker'\r\n\t\t-- 12.17 KMC 03/17/2016 - Feature 60789  \r\n\t\t,COALESCE(DATEDIFF(d, oe_line_promise_date.promise_date, anticipated_allocation.expected_delivery_date), 0) 'exp_delivery_date_days_after_prom_date'  \r\n\t\t,COALESCE(DATEDIFF(d, oe_line_promise_date.promise_date, anticipated_allocation.expected_inbound_date), 0) 'exp_in_stock_date_days_after_prom_date'\r\n\t\t,COALESCE(lost_sales.lost_sales_id, '') 'reason_cd'\r\n\t\t,COALESCE(lost_sales.lost_sales_desc, '') 'reason_cd_desc'\r\n\t\t,COALESCE(restricted_class.class_id, 'NULL') 'restricted_class_id'\r\n\t\t,COALESCE(restricted_class.class_description, '') 'restricted_class_description'\r\nFROM\tpending_alerts\r\nINNER JOIN oe_hdr ON (pending_alerts.trans_no_varchar = oe_hdr.order_no)\r\nINNER JOIN oe_line ON (oe_hdr.order_no = oe_line.order_no)\r\n--12.14 YCHEN 12/16/13 - Feature 56120: Exclude subtotal item (product_type = 'B') show up on OE alert notification.\r\n--INNER JOIN inv_mast ON (inv_mast.inv_mast_uid = oe_line.inv_mast_uid)\r\nINNER JOIN inv_mast ON (inv_mast.inv_mast_uid = oe_line.inv_mast_uid)\r\n\t\t\t\t   AND (inv_mast.product_type <> 'B') \r\nINNER JOIN customer ON (customer.customer_id = oe_hdr.customer_id)\r\n\t\t\t\t   AND (customer.company_id = oe_hdr.company_id)\r\nINNER JOIN supplier ON (oe_line.supplier_id = supplier.supplier_id)\r\nINNER JOIN inv_loc ON (inv_loc.inv_mast_uid = inv_mast.inv_mast_uid)\r\n\tAND (inv_loc.location_id = oe_line.source_loc_id)\r\nINNER JOIN oe_hdr_salesrep ON (oe_hdr_salesrep.order_number = oe_hdr.order_no)\r\n\t\t\t\t  AND (oe_hdr_salesrep.primary_salesrep = 'Y')\r\nLEFT JOIN contacts AS contacts_buyer ON (supplier.buyer_id = contacts_buyer.i"
+              },
+              {
+                "object_name": "dbo.p21_insert_anticipated_allocation_hard_links",
+                "result_set": "module_anticipated_lines",
+                "snippet": "\r\n\r\nCREATE PROCEDURE p21_insert_anticipated_allocation_hard_links\r\n(\t@al_LocationId\tINT\r\n\t,@al_InvMastUid\tINT\r\n)\r\nAS BEGIN\r\n\r\nDECLARE @TransactionType_SalesOrder INT\r\nDECLARE @TransactionType_ProdOrderComponent INT\r\nDECLARE @TransactionType_ProcessTransaction INT\r\nDECLARE @TransactionType_PurchaseOrder INT\r\nDECLARE @TransactionType_ProdOrder INT\r\nDECLARE @TransactionType_Transfer INT\r\nDECLARE @TransactionType_VesselReceipt INT\r\n\r\n\r\nSET @TransactionType_SalesOrder  = 706\r\nSET @TransactionType_ProdOrderComponent  = 1535\r\nSET @TransactionType_ProcessTransaction  = 1229\r\nSET @TransactionType_PurchaseOrder  = 916\r\nSET @TransactionType_ProdOrder  = 980\r\nSET @TransactionType_Transfer  = 904\r\nSET @TransactionType_VesselReceipt  = 1674\r\n\r\nDECLARE @SysSetting_UseProdOrderRequiredDates CHAR(1)\r\n\r\nSELECT\t@SysSetting_UseProdOrderRequiredDates = COALESCE(value, 'N')\r\nFROM\tsystem_setting \r\nWHERE\t[name] = 'use_prodreqdate_on_commtsched'\r\n\r\n--Order Lines linked to POs--\r\nINSERT INTO anticipated_allocation \r\n\t\t\t(location_id\r\n\t\t\t,inv_mast_uid\r\n\t\t\t,outbound_transaction_type_cd\r\n\t\t\t,outbound_transaction_no\r\n\t\t\t,outbound_line_no\r\n\t\t\t,inbound_transaction_type_cd\r\n\t\t\t,inbound_transaction_no\r\n\t\t\t,inbound_line_no\r\n\t\t\t,expected_inbound_date\r\n\t\t\t,sku_qty_to_be_allocated\r\n\t\t\t,hard_linked_flag)\r\nSELECT\toe_line.source_loc_id\r\n\t\t,oe_line.inv_mast_uid\r\n\t\t,@TransactionType_SalesOrder\r\n\t\t,oe_line_po.order_number\r\n\t\t,oe_line_po.line_number\r\n\t\t,@TransactionType_PurchaseOrder\r\n\t\t,oe_line_po.po_no\r\n\t\t,oe_line_po.po_line_number\r\n\t\t--po_line.due_d"
+              }
+            ]
+          }
+        ]
+      },
+      "pipelineName": "Diag_Coats_Auto_Sales_Allocation",
+      "pipelineRunId": "b447a021-530a-11f1-b126-9cb150a3acae",
+      "recoveryStatus": "None",
+      "resourceGroup": "RG1",
+      "retryAttempt": null,
+      "status": "Succeeded",
+      "userProperties": {}
+    }
+  ]
+}

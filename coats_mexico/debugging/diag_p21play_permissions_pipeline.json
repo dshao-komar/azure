@@ -1,0 +1,36 @@
+﻿{
+    "properties":  {
+                       "activities":  [
+                                          {
+                                              "name":  "RunProbe",
+                                              "policy":  {
+                                                             "retryIntervalInSeconds":  30,
+                                                             "secureInput":  false,
+                                                             "retry":  0,
+                                                             "timeout":  "0.00:10:00",
+                                                             "secureOutput":  false
+                                                         },
+                                              "dependsOn":  [
+
+                                                            ],
+                                              "type":  "Script",
+                                              "linkedServiceName":  {
+                                                                        "referenceName":  "SqlServer1",
+                                                                        "type":  "LinkedServiceReference"
+                                                                    },
+                                              "typeProperties":  {
+                                                                     "logSettings":  {
+                                                                                         "logDestination":  "ActivityOutput"
+                                                                                     },
+                                                                     "scriptBlockExecutionTimeout":  "00:10:00",
+                                                                     "scripts":  [
+                                                                                     {
+                                                                                         "text":  "USE P21Play;\nSET NOCOUNT ON;\nSELECT\n    database_name = DB_NAME(),\n    current_user_name = CURRENT_USER,\n    system_user_name = SYSTEM_USER,\n    original_login_name = ORIGINAL_LOGIN();\n\nSELECT\n    entity_name = \u0027p21_get_counter\u0027,\n    object_id = CONVERT(nvarchar(40), OBJECT_ID(\u0027dbo.p21_get_counter\u0027)),\n    execute_permission = CONVERT(nvarchar(10), HAS_PERMS_BY_NAME(\u0027dbo.p21_get_counter\u0027, \u0027OBJECT\u0027, \u0027EXECUTE\u0027)),\n    view_definition_permission = CONVERT(nvarchar(10), HAS_PERMS_BY_NAME(\u0027dbo.p21_get_counter\u0027, \u0027OBJECT\u0027, \u0027VIEW DEFINITION\u0027));\n\nSELECT\n    permission_name,\n    subentity_name\nFROM sys.fn_my_permissions(\u0027dbo.p21_get_counter\u0027, \u0027OBJECT\u0027)\nORDER BY permission_name;\n\nSELECT\n    counter_name = c.name,\n    counter_object_id = CONVERT(nvarchar(40), c.object_id),\n    has_select = CONVERT(nvarchar(10), HAS_PERMS_BY_NAME(\u0027dbo.\u0027 + c.name, \u0027OBJECT\u0027, \u0027SELECT\u0027)),\n    has_update = CONVERT(nvarchar(10), HAS_PERMS_BY_NAME(\u0027dbo.\u0027 + c.name, \u0027OBJECT\u0027, \u0027UPDATE\u0027)),\n    object_type = c.type_desc\nFROM sys.objects AS c\nWHERE c.name LIKE \u0027%counter%\u0027 OR c.name LIKE \u0027%sequence%\u0027\nORDER BY c.name;\n\nSELECT\n    sequence_name = s.name,\n    current_value = CONVERT(nvarchar(80), s.current_value),\n    has_update = CONVERT(nvarchar(10), HAS_PERMS_BY_NAME(\u0027dbo.\u0027 + s.name, \u0027OBJECT\u0027, \u0027UPDATE\u0027)),\n    has_select = CONVERT(nvarchar(10), HAS_PERMS_BY_NAME(\u0027dbo.\u0027 + s.name, \u0027OBJECT\u0027, \u0027SELECT\u0027))\nFROM sys.sequences AS s\nWHERE s.name LIKE \u0027%counter%\u0027 OR s.name LIKE \u0027%container%\u0027 OR s.name LIKE \u0027%vessel%\u0027\nORDER BY s.name;",
+                                                                                         "type":  "Query"
+                                                                                     }
+                                                                                 ]
+                                                                 }
+                                          }
+                                      ]
+                   }
+}

@@ -1,0 +1,74 @@
+{
+  "continuationToken": null,
+  "value": [
+    {
+      "activityName": "PostRetestCheck",
+      "activityRunEnd": "2026-05-20T17:57:05.247755+00:00",
+      "activityRunId": "170a2e5d-1191-4475-8e34-939c68a809a2",
+      "activityRunStart": "2026-05-20T17:56:44.302415+00:00",
+      "activityType": "Script",
+      "durationInMs": 20945,
+      "error": {
+        "details": [],
+        "errorCode": "2011",
+        "failureType": "UserError",
+        "message": "Specified cast is not valid.",
+        "target": "PostRetestCheck"
+      },
+      "executionDetails": {
+        "integrationRuntime": [
+          {
+            "location": "West US",
+            "name": "SQLServer",
+            "nodes": [
+              "KASVRW2K8FS"
+            ],
+            "type": "SelfHosted"
+          }
+        ]
+      },
+      "id": "/SUBSCRIPTIONS/6624EC13-3826-43B2-8E45-077F9051B88F/RESOURCEGROUPS/RG1/PROVIDERS/MICROSOFT.DATAFACTORY/FACTORIES/2026-04-01-DF1/pipelineruns/3d1e18f4-5475-11f1-92d0-9cb150a3acae/activityruns/170a2e5d-1191-4475-8e34-939c68a809a2",
+      "input": {
+        "logSettings": {
+          "logDestination": "ActivityOutput"
+        },
+        "scriptBlockExecutionTimeout": "00:05:00",
+        "scripts": [
+          {
+            "text": "USE P21Play;\nSET NOCOUNT ON;\nDECLARE @ShipmentFileId uniqueidentifier = 'f5c975af-1d81-5d36-9ff8-244fd38c9fc5';\nDECLARE @ContainerReceiptsHdrUid int = 682;\nDECLARE @VesselReceiptsHdrUid int = 762;\nDECLARE @ContainerBuildingUid int = 900;\n\n;WITH s AS (\n    SELECT po_line_uid, qty = SUM(CONVERT(decimal(19,9), Invoiced_Qty))\n    FROM P21Import.dbo.coats_mexico_shipment_pallet_line\n    WHERE shipment_file_id = @ShipmentFileId\n      AND po_line_uid IS NOT NULL\n      AND Invoiced_Qty IS NOT NULL\n    GROUP BY po_line_uid\n), expected AS (\n    SELECT line_count = COUNT(*), total_qty = SUM(qty)\n    FROM s\n), vlinks AS (\n    SELECT link_rows = COUNT(*), link_qty = COALESCE(SUM(CONVERT(decimal(19,9), quantity_on_po)),0)\n    FROM dbo.oe_line_po\n    WHERE po_no = @VesselReceiptsHdrUid\n      AND connection_type = 'V'\n      AND ISNULL(delete_flag,'N') = 'N'\n      AND ISNULL(cancel_flag,'N') = 'N'\n), open_vlinks AS (\n    SELECT open_link_rows = COUNT(*), open_link_qty = COALESCE(SUM(CONVERT(decimal(19,9), quantity_on_po)),0)\n    FROM dbo.oe_line_po\n    WHERE po_no = @VesselReceiptsHdrUid\n      AND connection_type = 'V'\n      AND ISNULL(delete_flag,'N') = 'N'\n      AND ISNULL(cancel_flag,'N') = 'N'\n      AND ISNULL(completed,'N') = 'N'\n), old_plinks AS (\n    SELECT open_original_po_link_rows = COUNT(*), open_original_po_link_qty = COALESCE(SUM(CONVERT(decimal(19,9), quantity_on_po)),0)\n    FROM dbo.oe_line_po AS olp\n    INNER JOIN dbo.po_line AS pol\n      ON pol.po_no = olp.po_no\n     AND pol.line_no = olp.po_line_number\n    INNER JOIN s\n      ON s.po_line_uid = pol.po_line_uid\n    WHERE olp.connection_type = 'P'\n      AND ISNULL(olp.delete_flag,'N') = 'N'\n      AND ISNULL(olp.cancel_flag,'N') = 'N'\n      AND ISNULL(olp.completed,'N') = 'N'\n)\nSELECT result_set='summary',\n       expected_lines = e.line_count,\n       expected_qty = e.total_qty,\n       cbp_rows = (SELECT COUNT(*) FROM dbo.container_building_po WHERE container_building_uid=@ContainerBuildingUid),\n       vrl_rows = (SELECT COUNT(*) FROM dbo.vessel_receipts_line WHERE vessel_receipts_hdr_uid=@VesselReceiptsHdrUid),\n       vrl_qty = (SELECT SUM(CONVERT(decimal(19,9), container_qty_received)) FROM dbo.vessel_receipts_line WHERE vessel_receipts_hdr_uid=@VesselReceiptsHdrUid),\n       crl_rows = (SELECT COUNT(*) FROM dbo.container_receipts_line WHERE container_receipts_hdr_uid=@ContainerReceiptsHdrUid),\n       crl_qty = (SELECT SUM(CONVERT(decimal(19,9), qty_received)) FROM dbo.container_receipts_line WHERE container_receipts_hdr_uid=@ContainerReceiptsHdrUid),\n       vlink_rows = v.link_rows,\n       vlink_qty = v.link_qty,\n       open_vlink_rows = ov.open_link_rows,\n       open_vlink_qty = ov.open_link_qty,\n       open_original_po_link_rows = op.open_original_po_link_rows,\n       open_original_po_link_qty = op.open_original_po_link_qty\nFROM expected e CROSS JOIN vlinks v CROSS JOIN open_vlinks ov CROSS JOIN old_plinks op;\n\nSELECT TOP (20) result_set='vessel_link_sample', order_number, line_number, po_no, po_line_number, quantity_on_po, completed, connection_type\nFROM dbo.oe_line_po\nWHERE po_no = @VesselReceiptsHdrUid\n  AND connection_type = 'V'\nORDER BY po_line_number, order_number, line_number;",
+            "type": "Query"
+          }
+        ]
+      },
+      "integrationRuntimeNames": [
+        "sqlserver"
+      ],
+      "iterationHash": "",
+      "linkedServiceName": "",
+      "output": {
+        "billingReference": {
+          "activityType": "PipelineActivity",
+          "billableDuration": [
+            {
+              "duration": 0.016666666666666666,
+              "meterType": "SelfhostedIR",
+              "unit": "Hours"
+            }
+          ]
+        },
+        "durationInQueue": {
+          "integrationRuntimeQueue": 7
+        },
+        "effectiveIntegrationRuntime": "SQLServer",
+        "executionDuration": 1
+      },
+      "pipelineName": "Diag_Coats_P21Play_Post_Retest_Check",
+      "pipelineRunId": "3d1e18f4-5475-11f1-92d0-9cb150a3acae",
+      "recoveryStatus": "None",
+      "resourceGroup": "RG1",
+      "retryAttempt": null,
+      "status": "Failed",
+      "userProperties": {}
+    }
+  ]
+}

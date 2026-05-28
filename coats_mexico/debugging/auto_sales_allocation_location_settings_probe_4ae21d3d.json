@@ -1,0 +1,338 @@
+﻿{
+  "continuationToken": null,
+  "value": [
+    {
+      "activityName": "RunQuery",
+      "activityRunEnd": "2026-05-18T22:46:54.224432+00:00",
+      "activityRunId": "e2e829d6-05d2-41d5-8692-d967e9377ec9",
+      "activityRunStart": "2026-05-18T22:45:50.141292+00:00",
+      "activityType": "Script",
+      "durationInMs": 64083,
+      "error": {
+        "details": "",
+        "errorCode": "",
+        "failureType": "",
+        "message": "",
+        "target": "RunQuery"
+      },
+      "executionDetails": {
+        "integrationRuntime": [
+          {
+            "location": "West US",
+            "name": "SQLServer",
+            "nodes": [
+              "INSPIRON_16"
+            ],
+            "type": "SelfHosted"
+          }
+        ]
+      },
+      "id": "/SUBSCRIPTIONS/6624EC13-3826-43B2-8E45-077F9051B88F/RESOURCEGROUPS/RG1/PROVIDERS/MICROSOFT.DATAFACTORY/FACTORIES/2026-04-01-DF1/pipelineruns/4ae21d3d-530b-11f1-91b6-9cb150a3acae/activityruns/e2e829d6-05d2-41d5-8692-d967e9377ec9",
+      "input": {
+        "logSettings": {
+          "logDestination": "ActivityOutput"
+        },
+        "scriptBlockExecutionTimeout": "00:10:00",
+        "scripts": [
+          {
+            "text": "USE P21;\nSET NOCOUNT ON; SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;\nSELECT result_set='location_allocation_flags', location_id=CONVERT(varchar(50),location_id), company_id, auto_allocate_in_po_import_flag, do_not_alloc_serial_to_ord_flag, undershipment_allocation_flag\nFROM dbo.location WHERE location_id IN (200,210);\nSELECT result_set='system_settings_allocation', name, value FROM dbo.system_setting WHERE name IN ('allow_container_receipts','allocate_to_planned_schedules','use_prodreqdate_on_commtsched','incl_stk_bo_on_chold_in_rqmt') OR name LIKE '%alloc%' OR name LIKE '%transfer%reserve%' ORDER BY name;",
+            "type": "Query"
+          }
+        ]
+      },
+      "integrationRuntimeNames": [
+        "sqlserver"
+      ],
+      "iterationHash": "",
+      "linkedServiceName": "",
+      "output": {
+        "billingReference": {
+          "activityType": "PipelineActivity",
+          "billableDuration": [
+            {
+              "duration": 0.016666666666666666,
+              "meterType": "SelfhostedIR",
+              "unit": "Hours"
+            }
+          ]
+        },
+        "durationInQueue": {
+          "integrationRuntimeQueue": 1
+        },
+        "effectiveIntegrationRuntime": "SQLServer",
+        "executionDuration": 0,
+        "outputLogs": "Changed database context to 'P21'.\n",
+        "outputLogsLocation": "",
+        "outputParameters": {},
+        "outputTruncated": false,
+        "recordsAffected": 0,
+        "resultSetCount": 2,
+        "resultSets": [
+          {
+            "rowCount": 2,
+            "rows": [
+              {
+                "auto_allocate_in_po_import_flag": null,
+                "company_id": "KA",
+                "do_not_alloc_serial_to_ord_flag": "N",
+                "location_id": "200",
+                "result_set": "location_allocation_flags",
+                "undershipment_allocation_flag": "N"
+              },
+              {
+                "auto_allocate_in_po_import_flag": null,
+                "company_id": "KA",
+                "do_not_alloc_serial_to_ord_flag": "N",
+                "location_id": "210",
+                "result_set": "location_allocation_flags",
+                "undershipment_allocation_flag": "N"
+              }
+            ]
+          },
+          {
+            "rowCount": 46,
+            "rows": [
+              {
+                "name": "affect_sched_alloc_by_lead_time",
+                "result_set": "system_settings_allocation",
+                "value": "Y"
+              },
+              {
+                "name": "alloc_po_assemblies_to_orders",
+                "result_set": "system_settings_allocation",
+                "value": "N"
+              },
+              {
+                "name": "alloc_xfers_at_xfer_receipts",
+                "result_set": "system_settings_allocation",
+                "value": "N"
+              },
+              {
+                "name": "allocate_bins_by_zone_uom",
+                "result_set": "system_settings_allocation",
+                "value": "N"
+              },
+              {
+                "name": "allocate_expedite_type",
+                "result_set": "system_settings_allocation",
+                "value": "Day(s)"
+              },
+              {
+                "name": "allocate_from_one_bin",
+                "result_set": "system_settings_allocation",
+                "value": "Y"
+              },
+              {
+                "name": "allocate_itemqty_to_lotqty_rmb_qto",
+                "result_set": "system_settings_allocation",
+                "value": "N"
+              },
+              {
+                "name": "allocate_pick_type",
+                "result_set": "system_settings_allocation",
+                "value": "Day(s)"
+              },
+              {
+                "name": "allocate_sort_by_creation_date",
+                "result_set": "system_settings_allocation",
+                "value": "N"
+              },
+              {
+                "name": "allocate_sort_by_order_date",
+                "result_set": "system_settings_allocation",
+                "value": "N"
+              },
+              {
+                "name": "allocate_tags_from_one_bin",
+                "result_set": "system_settings_allocation",
+                "value": "N"
+              },
+              {
+                "name": "allocate_to_planned_schedules",
+                "result_set": "system_settings_allocation",
+                "value": "Y"
+              },
+              {
+                "name": "allocate_to_sales_orders",
+                "result_set": "system_settings_allocation",
+                "value": "Y"
+              },
+              {
+                "name": "allocate_transit_type",
+                "result_set": "system_settings_allocation",
+                "value": "Day(s)"
+              },
+              {
+                "name": "allocate_unit_size_in_bin",
+                "result_set": "system_settings_allocation",
+                "value": "N"
+              },
+              {
+                "name": "allow_container_receipts",
+                "result_set": "system_settings_allocation",
+                "value": "Y"
+              },
+              {
+                "name": "allow_inv_adj_deallocations",
+                "result_set": "system_settings_allocation",
+                "value": "N"
+              },
+              {
+                "name": "allow_modify_transfer_reserve_oeline",
+                "result_set": "system_settings_allocation",
+                "value": "Y"
+              },
+              {
+                "name": "alternate_oe_alloc_stock_flag",
+                "result_set": "system_settings_allocation",
+                "value": "N"
+              },
+              {
+                "name": "always_show_qty_allocated_tab_in_imi",
+                "result_set": "system_settings_allocation",
+                "value": "N"
+              },
+              {
+                "name": "anticipated_allocation_proc_enabled",
+                "result_set": "system_settings_allocation",
+                "value": "N"
+              },
+              {
+                "name": "auto_allocate_AFS_item",
+                "result_set": "system_settings_allocation",
+                "value": "Y"
+              },
+              {
+                "name": "check_item_overallocated_on_clear",
+                "result_set": "system_settings_allocation",
+                "value": "N"
+              },
+              {
+                "name": "display_imi_bin_allocations",
+                "result_set": "system_settings_allocation",
+                "value": "Y"
+              },
+              {
+                "name": "do_not_allocate_inv_for_d_disposition",
+                "result_set": "system_settings_allocation",
+                "value": "N"
+              },
+              {
+                "name": "edit_trans_allocated_flag",
+                "result_set": "system_settings_allocation",
+                "value": "N"
+              },
+              {
+                "name": "enable_workbench_reallocation",
+                "result_set": "system_settings_allocation",
+                "value": "N"
+              },
+              {
+                "name": "enlarge_allocation_window",
+                "result_set": "system_settings_allocation",
+                "value": "N"
+              },
+              {
+                "name": "excl_holiday_alternate_oe_alloc_flag",
+                "result_set": "system_settings_allocation",
+                "value": "N"
+              },
+              {
+                "name": "incl_stk_bo_on_chold_in_rqmt",
+                "result_set": "system_settings_allocation",
+                "value": "N"
+              },
+              {
+                "name": "include_non_alloc_on_pack_list",
+                "result_set": "system_settings_allocation",
+                "value": "1279"
+              },
+              {
+                "name": "include_non_alloc_on_pick_hold",
+                "result_set": "system_settings_allocation",
+                "value": "1279"
+              },
+              {
+                "name": "include_non_alloc_on_pick_tix",
+                "result_set": "system_settings_allocation",
+                "value": "1279"
+              },
+              {
+                "name": "include_non_alloc_on_prod_pt",
+                "result_set": "system_settings_allocation",
+                "value": "1279"
+              },
+              {
+                "name": "oe_allocate_serials_when_cancel_pt",
+                "result_set": "system_settings_allocation",
+                "value": "Y"
+              },
+              {
+                "name": "po_receipt_allocate_serials",
+                "result_set": "system_settings_allocation",
+                "value": "Y"
+              },
+              {
+                "name": "prompt_inventory_deallocations",
+                "result_set": "system_settings_allocation",
+                "value": "Y"
+              },
+              {
+                "name": "putaway_move_allocated_flag",
+                "result_set": "system_settings_allocation",
+                "value": "Y"
+              },
+              {
+                "name": "qto_alt_oe_alloc_set_dates",
+                "result_set": "system_settings_allocation",
+                "value": "Y"
+              },
+              {
+                "name": "schedule_anticipated_alloc_comp",
+                "result_set": "system_settings_allocation",
+                "value": "N"
+              },
+              {
+                "name": "unit_conversion_allocation",
+                "result_set": "system_settings_allocation",
+                "value": "N"
+              },
+              {
+                "name": "use_advanced_inv_alloc",
+                "result_set": "system_settings_allocation",
+                "value": "N"
+              },
+              {
+                "name": "use_alternate_oe_allocation",
+                "result_set": "system_settings_allocation",
+                "value": "N"
+              },
+              {
+                "name": "use_prodreqdate_on_commtsched",
+                "result_set": "system_settings_allocation",
+                "value": "N"
+              },
+              {
+                "name": "use_standard_oe_allocation",
+                "result_set": "system_settings_allocation",
+                "value": "Y"
+              },
+              {
+                "name": "validate_bin_allocations",
+                "result_set": "system_settings_allocation",
+                "value": "N"
+              }
+            ]
+          }
+        ]
+      },
+      "pipelineName": "Diag_Coats_Auto_Sales_Allocation",
+      "pipelineRunId": "4ae21d3d-530b-11f1-91b6-9cb150a3acae",
+      "recoveryStatus": "None",
+      "resourceGroup": "RG1",
+      "retryAttempt": null,
+      "status": "Succeeded",
+      "userProperties": {}
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "annotations": [],
+  "debugRunId": null,
+  "durationInMs": 119683,
+  "id": "/SUBSCRIPTIONS/6624EC13-3826-43B2-8E45-077F9051B88F/RESOURCEGROUPS/RG1/PROVIDERS/MICROSOFT.DATAFACTORY/FACTORIES/2026-04-01-DF1/pipelineruns/0d8ac353-5471-11f1-9db5-9cb150a3acae",
+  "invokedBy": {
+    "id": "41d4c5437d724e20932bb7a58b29f451",
+    "invokedByType": "Manual",
+    "name": "Manual",
+    "pipelineName": null,
+    "pipelineRunId": null
+  },
+  "isLatest": true,
+  "lastUpdated": "2026-05-20T17:28:35.182539+00:00",
+  "message": "Operation on target ValidateCoatsShipment failed: The server principal \"coats_automation\" is not able to access the database \"P21Play\" under the current security context.",
+  "parameters": {
+    "graphSubscriptionId": "manual-direct-p21play-oe-line-po-retest",
+    "notificationReceivedUtc": "05/20/2026 17:26:35",
+    "sharePointDriveId": "b!7viKvqKWhE6iCaff_ZO8ifpt7Jn3Uq5Miai0gQMtnlODrwvwxKcAR46Tczqly28s",
+    "sharePointDriveItemId": "01LSIURSLPLBMHMFC3INEY524JAN5F32E5",
+    "sourceFileName": "Coats Mexico Shipment Report 05-11-26 - Trailer TM735.xlsx",
+    "sourceFolderPath": "/drives/b!7viKvqKWhE6iCaff_ZO8ifpt7Jn3Uq5Miai0gQMtnlODrwvwxKcAR46Tczqly28s/root:/Coats Mexico Shipment Reports",
+    "sourceWebUrl": "https://komaralliance.sharepoint.com/sites/KomarPublic/_layouts/15/Doc.aspx?sourcedoc=%7B7658586F-5B14-4943-8EEB-89037A5DE89D%7D&file=Coats%20Mexico%20Shipment%20Report%2005-11-26%20-%20Trailer%20TM735.xlsx&action=default&mobileredirect=true"
+  },
+  "pipelineName": "Coats_Mexico_Shipment_Stage_And_Validate",
+  "pipelineReturnValue": {},
+  "resourceGroup": "RG1",
+  "runDimension": {},
+  "runDimensions": null,
+  "runEnd": "2026-05-20T17:28:35.181984+00:00",
+  "runGroupId": "0d8ac353-5471-11f1-9db5-9cb150a3acae",
+  "runId": "0d8ac353-5471-11f1-9db5-9cb150a3acae",
+  "runStart": "2026-05-20T17:26:35.498519+00:00",
+  "status": "Failed"
+}

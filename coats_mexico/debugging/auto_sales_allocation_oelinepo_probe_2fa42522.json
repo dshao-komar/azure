@@ -1,0 +1,165 @@
+﻿{
+  "continuationToken": null,
+  "value": [
+    {
+      "activityName": "RunQuery",
+      "activityRunEnd": "2026-05-18T22:45:11.654465+00:00",
+      "activityRunId": "4843388b-c28a-4bdb-b562-fa660acd4857",
+      "activityRunStart": "2026-05-18T22:45:02.044665+00:00",
+      "activityType": "Script",
+      "durationInMs": 9609,
+      "error": {
+        "details": "",
+        "errorCode": "",
+        "failureType": "",
+        "message": "",
+        "target": "RunQuery"
+      },
+      "executionDetails": {
+        "integrationRuntime": [
+          {
+            "location": "West US",
+            "name": "SQLServer",
+            "nodes": [
+              "INSPIRON_16"
+            ],
+            "type": "SelfHosted"
+          }
+        ]
+      },
+      "id": "/SUBSCRIPTIONS/6624EC13-3826-43B2-8E45-077F9051B88F/RESOURCEGROUPS/RG1/PROVIDERS/MICROSOFT.DATAFACTORY/FACTORIES/2026-04-01-DF1/pipelineruns/2fa42522-530b-11f1-9cf3-9cb150a3acae/activityruns/4843388b-c28a-4bdb-b562-fa660acd4857",
+      "input": {
+        "logSettings": {
+          "logDestination": "ActivityOutput"
+        },
+        "scriptBlockExecutionTimeout": "00:10:00",
+        "scripts": [
+          {
+            "text": "USE P21;\nSET NOCOUNT ON; SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;\nDECLARE @TargetStart decimal(19,0)=9010472, @TargetEnd decimal(19,0)=9010490, @GoodStart decimal(19,0)=9010440, @GoodEnd decimal(19,0)=9010450;\nSELECT result_set='oe_line_po_columns', column_id=CONVERT(varchar(20),c.column_id), column_name=c.name, type_name=ty.name FROM sys.columns c JOIN sys.types ty ON ty.user_type_id=c.user_type_id WHERE c.object_id=OBJECT_ID('dbo.oe_line_po') ORDER BY c.column_id;\nSELECT result_set='oe_line_po_transfer_links', sample_name=CASE WHEN po_no BETWEEN @TargetStart AND @TargetEnd THEN 'TARGET' ELSE 'KNOWN_GOOD' END, po_no=CONVERT(varchar(50),po_no), connection_type, rows_count=CONVERT(varchar(50),COUNT(*)), quantity_on_po=CONVERT(varchar(50),SUM(quantity_on_po)), completed_y=CONVERT(varchar(50),SUM(CASE WHEN completed='Y' THEN 1 ELSE 0 END)), cancel_y=CONVERT(varchar(50),SUM(CASE WHEN cancel_flag='Y' THEN 1 ELSE 0 END))\nFROM dbo.oe_line_po\nWHERE (po_no BETWEEN @TargetStart AND @TargetEnd OR po_no BETWEEN @GoodStart AND @GoodEnd)\nGROUP BY CASE WHEN po_no BETWEEN @TargetStart AND @TargetEnd THEN 'TARGET' ELSE 'KNOWN_GOOD' END, po_no, connection_type\nORDER BY sample_name, po_no;",
+            "type": "Query"
+          }
+        ]
+      },
+      "integrationRuntimeNames": [
+        "sqlserver"
+      ],
+      "iterationHash": "",
+      "linkedServiceName": "",
+      "output": {
+        "billingReference": {
+          "activityType": "PipelineActivity",
+          "billableDuration": [
+            {
+              "duration": 0.016666666666666666,
+              "meterType": "SelfhostedIR",
+              "unit": "Hours"
+            }
+          ]
+        },
+        "durationInQueue": {
+          "integrationRuntimeQueue": 1
+        },
+        "effectiveIntegrationRuntime": "SQLServer",
+        "executionDuration": 0,
+        "outputLogs": "Changed database context to 'P21'.\n",
+        "outputLogsLocation": "",
+        "outputParameters": {},
+        "outputTruncated": false,
+        "recordsAffected": 0,
+        "resultSetCount": 1,
+        "resultSets": [
+          {
+            "rowCount": 13,
+            "rows": [
+              {
+                "column_id": "1",
+                "column_name": "order_number",
+                "result_set": "oe_line_po_columns",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "2",
+                "column_name": "line_number",
+                "result_set": "oe_line_po_columns",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "3",
+                "column_name": "po_no",
+                "result_set": "oe_line_po_columns",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "4",
+                "column_name": "date_created",
+                "result_set": "oe_line_po_columns",
+                "type_name": "datetime"
+              },
+              {
+                "column_id": "5",
+                "column_name": "date_last_modified",
+                "result_set": "oe_line_po_columns",
+                "type_name": "datetime"
+              },
+              {
+                "column_id": "6",
+                "column_name": "last_maintained_by",
+                "result_set": "oe_line_po_columns",
+                "type_name": "varchar"
+              },
+              {
+                "column_id": "7",
+                "column_name": "quantity_on_po",
+                "result_set": "oe_line_po_columns",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "8",
+                "column_name": "po_line_number",
+                "result_set": "oe_line_po_columns",
+                "type_name": "decimal"
+              },
+              {
+                "column_id": "9",
+                "column_name": "delete_flag",
+                "result_set": "oe_line_po_columns",
+                "type_name": "char"
+              },
+              {
+                "column_id": "10",
+                "column_name": "cancel_flag",
+                "result_set": "oe_line_po_columns",
+                "type_name": "char"
+              },
+              {
+                "column_id": "11",
+                "column_name": "completed",
+                "result_set": "oe_line_po_columns",
+                "type_name": "char"
+              },
+              {
+                "column_id": "12",
+                "column_name": "connection_type",
+                "result_set": "oe_line_po_columns",
+                "type_name": "char"
+              },
+              {
+                "column_id": "13",
+                "column_name": "original_oe_line_freight_in",
+                "result_set": "oe_line_po_columns",
+                "type_name": "decimal"
+              }
+            ]
+          }
+        ]
+      },
+      "pipelineName": "Diag_Coats_Auto_Sales_Allocation",
+      "pipelineRunId": "2fa42522-530b-11f1-9cf3-9cb150a3acae",
+      "recoveryStatus": "None",
+      "resourceGroup": "RG1",
+      "retryAttempt": null,
+      "status": "Succeeded",
+      "userProperties": {}
+    }
+  ]
+}

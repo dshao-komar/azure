@@ -1,0 +1,974 @@
+﻿{
+    "continuationToken":  null,
+    "value":  [
+                  {
+                      "activityName":  "RunProbe",
+                      "activityRunEnd":  "2026-05-19T23:05:13.064379+00:00",
+                      "activityRunId":  "6f52e577-1240-4887-8212-484b4906405b",
+                      "activityRunStart":  "2026-05-19T23:04:58.715240+00:00",
+                      "activityType":  "Script",
+                      "durationInMs":  14349,
+                      "error":  {
+                                    "details":  "",
+                                    "errorCode":  "",
+                                    "failureType":  "",
+                                    "message":  "",
+                                    "target":  "RunProbe"
+                                },
+                      "executionDetails":  {
+                                               "integrationRuntime":  [
+                                                                          {
+                                                                              "location":  "West US",
+                                                                              "name":  "SQLServer",
+                                                                              "nodes":  [
+                                                                                            "KASVRW2K8FS"
+                                                                                        ],
+                                                                              "type":  "SelfHosted"
+                                                                          }
+                                                                      ]
+                                           },
+                      "id":  "/SUBSCRIPTIONS/6624EC13-3826-43B2-8E45-077F9051B88F/RESOURCEGROUPS/RG1/PROVIDERS/MICROSOFT.DATAFACTORY/FACTORIES/2026-04-01-DF1/pipelineruns/23059f7e-53d7-11f1-845a-9cb150a3acae/activityruns/6f52e577-1240-4887-8212-484b4906405b",
+                      "input":  {
+                                    "logSettings":  {
+                                                        "logDestination":  "ActivityOutput"
+                                                    },
+                                    "scriptBlockExecutionTimeout":  "00:10:00",
+                                    "scripts":  [
+                                                    {
+                                                        "text":  "USE P21Play;\nSET NOCOUNT ON;\nSELECT\n    database_name = DB_NAME(),\n    current_user_name = CURRENT_USER,\n    system_user_name = SYSTEM_USER,\n    original_login_name = ORIGINAL_LOGIN();\n\nSELECT\n    entity_name = \u0027p21_get_counter\u0027,\n    object_id = CONVERT(nvarchar(40), OBJECT_ID(\u0027dbo.p21_get_counter\u0027)),\n    execute_permission = CONVERT(nvarchar(10), HAS_PERMS_BY_NAME(\u0027dbo.p21_get_counter\u0027, \u0027OBJECT\u0027, \u0027EXECUTE\u0027)),\n    view_definition_permission = CONVERT(nvarchar(10), HAS_PERMS_BY_NAME(\u0027dbo.p21_get_counter\u0027, \u0027OBJECT\u0027, \u0027VIEW DEFINITION\u0027));\n\nSELECT\n    permission_name,\n    subentity_name\nFROM sys.fn_my_permissions(\u0027dbo.p21_get_counter\u0027, \u0027OBJECT\u0027)\nORDER BY permission_name;\n\nSELECT\n    counter_name = c.name,\n    counter_object_id = CONVERT(nvarchar(40), c.object_id),\n    has_select = CONVERT(nvarchar(10), HAS_PERMS_BY_NAME(\u0027dbo.\u0027 + c.name, \u0027OBJECT\u0027, \u0027SELECT\u0027)),\n    has_update = CONVERT(nvarchar(10), HAS_PERMS_BY_NAME(\u0027dbo.\u0027 + c.name, \u0027OBJECT\u0027, \u0027UPDATE\u0027)),\n    object_type = c.type_desc\nFROM sys.objects AS c\nWHERE c.name LIKE \u0027%counter%\u0027 OR c.name LIKE \u0027%sequence%\u0027\nORDER BY c.name;\n\nSELECT\n    sequence_name = s.name,\n    current_value = CONVERT(nvarchar(80), s.current_value),\n    has_update = CONVERT(nvarchar(10), HAS_PERMS_BY_NAME(\u0027dbo.\u0027 + s.name, \u0027OBJECT\u0027, \u0027UPDATE\u0027)),\n    has_select = CONVERT(nvarchar(10), HAS_PERMS_BY_NAME(\u0027dbo.\u0027 + s.name, \u0027OBJECT\u0027, \u0027SELECT\u0027))\nFROM sys.sequences AS s\nWHERE s.name LIKE \u0027%counter%\u0027 OR s.name LIKE \u0027%container%\u0027 OR s.name LIKE \u0027%vessel%\u0027\nORDER BY s.name;",
+                                                        "type":  "Query"
+                                                    }
+                                                ]
+                                },
+                      "integrationRuntimeNames":  [
+                                                      "sqlserver"
+                                                  ],
+                      "iterationHash":  "",
+                      "linkedServiceName":  "",
+                      "output":  {
+                                     "billingReference":  {
+                                                              "activityType":  "PipelineActivity",
+                                                              "billableDuration":  [
+                                                                                       {
+                                                                                           "duration":  0.016666666666666666,
+                                                                                           "meterType":  "SelfhostedIR",
+                                                                                           "unit":  "Hours"
+                                                                                       }
+                                                                                   ]
+                                                          },
+                                     "durationInQueue":  {
+                                                             "integrationRuntimeQueue":  7
+                                                         },
+                                     "effectiveIntegrationRuntime":  "SQLServer",
+                                     "executionDuration":  1,
+                                     "outputLogs":  "Changed database context to \u0027P21Play\u0027.\n",
+                                     "outputLogsLocation":  "",
+                                     "outputParameters":  {
+
+                                                          },
+                                     "outputTruncated":  false,
+                                     "recordsAffected":  0,
+                                     "resultSetCount":  5,
+                                     "resultSets":  [
+                                                        {
+                                                            "rowCount":  1,
+                                                            "rows":  [
+                                                                         {
+                                                                             "current_user_name":  "coats_automation",
+                                                                             "database_name":  "P21Play",
+                                                                             "original_login_name":  "coats_automation",
+                                                                             "system_user_name":  "coats_automation"
+                                                                         }
+                                                                     ]
+                                                        },
+                                                        {
+                                                            "rowCount":  1,
+                                                            "rows":  [
+                                                                         {
+                                                                             "entity_name":  "p21_get_counter",
+                                                                             "execute_permission":  "0",
+                                                                             "object_id":  "1717177463",
+                                                                             "view_definition_permission":  "0"
+                                                                         }
+                                                                     ]
+                                                        },
+                                                        {
+                                                            "rowCount":  2,
+                                                            "rows":  [
+                                                                         {
+                                                                             "permission_name":  "ALTER",
+                                                                             "subentity_name":  ""
+                                                                         },
+                                                                         {
+                                                                             "permission_name":  "REFERENCES",
+                                                                             "subentity_name":  ""
+                                                                         }
+                                                                     ]
+                                                        },
+                                                        {
+                                                            "rowCount":  105,
+                                                            "rows":  [
+                                                                         {
+                                                                             "counter_name":  "ak_copy_table_data_x_counter",
+                                                                             "counter_object_id":  "1605229119",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "UNIQUE_CONSTRAINT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "ak_portal_x_portal_element_sequence",
+                                                                             "counter_object_id":  "1233803853",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "UNIQUE_CONSTRAINT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "company_daily_deposit_counter",
+                                                                             "counter_object_id":  "1581846785",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "USER_TABLE"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "copy_table_data_x_counter",
+                                                                             "counter_object_id":  "1477228663",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "USER_TABLE"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "counter",
+                                                                             "counter_object_id":  "1858157715",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "USER_TABLE"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "df_accnt_group_mx_sequence_no",
+                                                                             "counter_object_id":  "1829515684",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "DEFAULT_CONSTRAINT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "df_accnt_group_mx2_sequence_no",
+                                                                             "counter_object_id":  "658035513",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "DEFAULT_CONSTRAINT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "df_bin_pick_zone_sequence",
+                                                                             "counter_object_id":  "878118369",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "DEFAULT_CONSTRAINT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "df_bin_putaway_zone_sequence",
+                                                                             "counter_object_id":  "862118312",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "DEFAULT_CONSTRAINT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "df_bin_warehouse_sequence",
+                                                                             "counter_object_id":  "894118426",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "DEFAULT_CONSTRAINT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "df_code_x_code_p21_sequence_number",
+                                                                             "counter_object_id":  "278344106",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "DEFAULT_CONSTRAINT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "df_company_daily_deposit_counter_created_by",
+                                                                             "counter_object_id":  "1629846956",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "DEFAULT_CONSTRAINT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "df_company_daily_deposit_counter_date_created",
+                                                                             "counter_object_id":  "1613846899",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "DEFAULT_CONSTRAINT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "df_company_daily_deposit_counter_date_last_modified",
+                                                                             "counter_object_id":  "1645847013",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "DEFAULT_CONSTRAINT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "df_company_daily_deposit_counter_last_maintained_by",
+                                                                             "counter_object_id":  "1661847070",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "DEFAULT_CONSTRAINT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "df_copy_table_data_x_counter_created_by",
+                                                                             "counter_object_id":  "1557228948",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "DEFAULT_CONSTRAINT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "df_copy_table_data_x_counter_date_created",
+                                                                             "counter_object_id":  "1541228891",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "DEFAULT_CONSTRAINT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "df_copy_table_data_x_counter_date_last_modified",
+                                                                             "counter_object_id":  "1573229005",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "DEFAULT_CONSTRAINT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "df_copy_table_data_x_counter_last_maintained_by",
+                                                                             "counter_object_id":  "1589229062",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "DEFAULT_CONSTRAINT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "df_document_line_lot_sequence_no",
+                                                                             "counter_object_id":  "1259919610",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "DEFAULT_CONSTRAINT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "df_document_line_serial_sequence_no",
+                                                                             "counter_object_id":  "434868666",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "DEFAULT_CONSTRAINT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "df_export_counter_created_by",
+                                                                             "counter_object_id":  "603409469",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "DEFAULT_CONSTRAINT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "df_export_counter_date_created",
+                                                                             "counter_object_id":  "587409412",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "DEFAULT_CONSTRAINT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "df_export_counter_date_last_modified",
+                                                                             "counter_object_id":  "619409526",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "DEFAULT_CONSTRAINT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "df_export_counter_last_maintained_by",
+                                                                             "counter_object_id":  "635409583",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "DEFAULT_CONSTRAINT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "df_inventoryissuestest_x_rebuild_sequence_no",
+                                                                             "counter_object_id":  "1599761202",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "DEFAULT_CONSTRAINT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "df_item_category_hierarchy_sequence_no",
+                                                                             "counter_object_id":  "1468792540",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "DEFAULT_CONSTRAINT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "df_manual_pick_sequence_created_by",
+                                                                             "counter_object_id":  "551060028",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "DEFAULT_CONSTRAINT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "df_manual_pick_sequence_date_created",
+                                                                             "counter_object_id":  "535059971",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "DEFAULT_CONSTRAINT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "df_manual_pick_sequence_date_last_modified",
+                                                                             "counter_object_id":  "567060085",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "DEFAULT_CONSTRAINT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "df_manual_pick_sequence_last_maintained_by",
+                                                                             "counter_object_id":  "583060142",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "DEFAULT_CONSTRAINT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "df_metrics_daily_customer_front_counter_line_count",
+                                                                             "counter_object_id":  "888988331",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "DEFAULT_CONSTRAINT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "df_metrics_daily_customer_non_counter_line_count",
+                                                                             "counter_object_id":  "1144989243",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "DEFAULT_CONSTRAINT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "df_metrics_daily_customer_working_front_counter_line_count",
+                                                                             "counter_object_id":  "904988388",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "DEFAULT_CONSTRAINT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "df_metrics_daily_customer_working_non_counter_line_count",
+                                                                             "counter_object_id":  "1160989300",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "DEFAULT_CONSTRAINT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "df_metrics_period_customer_front_counter_line_count",
+                                                                             "counter_object_id":  "936988502",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "DEFAULT_CONSTRAINT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "df_metrics_period_customer_non_counter_line_count",
+                                                                             "counter_object_id":  "1192989414",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "DEFAULT_CONSTRAINT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "df_metrics_period_customer_percent_of_total_front_counter_lines",
+                                                                             "counter_object_id":  "165509756",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "DEFAULT_CONSTRAINT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "df_metrics_period_hierarchy_front_counter_line_count",
+                                                                             "counter_object_id":  "920988445",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "DEFAULT_CONSTRAINT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "df_metrics_period_hierarchy_non_counter_line_count",
+                                                                             "counter_object_id":  "1176989357",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "DEFAULT_CONSTRAINT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "df_oe_hdr_front_counter_rma",
+                                                                             "counter_object_id":  "287444198",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "DEFAULT_CONSTRAINT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "df_oe_pick_ticket_line_item_sort_sequence",
+                                                                             "counter_object_id":  "1225263620",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "DEFAULT_CONSTRAINT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "df_p21_fulltext_catalog_counter",
+                                                                             "counter_object_id":  "126375965",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "DEFAULT_CONSTRAINT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "df_pricing_service_column_tpcx_column_sequence",
+                                                                             "counter_object_id":  "1593876845",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "DEFAULT_CONSTRAINT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "df_pricing_template_key_field_sequence_no",
+                                                                             "counter_object_id":  "1053611192",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "DEFAULT_CONSTRAINT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "df_prod_order_line_operation_sequence_set",
+                                                                             "counter_object_id":  "990064571",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "DEFAULT_CONSTRAINT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "df_rewards_program_entry_goal_sequence_number",
+                                                                             "counter_object_id":  "692666011",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "DEFAULT_CONSTRAINT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "df_rma_receipt_hdr_front_counter_rma",
+                                                                             "counter_object_id":  "427304732",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "DEFAULT_CONSTRAINT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "df_scheduled_job_consecutive_failure_counter",
+                                                                             "counter_object_id":  "384744844",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "DEFAULT_CONSTRAINT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "df_service_labor_process_hdr_labor_operation_sequence_flag",
+                                                                             "counter_object_id":  "1006064628",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "DEFAULT_CONSTRAINT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "df_tag_document_line_tdl_sequence_no",
+                                                                             "counter_object_id":  "357784532",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "DEFAULT_CONSTRAINT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "df_tax_exception_list_x_ship_to_sequence_no",
+                                                                             "counter_object_id":  "380996884",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "DEFAULT_CONSTRAINT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "df_transfer_hdr_line_item_sort_sequence",
+                                                                             "counter_object_id":  "1545264760",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "DEFAULT_CONSTRAINT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "df_user_configured_tabpage_sequence_no",
+                                                                             "counter_object_id":  "644249400",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "DEFAULT_CONSTRAINT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "df_users_current_cashdrawer_counter",
+                                                                             "counter_object_id":  "1089595120",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "DEFAULT_CONSTRAINT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "df_users_current_gl_counter",
+                                                                             "counter_object_id":  "1771361575",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "DEFAULT_CONSTRAINT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "df_users_current_invoice_line_counter",
+                                                                             "counter_object_id":  "1153595348",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "DEFAULT_CONSTRAINT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "df_users_current_oe_line_counter",
+                                                                             "counter_object_id":  "1121595234",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "DEFAULT_CONSTRAINT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "df_users_max_cashdrawer_counter",
+                                                                             "counter_object_id":  "1105595177",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "DEFAULT_CONSTRAINT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "df_users_max_gl_counter",
+                                                                             "counter_object_id":  "1787361632",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "DEFAULT_CONSTRAINT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "df_users_max_inv_tran_counter",
+                                                                             "counter_object_id":  "1755361518",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "DEFAULT_CONSTRAINT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "df_users_max_invoice_line_counter",
+                                                                             "counter_object_id":  "1169595405",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "DEFAULT_CONSTRAINT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "df_users_max_oe_line_counter",
+                                                                             "counter_object_id":  "1137595291",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "DEFAULT_CONSTRAINT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "df_users_next_inv_tran_counter",
+                                                                             "counter_object_id":  "1739361461",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "DEFAULT_CONSTRAINT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "df_wf_ach_counter_created_by",
+                                                                             "counter_object_id":  "1073320971",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "DEFAULT_CONSTRAINT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "df_wf_ach_counter_date_created",
+                                                                             "counter_object_id":  "1057320914",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "DEFAULT_CONSTRAINT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "df_wf_ach_counter_date_last_modified",
+                                                                             "counter_object_id":  "1089321028",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "DEFAULT_CONSTRAINT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "df_wf_ach_counter_last_maintained_by",
+                                                                             "counter_object_id":  "1105321085",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "DEFAULT_CONSTRAINT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "export_counter",
+                                                                             "counter_object_id":  "555409298",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "USER_TABLE"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "fk_copy_table_data_x_counter_copy_table_data_x_table",
+                                                                             "counter_object_id":  "1509228777",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "FOREIGN_KEY_CONSTRAINT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "fk_copy_table_data_x_counter_counter",
+                                                                             "counter_object_id":  "1525228834",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "FOREIGN_KEY_CONSTRAINT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "manual_pick_sequence",
+                                                                             "counter_object_id":  "503059857",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "USER_TABLE"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "nsp_p21_get_counter",
+                                                                             "counter_object_id":  "1364757627",
+                                                                             "has_select":  "0",
+                                                                             "has_update":  "0",
+                                                                             "object_type":  "CLR_STORED_PROCEDURE"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "p21_add_counter",
+                                                                             "counter_object_id":  "377325400",
+                                                                             "has_select":  "0",
+                                                                             "has_update":  "0",
+                                                                             "object_type":  "SQL_STORED_PROCEDURE"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "p21_ads_get_counter",
+                                                                             "counter_object_id":  "1722189631",
+                                                                             "has_select":  "0",
+                                                                             "has_update":  "0",
+                                                                             "object_type":  "SQL_STORED_PROCEDURE"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "p21_ads_get_metric_number_front_counter_lines",
+                                                                             "counter_object_id":  "1155235616",
+                                                                             "has_select":  "0",
+                                                                             "has_update":  "0",
+                                                                             "object_type":  "SQL_STORED_PROCEDURE"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "p21_BillTrust_statements_generate_counter_app",
+                                                                             "counter_object_id":  "1637385398",
+                                                                             "has_select":  "0",
+                                                                             "has_update":  "0",
+                                                                             "object_type":  "SQL_STORED_PROCEDURE"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "p21_get_counter",
+                                                                             "counter_object_id":  "1717177463",
+                                                                             "has_select":  "0",
+                                                                             "has_update":  "0",
+                                                                             "object_type":  "SQL_STORED_PROCEDURE"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "p21_number_sequence_generator",
+                                                                             "counter_object_id":  "805680947",
+                                                                             "has_select":  "0",
+                                                                             "has_update":  "0",
+                                                                             "object_type":  "SQL_STORED_PROCEDURE"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "p21_price_engine_PricingBase_DeletePagesUsingPageTypeSequenceNumber",
+                                                                             "counter_object_id":  "1217008083",
+                                                                             "has_select":  "0",
+                                                                             "has_update":  "0",
+                                                                             "object_type":  "SQL_STORED_PROCEDURE"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "p21_price_engine_PricingBase_DeletePricePageUsingPriceBookSequenceNumber",
+                                                                             "counter_object_id":  "1249008197",
+                                                                             "has_select":  "0",
+                                                                             "has_update":  "0",
+                                                                             "object_type":  "SQL_STORED_PROCEDURE"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "p21_repair_users_counters",
+                                                                             "counter_object_id":  "659375126",
+                                                                             "has_select":  "0",
+                                                                             "has_update":  "0",
+                                                                             "object_type":  "SQL_STORED_PROCEDURE"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "p21_set_counter",
+                                                                             "counter_object_id":  "608278218",
+                                                                             "has_select":  "0",
+                                                                             "has_update":  "0",
+                                                                             "object_type":  "SQL_STORED_PROCEDURE"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "p21_update_assembly_line_operation_sequence",
+                                                                             "counter_object_id":  "848615824",
+                                                                             "has_select":  "0",
+                                                                             "has_update":  "0",
+                                                                             "object_type":  "SQL_STORED_PROCEDURE"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "p21_update_operation_sequence_on_all_open_production_orders",
+                                                                             "counter_object_id":  "1022064685",
+                                                                             "has_select":  "0",
+                                                                             "has_update":  "0",
+                                                                             "object_type":  "SQL_STORED_PROCEDURE"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "p21_update_previous_next_sequence_on_all_open_production_orders",
+                                                                             "counter_object_id":  "1518066452",
+                                                                             "has_select":  "0",
+                                                                             "has_update":  "0",
+                                                                             "object_type":  "SQL_STORED_PROCEDURE"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "p21_view_company_daily_deposit_counter",
+                                                                             "counter_object_id":  "1677847127",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "VIEW"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "p21_view_counter",
+                                                                             "counter_object_id":  "48276223",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "VIEW"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "p21_view_export_counter",
+                                                                             "counter_object_id":  "651409640",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "VIEW"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "p21_view_manual_pick_sequence",
+                                                                             "counter_object_id":  "599060199",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "VIEW"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "p21_view_wf_ach_counter",
+                                                                             "counter_object_id":  "1121321142",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "VIEW"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "pk_company_daily_deposit_counter",
+                                                                             "counter_object_id":  "1597846842",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "PRIMARY_KEY_CONSTRAINT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "pk_copy_table_data_x_counter",
+                                                                             "counter_object_id":  "1493228720",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "PRIMARY_KEY_CONSTRAINT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "pk_counter",
+                                                                             "counter_object_id":  "1874157772",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "PRIMARY_KEY_CONSTRAINT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "pk_export_counter",
+                                                                             "counter_object_id":  "571409355",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "PRIMARY_KEY_CONSTRAINT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "pk_manual_pick_sequence",
+                                                                             "counter_object_id":  "519059914",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "PRIMARY_KEY_CONSTRAINT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "pk_wf_ach_counter",
+                                                                             "counter_object_id":  "1041320857",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "PRIMARY_KEY_CONSTRAINT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "seq_filename_counter",
+                                                                             "counter_object_id":  "1896614791",
+                                                                             "has_select":  "0",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "SEQUENCE_OBJECT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "seq_inventory_value_analysis_counter",
+                                                                             "counter_object_id":  "351665392",
+                                                                             "has_select":  "0",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "SEQUENCE_OBJECT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "seq_report_counter",
+                                                                             "counter_object_id":  "862183113",
+                                                                             "has_select":  "0",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "SEQUENCE_OBJECT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "seq_rfnavigator_rts_counter",
+                                                                             "counter_object_id":  "1665413373",
+                                                                             "has_select":  "0",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "SEQUENCE_OBJECT"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "t_counter_counter_num_u",
+                                                                             "counter_object_id":  "32276166",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "SQL_TRIGGER"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "t_system_setting_inv_tran_counter_return_u",
+                                                                             "counter_object_id":  "1273328592",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "SQL_TRIGGER"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "temp_counter_table",
+                                                                             "counter_object_id":  "1420232510",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "USER_TABLE"
+                                                                         },
+                                                                         {
+                                                                             "counter_name":  "wf_ach_counter",
+                                                                             "counter_object_id":  "1025320800",
+                                                                             "has_select":  "1",
+                                                                             "has_update":  "1",
+                                                                             "object_type":  "USER_TABLE"
+                                                                         }
+                                                                     ]
+                                                        },
+                                                        {
+                                                            "rowCount":  18,
+                                                            "rows":  [
+                                                                         {
+                                                                             "current_value":  "899",
+                                                                             "has_select":  "0",
+                                                                             "has_update":  "1",
+                                                                             "sequence_name":  "seq_container_building"
+                                                                         },
+                                                                         {
+                                                                             "current_value":  "40510",
+                                                                             "has_select":  "0",
+                                                                             "has_update":  "1",
+                                                                             "sequence_name":  "seq_container_id"
+                                                                         },
+                                                                         {
+                                                                             "current_value":  "681",
+                                                                             "has_select":  "0",
+                                                                             "has_update":  "1",
+                                                                             "sequence_name":  "seq_container_receipts_hdr"
+                                                                         },
+                                                                         {
+                                                                             "current_value":  "103037",
+                                                                             "has_select":  "0",
+                                                                             "has_update":  "1",
+                                                                             "sequence_name":  "seq_container_receipts_line"
+                                                                         },
+                                                                         {
+                                                                             "current_value":  "2",
+                                                                             "has_select":  "0",
+                                                                             "has_update":  "1",
+                                                                             "sequence_name":  "seq_filename_counter"
+                                                                         },
+                                                                         {
+                                                                             "current_value":  "1",
+                                                                             "has_select":  "0",
+                                                                             "has_update":  "1",
+                                                                             "sequence_name":  "seq_inventory_value_analysis_counter"
+                                                                         },
+                                                                         {
+                                                                             "current_value":  "60",
+                                                                             "has_select":  "0",
+                                                                             "has_update":  "1",
+                                                                             "sequence_name":  "seq_report_counter"
+                                                                         },
+                                                                         {
+                                                                             "current_value":  "1",
+                                                                             "has_select":  "0",
+                                                                             "has_update":  "1",
+                                                                             "sequence_name":  "seq_rfnavigator_rts_counter"
+                                                                         },
+                                                                         {
+                                                                             "current_value":  "41220",
+                                                                             "has_select":  "0",
+                                                                             "has_update":  "1",
+                                                                             "sequence_name":  "seq_scan_pack_container_hdr"
+                                                                         },
+                                                                         {
+                                                                             "current_value":  "1",
+                                                                             "has_select":  "0",
+                                                                             "has_update":  "1",
+                                                                             "sequence_name":  "seq_shipping_container_line_temp_sort"
+                                                                         },
+                                                                         {
+                                                                             "current_value":  "1",
+                                                                             "has_select":  "0",
+                                                                             "has_update":  "1",
+                                                                             "sequence_name":  "seq_shipping_containers_hdr"
+                                                                         },
+                                                                         {
+                                                                             "current_value":  "1",
+                                                                             "has_select":  "0",
+                                                                             "has_update":  "1",
+                                                                             "sequence_name":  "seq_shipping_containers_line"
+                                                                         },
+                                                                         {
+                                                                             "current_value":  "761",
+                                                                             "has_select":  "0",
+                                                                             "has_update":  "1",
+                                                                             "sequence_name":  "seq_vessel_receipts_container"
+                                                                         },
+                                                                         {
+                                                                             "current_value":  "761",
+                                                                             "has_select":  "0",
+                                                                             "has_update":  "1",
+                                                                             "sequence_name":  "seq_vessel_receipts_hdr"
+                                                                         },
+                                                                         {
+                                                                             "current_value":  "660",
+                                                                             "has_select":  "0",
+                                                                             "has_update":  "1",
+                                                                             "sequence_name":  "seq_vessel_receipts_hdr_tracking_uid"
+                                                                         },
+                                                                         {
+                                                                             "current_value":  "95931",
+                                                                             "has_select":  "0",
+                                                                             "has_update":  "1",
+                                                                             "sequence_name":  "seq_vessel_receipts_line"
+                                                                         },
+                                                                         {
+                                                                             "current_value":  "36",
+                                                                             "has_select":  "0",
+                                                                             "has_update":  "1",
+                                                                             "sequence_name":  "seq_vessel_receipts_repair_run"
+                                                                         },
+                                                                         {
+                                                                             "current_value":  "1",
+                                                                             "has_select":  "0",
+                                                                             "has_update":  "1",
+                                                                             "sequence_name":  "seq_vics_bol_pallet_container"
+                                                                         }
+                                                                     ]
+                                                        }
+                                                    ]
+                                 },
+                      "pipelineName":  "Diag_Coats_P21Play_Permissions",
+                      "pipelineRunId":  "23059f7e-53d7-11f1-845a-9cb150a3acae",
+                      "recoveryStatus":  "None",
+                      "resourceGroup":  "RG1",
+                      "retryAttempt":  null,
+                      "status":  "Succeeded",
+                      "userProperties":  {
+
+                                         }
+                  }
+              ]
+}
