@@ -196,6 +196,24 @@ function Set-AdfResource {
     -Body ($Body | ConvertTo-Json -Depth 100) | Out-Null
 }
 
+function Assert-AdfActivityDependencies {
+  param([Parameter(Mandatory = $true)][object[]]$Activities)
+
+  $activityNames = @($Activities | ForEach-Object { $_.name })
+  foreach ($activity in $Activities) {
+    foreach ($dependency in @($activity.dependsOn)) {
+      if ($dependency.activity -notin $activityNames) {
+        throw "ADF activity '$($activity.name)' depends on missing activity '$($dependency.activity)' in the same activity scope."
+      }
+    }
+
+    if ($activity.type -eq "IfCondition") {
+      Assert-AdfActivityDependencies -Activities @($activity.typeProperties.ifTrueActivities)
+      Assert-AdfActivityDependencies -Activities @($activity.typeProperties.ifFalseActivities)
+    }
+  }
+}
+
 function Set-FunctionAppSettings {
   param(
     [Parameter(Mandatory = $true)][hashtable]$Config,
@@ -463,6 +481,13 @@ $processUrl = "https://$functionAppName.azurewebsites.net/api/process-coats-work
 $validationEmailUrl = "https://$functionAppName.azurewebsites.net/api/send-coats-validation-email?code=$functionKey"
 $successEmailUrl = "https://$functionAppName.azurewebsites.net/api/send-coats-success-email?code=$functionKey"
 $notificationUrl = "https://$functionAppName.azurewebsites.net/api/graph-sharepoint-notification?code=$functionKey"
+$renewalUrl = "https://$functionAppName.azurewebsites.net/api/renew-graph-sharepoint-subscription?code=$functionKey"
+
+Set-FunctionAppSettings -Config $config -FunctionAppName $functionAppName -Settings @{
+  GRAPH_NOTIFICATION_URL = $notificationUrl
+  GRAPH_SUBSCRIPTION_RESOURCE = "drives/$($drive.id)/root"
+  GRAPH_SUBSCRIPTION_RENEWAL_MINUTES = "36000"
+}
 
 Write-Host "Creating/updating ADF pipeline $pipelineName..."
 $stagingSqlPath = Join-Path $PSScriptRoot "sql/main/001_create_coats_mexico_staging.sql"
@@ -611,7 +636,7 @@ $extractRawSqlText
   $successEmailDependencyName = "ExtractRawFileForEmail"
 }
 
-Set-AdfResource -Config $config -ResourcePath "pipelines/$pipelineName" -Body @{
+$pipelineBody = @{
   properties = @{
     parameters = @{
       sharePointDriveId = @{ type = "String" }
@@ -836,6 +861,52 @@ Set-AdfResource -Config $config -ResourcePath "pipelines/$pipelineName" -Body @{
                 }
               }
             },
+            $(if ($Live) {
+              @{
+                name = "ExtractRawFileForEmail"
+                type = "Script"
+                dependsOn = @(
+                  @{
+                    activity = $receiptActivityName
+                    dependencyConditions = @("Succeeded")
+                  }
+                )
+                policy = @{
+                  timeout = "0.00:10:00"
+                  retry = 0
+                  retryIntervalInSeconds = 30
+                  secureInput = $true
+                  secureOutput = $false
+                }
+                linkedServiceName = @{
+                  referenceName = $config["SQL_LINKED_SERVICE_NAME"]
+                  type = "LinkedServiceReference"
+                }
+                typeProperties = @{
+                  scripts = @(
+                    @{
+                      type = "Query"
+                      text = $extractRawScript
+                      parameters = @(
+                        @{
+                          name = "extraction_payload"
+                          value = @{
+                            value = "@string(activity('ProcessCoatsWorkbook').output.extraction)"
+                            type = "Expression"
+                          }
+                          type = "String"
+                          direction = "Input"
+                        }
+                      )
+                    }
+                  )
+                  scriptBlockExecutionTimeout = "00:10:00"
+                  logSettings = @{
+                    logDestination = "ActivityOutput"
+                  }
+                }
+              }
+            }),
             @{
               name = "SendSuccessEmail"
               type = "WebActivity"
@@ -875,6 +946,9 @@ Set-AdfResource -Config $config -ResourcePath "pipelines/$pipelineName" -Body @{
   }
 }
 
+Assert-AdfActivityDependencies -Activities @($pipelineBody.properties.activities)
+Set-AdfResource -Config $config -ResourcePath "pipelines/$pipelineName" -Body $pipelineBody
+
 Write-Host "Registering Microsoft Graph subscription..."
 $existingSubscriptions = Invoke-Graph -Method Get -Uri "https://graph.microsoft.com/v1.0/subscriptions"
 foreach ($existing in $existingSubscriptions.value) {
@@ -902,4 +976,5 @@ Write-Host "ADF pipeline: $pipelineName"
 Write-Host "SharePoint drive: $($drive.name) / $($drive.id)"
 Write-Host "Watch folder: $watchFolderPath / $($folder.id)"
 Write-Host "Graph subscription id: $($subscription.id)"
+Write-Host "Graph subscription renewal URL: $renewalUrl"
 Write-Host "Graph subscription saved to: $subscriptionOutputPath"

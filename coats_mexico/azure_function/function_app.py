@@ -10,6 +10,7 @@ from coats_function_common import (
     graph_get,
     is_target_workbook,
     recent_target_workbooks,
+    renew_graph_subscriptions,
     required_setting,
     resolve_drive_item,
     send_success_email,
@@ -19,6 +20,35 @@ from coats_function_common import (
 
 
 app = func.FunctionApp(http_auth_level=func.AuthLevel.FUNCTION)
+
+
+@app.timer_trigger(
+    schedule="0 0 15 * * *",
+    arg_name="timer",
+    run_on_startup=False,
+    use_monitor=True,
+)
+def renew_graph_sharepoint_subscription_timer(timer: func.TimerRequest) -> None:
+    if timer.past_due:
+        logging.warning("Graph subscription renewal timer is past due.")
+
+    result = renew_graph_subscriptions()
+    logging.info(
+        "Graph subscription renewal completed. renewed=%s created=%s resource=%s",
+        result["renewedCount"],
+        bool(result["createdSubscription"]),
+        result["resource"],
+    )
+
+
+@app.route(route="renew-graph-sharepoint-subscription", methods=["POST"])
+def renew_graph_sharepoint_subscription(req: func.HttpRequest) -> func.HttpResponse:
+    result = renew_graph_subscriptions()
+    return func.HttpResponse(
+        json.dumps(result),
+        status_code=202,
+        mimetype="application/json",
+    )
 
 
 @app.route(route="process-coats-workbook", methods=["POST"])
@@ -66,8 +96,8 @@ def graph_sharepoint_notification(req: func.HttpRequest) -> func.HttpResponse:
         try:
             item = resolve_drive_item(notification)
             items = [item] if item and is_target_workbook(item) else []
-            if not item:
-                items = recent_target_workbooks(minutes=3)
+            if not items:
+                items = recent_target_workbooks(minutes=10)
 
             for target_item in items:
                 if not claim_drive_item_event(target_item):

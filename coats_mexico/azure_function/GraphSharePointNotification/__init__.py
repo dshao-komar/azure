@@ -28,8 +28,8 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         try:
             item = resolve_drive_item(notification)
             items = [item] if item and is_target_workbook(item) else []
-            if not item:
-                items = recent_target_workbooks(minutes=3)
+            if not items:
+                items = recent_target_workbooks(minutes=10)
 
             for target_item in items:
                 if not claim_drive_item_event(target_item):

@@ -10,6 +10,7 @@ from html import escape
 from datetime import datetime, timedelta, timezone
 from typing import Any
 from urllib.parse import quote
+from urllib.parse import urlsplit
 
 import requests
 from azure.identity import DefaultAzureCredential
@@ -91,6 +92,32 @@ def graph_post(url: str, body: dict[str, Any]) -> dict[str, Any]:
     return {}
 
 
+def graph_patch(url: str, body: dict[str, Any]) -> dict[str, Any]:
+    response = requests.patch(
+        url,
+        headers={
+            "Authorization": f"Bearer {graph_access_token()}",
+            "Content-Type": "application/json",
+        },
+        data=json.dumps(body),
+        timeout=30,
+    )
+    response.raise_for_status()
+    if response.content:
+        return response.json()
+    return {}
+
+
+def graph_list(url: str) -> list[dict[str, Any]]:
+    items: list[dict[str, Any]] = []
+    next_url: str | None = url
+    while next_url:
+        page = graph_get(next_url)
+        items.extend(page.get("value", []))
+        next_url = page.get("@odata.nextLink")
+    return items
+
+
 def start_adf_pipeline(parameters: dict[str, Any]) -> dict[str, Any]:
     subscription_id = required_setting("ADF_SUBSCRIPTION_ID")
     resource_group = required_setting("ADF_RESOURCE_GROUP")
@@ -114,6 +141,107 @@ def start_adf_pipeline(parameters: dict[str, Any]) -> dict[str, Any]:
     )
     response.raise_for_status()
     return response.json()
+
+
+def _graph_subscription_expiration() -> str:
+    max_minutes = int(os.environ.get("GRAPH_SUBSCRIPTION_RENEWAL_MINUTES", "36000"))
+    return (datetime.now(timezone.utc) + timedelta(minutes=max_minutes)).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _graph_subscription_resource() -> str:
+    return os.environ.get("GRAPH_SUBSCRIPTION_RESOURCE") or f"drives/{required_setting('GRAPH_DRIVE_ID')}/root"
+
+
+def _graph_subscription_notification_url() -> str:
+    return required_setting("GRAPH_NOTIFICATION_URL")
+
+
+def _is_target_subscription(subscription: dict[str, Any], resource: str, notification_url: str) -> bool:
+    return (
+        subscription.get("resource") == resource
+        and str(subscription.get("notificationUrl") or "").lower() == notification_url.lower()
+    )
+
+
+def _public_subscription(subscription: dict[str, Any] | None) -> dict[str, Any] | None:
+    if not subscription:
+        return None
+
+    notification_url = str(subscription.get("notificationUrl") or "")
+    notification_host = urlsplit(notification_url).netloc if notification_url else ""
+    return {
+        "id": subscription.get("id"),
+        "resource": subscription.get("resource"),
+        "changeType": subscription.get("changeType"),
+        "expirationDateTime": subscription.get("expirationDateTime"),
+        "notificationHost": notification_host,
+    }
+
+
+def create_graph_subscription() -> dict[str, Any]:
+    expiration = _graph_subscription_expiration()
+    body = {
+        "changeType": "updated",
+        "notificationUrl": _graph_subscription_notification_url(),
+        "resource": _graph_subscription_resource(),
+        "expirationDateTime": expiration,
+        "clientState": os.environ.get("GRAPH_SUBSCRIPTION_CLIENT_STATE") or "",
+    }
+    if not body["clientState"]:
+        import uuid
+
+        body["clientState"] = str(uuid.uuid4())
+
+    subscription = graph_post("https://graph.microsoft.com/v1.0/subscriptions", body)
+    logging.info(
+        "Created Graph subscription %s for %s expiring %s.",
+        subscription.get("id"),
+        body["resource"],
+        subscription.get("expirationDateTime"),
+    )
+    return subscription
+
+
+def renew_graph_subscriptions() -> dict[str, Any]:
+    resource = _graph_subscription_resource()
+    notification_url = _graph_subscription_notification_url()
+    expiration = _graph_subscription_expiration()
+    subscriptions = graph_list("https://graph.microsoft.com/v1.0/subscriptions")
+    target_subscriptions = [
+        subscription
+        for subscription in subscriptions
+        if _is_target_subscription(subscription, resource, notification_url)
+    ]
+
+    renewed: list[dict[str, Any]] = []
+    for subscription in target_subscriptions:
+        subscription_id = subscription.get("id")
+        if not subscription_id:
+            continue
+        renewed_subscription = graph_patch(
+            f"https://graph.microsoft.com/v1.0/subscriptions/{subscription_id}",
+            {"expirationDateTime": expiration},
+        )
+        renewed.append(renewed_subscription)
+        logging.info(
+            "Renewed Graph subscription %s for %s until %s.",
+            subscription_id,
+            resource,
+            renewed_subscription.get("expirationDateTime"),
+        )
+
+    created = None
+    if not renewed:
+        created = create_graph_subscription()
+
+    return {
+        "resource": resource,
+        "notificationUrlConfigured": bool(notification_url),
+        "requestedExpirationDateTime": expiration,
+        "renewedCount": len(renewed),
+        "renewedSubscriptions": [_public_subscription(subscription) for subscription in renewed],
+        "createdSubscription": _public_subscription(created),
+    }
 
 
 def claim_drive_item_event(item: dict[str, Any]) -> bool:
