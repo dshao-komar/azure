@@ -1,0 +1,530 @@
+{
+  "etag": "98005ffe-0000-0700-0000-6a4ff64a0000",
+  "id": "/subscriptions/6624ec13-3826-43b2-8e45-077f9051b88f/resourceGroups/RG1/providers/Microsoft.DataFactory/factories/2026-04-01-DF1/pipelines/LIVE_Coats_Mexico_Shipment_Stage_And_Validate",
+  "name": "LIVE_Coats_Mexico_Shipment_Stage_And_Validate",
+  "properties": {
+    "activities": [
+      {
+        "dependsOn": [],
+        "name": "ProcessCoatsWorkbook",
+        "policy": {
+          "retry": 1,
+          "retryIntervalInSeconds": 30,
+          "secureInput": true,
+          "secureOutput": false,
+          "timeout": "0.00:10:00"
+        },
+        "type": "WebActivity",
+        "typeProperties": {
+          "body": {
+            "type": "Expression",
+            "value": "@json(concat('{', '\"sharePointDriveId\":\"', pipeline().parameters.sharePointDriveId, '\",', '\"sharePointDriveItemId\":\"', pipeline().parameters.sharePointDriveItemId, '\",', '\"sourceFileName\":\"', replace(pipeline().parameters.sourceFileName, '\"', '\\\"'), '\",', '\"sourceWebUrl\":\"', replace(pipeline().parameters.sourceWebUrl, '\"', '\\\"'), '\",', '\"sourceFolderPath\":\"', replace(pipeline().parameters.sourceFolderPath, '\"', '\\\"'), '\",', '\"pipelineRunId\":\"', pipeline().RunId, '\"', '}'))"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "method": "POST",
+          "url": "https://func-coats-mexico-20260401dshao.azurewebsites.net/api/process-coats-workbook?code=eJQUUOrEm6FmTYlxPQyjJiHq72cDjnvYB7rCE9d53AyLAzFusfl7jA=="
+        }
+      },
+      {
+        "dependsOn": [
+          {
+            "activity": "ProcessCoatsWorkbook",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ],
+        "linkedServiceName": {
+          "referenceName": "SqlServer1",
+          "type": "LinkedServiceReference"
+        },
+        "name": "StageCoatsShipmentJson",
+        "policy": {
+          "retry": 0,
+          "retryIntervalInSeconds": 30,
+          "secureInput": true,
+          "secureOutput": false,
+          "timeout": "0.00:10:00"
+        },
+        "type": "Script",
+        "typeProperties": {
+          "logSettings": {
+            "logDestination": "ActivityOutput"
+          },
+          "scriptBlockExecutionTimeout": "00:10:00",
+          "scripts": [
+            {
+              "parameters": [
+                {
+                  "direction": "Input",
+                  "name": "extraction_payload",
+                  "type": "String",
+                  "value": {
+                    "type": "Expression",
+                    "value": "@string(activity('ProcessCoatsWorkbook').output.extraction)"
+                  }
+                }
+              ],
+              "text": "USE P21Import;\n\n/*\nCoats Mexico shipment staging objects.\n\nRun in the P21Import database. These tables intentionally stop before P21\ncontainer/vessel/container-receipt writes.\n*/\n\nSET NOCOUNT ON;\nSET XACT_ABORT ON;\n\nIF OBJECT_ID('dbo.coats_mexico_shipment_validation_issue', 'U') IS NULL\nBEGIN\n    CREATE TABLE dbo.coats_mexico_shipment_validation_issue\n    (\n          validation_issue_id bigint IDENTITY(1,1) NOT NULL\n        , shipment_file_id uniqueidentifier NOT NULL\n        , severity nvarchar(20) NOT NULL\n        , issue_code nvarchar(100) NOT NULL\n        , message nvarchar(1000) NOT NULL\n        , source_sheet nvarchar(128) NULL\n        , source_row_number int NULL\n        , Bin_ID nvarchar(100) NULL\n        , Item_ID nvarchar(100) NULL\n        , PO_No nvarchar(50) NULL\n        , raw_pallet_comment nvarchar(max) NULL\n        , created_at_utc datetime2(0) NOT NULL\n            CONSTRAINT DF_coats_mexico_validation_issue_created_at_utc DEFAULT SYSUTCDATETIME()\n        , CONSTRAINT PK_coats_mexico_shipment_validation_issue\n            PRIMARY KEY CLUSTERED (validation_issue_id)\n    );\nEND;\n\nIF OBJECT_ID('dbo.coats_mexico_shipment_pallet_line', 'U') IS NULL\nBEGIN\n    CREATE TABLE dbo.coats_mexico_shipment_pallet_line\n    (\n          shipment_pallet_line_id bigint IDENTITY(1,1) NOT NULL\n        , shipment_file_id uniqueidentifier NOT NULL\n        , source_sheet nvarchar(128) NOT NULL\n        , source_row_number int NOT NULL\n        , Bin_ID nvarchar(100) NULL\n        , P21_Bin_ID nvarchar(100) NULL\n        , Item_ID nvarchar(100) NULL\n        , PO_No nvarchar(50) NULL\n        , Invoiced_Qty decimal(18,4) NULL\n        , Parsed_Qty_Unit nvarchar(30) NULL\n        , raw_pallet_value nvarchar(100) NULL\n        , raw_pallet_comment nvarchar(max) NULL\n        , comment_line nvarchar(1000) NULL\n        , quantity_reconciled bit NOT NULL\n        , po_line_uid int NULL\n        , cancel_flag char(1) NULL\n        , has_duplicate_supplier_part bit NULL\n        , missing_supplier_part_flag bit NULL\n        , komar_item_id nvarchar(100) NULL\n        , container_uom nvarchar(50) NULL\n        , created_at_utc datetime2(0) NOT NULL\n            CONSTRAINT DF_coats_mexico_pallet_line_created_at_utc DEFAULT SYSUTCDATETIME()\n        , CONSTRAINT PK_coats_mexico_shipment_pallet_line\n            PRIMARY KEY CLUSTERED (shipment_pallet_line_id)\n    );\nEND;\n\nIF OBJECT_ID('dbo.coats_mexico_shipment_raw_line', 'U') IS NULL\nBEGIN\n    CREATE TABLE dbo.coats_mexico_shipment_raw_line\n    (\n          shipment_raw_line_id bigint IDENTITY(1,1) NOT NULL\n        , shipment_file_id uniqueidentifier NOT NULL\n        , source_sheet nvarchar(128) NOT NULL\n        , source_row_number int NOT NULL\n        , Bin_ID nvarchar(100) NULL\n        , Item_ID nvarchar(100) NULL\n        , PO_No nvarchar(50) NULL\n        , Invoiced_Qty decimal(18,4) NULL\n        , raw_pallet_comment nvarchar(max) NULL\n        , created_at_utc datetime2(0) NOT NULL\n            CONSTRAINT DF_coats_mexico_raw_line_created_at_utc DEFAULT SYSUTCDATETIME()\n        , CONSTRAINT PK_coats_mexico_shipment_raw_line\n            PRIMARY KEY CLUSTERED (shipment_raw_line_id)\n    );\nEND;\n\nIF OBJECT_ID('dbo.coats_mexico_shipment_file', 'U') IS NULL\nBEGIN\n    CREATE TABLE dbo.coats_mexico_shipment_file\n    (\n          shipment_file_id uniqueidentifier NOT NULL\n        , source_file_name nvarchar(260) NOT NULL\n        , source_web_url nvarchar(1000) NULL\n        , shipment_date date NULL\n        , trailer_name nvarchar(50) NULL\n        , estimated_arrival_date date NULL\n        , pipeline_run_id nvarchar(100) NULL\n        , loaded_at_utc datetime2(0) NOT NULL\n        , raw_payload nvarchar(max) NOT NULL\n        , created_at_utc datetime2(0) NOT NULL\n            CONSTRAINT DF_coats_mexico_file_created_at_utc DEFAULT SYSUTCDATETIME()\n        , CONSTRAINT PK_coats_mexico_shipment_file\n            PRIMARY KEY CLUSTERED (shipment_file_id)\n    );\nEND;\n\nIF NOT EXISTS (\n    SELECT 1\n    FROM sys.foreign_keys\n    WHERE name = 'FK_coats_mexico_raw_line_file'\n)\nBEGIN\n    ALTER TABLE dbo.coats_mexico_shipment_raw_line\n    ADD CONSTRAINT FK_coats_mexico_raw_line_file\n        FOREIGN KEY (shipment_file_id)\n        REFERENCES dbo.coats_mexico_shipment_file (shipment_file_id);\nEND;\n\nIF NOT EXISTS (\n    SELECT 1\n    FROM sys.foreign_keys\n    WHERE name = 'FK_coats_mexico_pallet_line_file'\n)\nBEGIN\n    ALTER TABLE dbo.coats_mexico_shipment_pallet_line\n    ADD CONSTRAINT FK_coats_mexico_pallet_line_file\n        FOREIGN KEY (shipment_file_id)\n        REFERENCES dbo.coats_mexico_shipment_file (shipment_file_id);\nEND;\n\nIF NOT EXISTS (\n    SELECT 1\n    FROM sys.foreign_keys\n    WHERE name = 'FK_coats_mexico_validation_issue_file'\n)\nBEGIN\n    ALTER TABLE dbo.coats_mexico_shipment_validation_issue\n    ADD CONSTRAINT FK_coats_mexico_validation_issue_file\n        FOREIGN KEY (shipment_file_id)\n        REFERENCES dbo.coats_mexico_shipment_file (shipment_file_id);\nEND;\n\nIF NOT EXISTS (\n    SELECT 1\n    FROM sys.indexes\n    WHERE object_id = OBJECT_ID('dbo.coats_mexico_shipment_file')\n      AND name = 'IX_coats_mexico_file_source'\n)\nBEGIN\n    CREATE INDEX IX_coats_mexico_file_source\n        ON dbo.coats_mexico_shipment_file (source_file_name, shipment_date, trailer_name);\nEND;\n\nIF NOT EXISTS (\n    SELECT 1\n    FROM sys.indexes\n    WHERE object_id = OBJECT_ID('dbo.coats_mexico_shipment_pallet_line')\n      AND name = 'IX_coats_mexico_pallet_line_validate'\n)\nBEGIN\n    CREATE INDEX IX_coats_mexico_pallet_line_validate\n        ON dbo.coats_mexico_shipment_pallet_line (shipment_file_id, PO_No, Item_ID)\n        INCLUDE (Bin_ID, P21_Bin_ID, Invoiced_Qty, po_line_uid);\nEND;\n\nIF COL_LENGTH('dbo.coats_mexico_shipment_pallet_line', 'vessel_receipts_line_uid') IS NULL\nBEGIN\n    ALTER TABLE dbo.coats_mexico_shipment_pallet_line\n    ADD vessel_receipts_line_uid int NULL;\nEND;\n\nIF COL_LENGTH('dbo.coats_mexico_shipment_pallet_line', 'container_receipts_line_uid') IS NULL\nBEGIN\n    ALTER TABLE dbo.coats_mexico_shipment_pallet_line\n    ADD container_receipts_line_uid int NULL;\nEND;\n\nIF NOT EXISTS (\n    SELECT 1\n    FROM sys.indexes\n    WHERE object_id = OBJECT_ID('dbo.coats_mexico_shipment_validation_issue')\n      AND name = 'IX_coats_mexico_validation_issue_file'\n)\nBEGIN\n    CREATE INDEX IX_coats_mexico_validation_issue_file\n        ON dbo.coats_mexico_shipment_validation_issue (shipment_file_id, severity, issue_code);\nEND;\n\n\nDECLARE @payload nvarchar(max) = @extraction_payload;\n\nSET NOCOUNT ON;\n    SET XACT_ABORT ON;\n\n    IF ISJSON(@payload) <> 1\n    BEGIN\n        THROW 50000, 'Payload is not valid JSON.', 1;\n    END;\n\n    DECLARE @shipment_file_id uniqueidentifier =\n        TRY_CONVERT(uniqueidentifier, JSON_VALUE(@payload, '$.metadata.shipment_file_id'));\n\n    IF @shipment_file_id IS NULL\n    BEGIN\n        THROW 50001, 'Payload metadata.shipment_file_id is missing or invalid.', 1;\n    END;\n\n    BEGIN TRAN;\n\n    DECLARE @receipt_build_count int = 0;\n\n    IF OBJECT_ID('dbo.coats_mexico_shipment_receipt_build', 'U') IS NOT NULL\n    BEGIN\n        EXEC sp_executesql\n              N'\n                SELECT @receipt_build_count = COUNT(*)\n                FROM dbo.coats_mexico_shipment_receipt_build WITH (UPDLOCK, HOLDLOCK)\n                WHERE shipment_file_id = @shipment_file_id;\n              '\n            , N'@shipment_file_id uniqueidentifier, @receipt_build_count int OUTPUT'\n            , @shipment_file_id = @shipment_file_id\n            , @receipt_build_count = @receipt_build_count OUTPUT;\n\n        IF @receipt_build_count > 0\n        BEGIN\n            THROW 50002, 'Receipt records already exist for this shipment_file_id. Staging refresh is blocked.', 1;\n        END;\n    END;\n\n    IF EXISTS (\n        SELECT 1\n        FROM dbo.coats_mexico_shipment_file WITH (UPDLOCK, HOLDLOCK)\n        WHERE shipment_file_id = @shipment_file_id\n    )\n    BEGIN\n        UPDATE dbo.coats_mexico_shipment_file\n        SET\n              source_file_name = JSON_VALUE(@payload, '$.metadata.source_file_name')\n            , source_web_url = JSON_VALUE(@payload, '$.metadata.source_web_url')\n            , shipment_date = TRY_CONVERT(date, JSON_VALUE(@payload, '$.metadata.shipment_date'))\n            , trailer_name = JSON_VALUE(@payload, '$.metadata.trailer_name')\n            , estimated_arrival_date = TRY_CONVERT(date, JSON_VALUE(@payload, '$.metadata.estimated_arrival_date'))\n            , pipeline_run_id = JSON_VALUE(@payload, '$.metadata.pipeline_run_id')\n            , loaded_at_utc = COALESCE(\n                  TRY_CONVERT(datetime2(0), JSON_VALUE(@payload, '$.metadata.loaded_at_utc'), 127)\n                , SYSUTCDATETIME()\n              )\n            , raw_payload = @payload\n        WHERE shipment_file_id = @shipment_file_id;\n    END\n    ELSE\n    BEGIN\n        INSERT INTO dbo.coats_mexico_shipment_file\n        (\n              shipment_file_id\n            , source_file_name\n            , source_web_url\n            , shipment_date\n            , trailer_name\n            , estimated_arrival_date\n            , pipeline_run_id\n            , loaded_at_utc\n            , raw_payload\n        )\n        VALUES\n        (\n              @shipment_file_id\n            , JSON_VALUE(@payload, '$.metadata.source_file_name')\n            , JSON_VALUE(@payload, '$.metadata.source_web_url')\n            , TRY_CONVERT(date, JSON_VALUE(@payload, '$.metadata.shipment_date'))\n            , JSON_VALUE(@payload, '$.metadata.trailer_name')\n            , TRY_CONVERT(date, JSON_VALUE(@payload, '$.metadata.estimated_arrival_date'))\n            , JSON_VALUE(@payload, '$.metadata.pipeline_run_id')\n            , COALESCE(\n                  TRY_CONVERT(datetime2(0), JSON_VALUE(@payload, '$.metadata.loaded_at_utc'), 127)\n                , SYSUTCDATETIME()\n              )\n            , @payload\n        );\n    END;\n\n    DELETE FROM dbo.coats_mexico_shipment_validation_issue\n    WHERE shipment_file_id = @shipment_file_id;\n\n    DELETE FROM dbo.coats_mexico_shipment_pallet_line\n    WHERE shipment_file_id = @shipment_file_id;\n\n    DELETE FROM dbo.coats_mexico_shipment_raw_line\n    WHERE shipment_file_id = @shipment_file_id;\n\n    INSERT INTO dbo.coats_mexico_shipment_raw_line\n    (\n          shipment_file_id\n        , source_sheet\n        , source_row_number\n        , Bin_ID\n        , Item_ID\n        , PO_No\n        , Invoiced_Qty\n        , raw_pallet_comment\n    )\n    SELECT\n          @shipment_file_id\n        , j.source_sheet\n        , j.source_row_number\n        , j.Bin_ID\n        , j.Item_ID\n        , j.PO_No\n        , TRY_CONVERT(decimal(18,4), j.Invoiced_Qty)\n        , j.raw_pallet_comment\n    FROM OPENJSON(@payload, '$.raw_lines')\n    WITH\n    (\n          source_sheet nvarchar(128) '$.source_sheet'\n        , source_row_number int '$.source_row_number'\n        , Bin_ID nvarchar(100) '$.Bin_ID'\n        , Item_ID nvarchar(100) '$.Item_ID'\n        , PO_No nvarchar(50) '$.PO_No'\n        , Invoiced_Qty nvarchar(50) '$.Invoiced_Qty'\n        , raw_pallet_comment nvarchar(max) '$.raw_pallet_comment'\n    ) AS j;\n\n    INSERT INTO dbo.coats_mexico_shipment_pallet_line\n    (\n          shipment_file_id\n        , source_sheet\n        , source_row_number\n        , Bin_ID\n        , Item_ID\n        , PO_No\n        , Invoiced_Qty\n        , Parsed_Qty_Unit\n        , raw_pallet_value\n        , raw_pallet_comment\n        , comment_line\n        , quantity_reconciled\n    )\n    SELECT\n          @shipment_file_id\n        , j.source_sheet\n        , j.source_row_number\n        , j.Bin_ID\n        , j.Item_ID\n        , j.PO_No\n        , TRY_CONVERT(decimal(18,4), j.Invoiced_Qty)\n        , j.Parsed_Qty_Unit\n        , j.raw_pallet_value\n        , j.raw_pallet_comment\n        , j.comment_line\n        , COALESCE(j.quantity_reconciled, 0)\n    FROM OPENJSON(@payload, '$.pallet_lines')\n    WITH\n    (\n          source_sheet nvarchar(128) '$.source_sheet'\n        , source_row_number int '$.source_row_number'\n        , Bin_ID nvarchar(100) '$.Bin_ID'\n        , Item_ID nvarchar(100) '$.Item_ID'\n        , PO_No nvarchar(50) '$.PO_No'\n        , Invoiced_Qty nvarchar(50) '$.Invoiced_Qty'\n        , Parsed_Qty_Unit nvarchar(30) '$.Parsed_Qty_Unit'\n        , raw_pallet_value nvarchar(100) '$.raw_pallet_value'\n        , raw_pallet_comment nvarchar(max) '$.raw_pallet_comment'\n        , comment_line nvarchar(1000) '$.comment_line'\n        , quantity_reconciled bit '$.quantity_reconciled'\n    ) AS j;\n\n    INSERT INTO dbo.coats_mexico_shipment_validation_issue\n    (\n          shipment_file_id\n        , severity\n        , issue_code\n        , message\n        , source_sheet\n        , source_row_number\n        , Bin_ID\n        , Item_ID\n        , PO_No\n        , raw_pallet_comment\n    )\n    SELECT\n          @shipment_file_id\n        , COALESCE(j.severity, 'BLOCKING')\n        , j.issue_code\n        , j.message\n        , j.source_sheet\n        , j.source_row_number\n        , j.Bin_ID\n        , j.Item_ID\n        , j.PO_No\n        , j.raw_pallet_comment\n    FROM OPENJSON(@payload, '$.validation_issues')\n    WITH\n    (\n          severity nvarchar(20) '$.severity'\n        , issue_code nvarchar(100) '$.issue_code'\n        , message nvarchar(1000) '$.message'\n        , source_sheet nvarchar(128) '$.source_sheet'\n        , source_row_number int '$.source_row_number'\n        , Bin_ID nvarchar(100) '$.Bin_ID'\n        , Item_ID nvarchar(100) '$.Item_ID'\n        , PO_No nvarchar(50) '$.PO_No'\n        , raw_pallet_comment nvarchar(max) '$.raw_pallet_comment'\n    ) AS j;\n\n    COMMIT;\n\n    SELECT\n          f.shipment_file_id\n        , f.source_file_name\n        , f.shipment_date\n        , f.trailer_name\n        , f.estimated_arrival_date\n        , raw_line_count = (SELECT COUNT(*) FROM dbo.coats_mexico_shipment_raw_line r WHERE r.shipment_file_id = f.shipment_file_id)\n        , pallet_line_count = (SELECT COUNT(*) FROM dbo.coats_mexico_shipment_pallet_line p WHERE p.shipment_file_id = f.shipment_file_id)\n        , blocking_issue_count = (\n              SELECT COUNT(*)\n              FROM dbo.coats_mexico_shipment_validation_issue i\n              WHERE i.shipment_file_id = f.shipment_file_id\n                AND i.severity = 'BLOCKING'\n          )\n    FROM dbo.coats_mexico_shipment_file f\n    WHERE f.shipment_file_id = @shipment_file_id;\n",
+              "type": "Query"
+            }
+          ]
+        }
+      },
+      {
+        "dependsOn": [
+          {
+            "activity": "StageCoatsShipmentJson",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ],
+        "linkedServiceName": {
+          "referenceName": "SqlServer1",
+          "type": "LinkedServiceReference"
+        },
+        "name": "ValidateCoatsShipment",
+        "policy": {
+          "retry": 0,
+          "retryIntervalInSeconds": 30,
+          "secureInput": true,
+          "secureOutput": false,
+          "timeout": "0.00:10:00"
+        },
+        "type": "Script",
+        "typeProperties": {
+          "logSettings": {
+            "logDestination": "ActivityOutput"
+          },
+          "scriptBlockExecutionTimeout": "00:10:00",
+          "scripts": [
+            {
+              "parameters": [
+                {
+                  "direction": "Input",
+                  "name": "extraction_payload",
+                  "type": "String",
+                  "value": {
+                    "type": "Expression",
+                    "value": "@string(activity('ProcessCoatsWorkbook').output.extraction)"
+                  }
+                }
+              ],
+              "text": "USE P21Import;\n\nDECLARE @extractionPayload nvarchar(max) = @extraction_payload;\nDECLARE @ShipmentFileId uniqueidentifier = TRY_CONVERT(uniqueidentifier, JSON_VALUE(@extractionPayload, '$.metadata.shipment_file_id'));\n\n/*\nValidate one staged Coats Mexico shipment against P21Import.\n\nRun from the P21Import database. This keeps the Coats Mexico staging,\nvalidation, and receipt-write path scoped to P21Import instead of P21.\n\nSet @ShipmentFileId before running. This script does not create container,\nvessel receipt, container receipt, or document_line_bin records.\n*/\n\nSET NOCOUNT ON;\nSET XACT_ABORT ON;\nSET @ShipmentFileId = TRY_CONVERT(uniqueidentifier, JSON_VALUE(@extractionPayload, '$.metadata.shipment_file_id'));\nDECLARE @SupplierID int = 40408;\nDECLARE @BypassMissingPoLine bit = 0;\n\nIF @ShipmentFileId IS NULL\nBEGIN\n    THROW 50000, 'Extractor payload metadata.shipment_file_id is missing or invalid.', 1;\nEND;\n\nIF NOT EXISTS (\n    SELECT 1\n    FROM P21Import.dbo.coats_mexico_shipment_file\n    WHERE shipment_file_id = @ShipmentFileId\n)\nBEGIN\n    THROW 50001, 'Shipment file was not found in P21Import staging.', 1;\nEND;\n\nBEGIN TRAN;\n\nDELETE FROM P21Import.dbo.coats_mexico_shipment_validation_issue\nWHERE shipment_file_id = @ShipmentFileId\n  AND issue_code IN\n  (\n        'MISSING_SUPPLIER_PART'\n      , 'DUPLICATE_SUPPLIER_PART'\n      , 'MISSING_PO_LINE'\n      , 'DUPLICATE_PO_LINE'\n      , 'CANCELED_PO_LINE'\n      , 'COMPLETED_PO_LINE'\n      , 'INVALID_BIN_ID'\n      , 'MISSING_REQUIRED_VALUE_SQL'\n  );\n\n;WITH cte_last_color_bin AS (\n    SELECT TOP (1)\n          dlb.bin_cd\n        , dlb.date_created\n        , CASE\n              WHEN p.prefix = 'BL' THEN 'Y'\n              WHEN p.prefix = 'Y' THEN 'BL'\n              ELSE 'unknown'\n          END AS next_bin_start\n    FROM P21.dbo.document_line_bin AS dlb\n    CROSS APPLY (\n        SELECT prefix =\n            CASE\n                WHEN PATINDEX('%[0-9]%', dlb.bin_cd) > 0\n                    THEN LEFT(dlb.bin_cd, PATINDEX('%[0-9]%', dlb.bin_cd) - 1)\n                ELSE dlb.bin_cd\n            END\n    ) AS p\n    WHERE dlb.document_type = 'CR'\n      AND p.prefix IN ('BL', 'Y')\n    ORDER BY\n          dlb.date_created DESC\n        , dlb.bin_cd DESC\n)\nUPDATE p\nSET P21_Bin_ID =\n    CASE\n        WHEN CHARINDEX('-', p.Bin_ID) > 0 THEN\n            (SELECT next_bin_start FROM cte_last_color_bin)\n            + SUBSTRING(p.Bin_ID, CHARINDEX('-', p.Bin_ID) + 1, LEN(p.Bin_ID))\n        ELSE p.Bin_ID\n    END\nFROM P21Import.dbo.coats_mexico_shipment_pallet_line AS p\nWHERE p.shipment_file_id = @ShipmentFileId;\n\n;WITH supplier_part AS (\n    SELECT\n          ivs.supplier_part_no\n        , active_part_count = COUNT(DISTINCT ivs.inv_mast_uid)\n        , komar_item_id = MAX(ivm.item_id)\n    FROM P21.dbo.inventory_supplier AS ivs\n    JOIN P21.dbo.inv_mast AS ivm\n      ON ivm.inv_mast_uid = ivs.inv_mast_uid\n    WHERE ivs.supplier_id = @SupplierID\n      AND ISNULL(ivm.delete_flag, 'N') <> 'Y'\n    GROUP BY\n          ivs.supplier_part_no\n),\npo_candidates AS (\n    SELECT\n          p.shipment_pallet_line_id\n        , pol.po_line_uid\n        , pol.cancel_flag\n        , container_uom =\n            CASE\n                WHEN ivm.default_purchasing_unit = pol.unit_of_measure\n                    THEN pol.unit_of_measure\n                ELSE ivm.default_purchasing_unit\n            END\n        , rn = ROW_NUMBER() OVER (\n              PARTITION BY p.shipment_pallet_line_id\n              ORDER BY\n                    CASE WHEN ISNULL(pol.cancel_flag, 'N') = 'Y' THEN 1 ELSE 0 END\n                  , pol.po_line_uid\n          )\n        , match_count = COUNT(*) OVER (\n              PARTITION BY p.shipment_pallet_line_id\n          )\n    FROM P21Import.dbo.coats_mexico_shipment_pallet_line AS p\n    JOIN P21.dbo.po_line AS pol\n      ON pol.po_no = p.PO_No\n     AND (pol.complete <> 'Y' OR ISNULL(pol.cancel_flag, 'N') = 'Y')\n    JOIN P21.dbo.inv_mast AS ivm\n      ON ivm.inv_mast_uid = pol.inv_mast_uid\n     AND ISNULL(ivm.delete_flag, 'N') <> 'Y'\n    JOIN P21.dbo.inventory_supplier AS ivs\n      ON ivs.inv_mast_uid = ivm.inv_mast_uid\n     AND ivs.supplier_id = @SupplierID\n     AND ivs.supplier_part_no = p.Item_ID\n    WHERE p.shipment_file_id = @ShipmentFileId\n),\nchosen_po AS (\n    SELECT\n          shipment_pallet_line_id\n        , po_line_uid\n        , cancel_flag\n        , container_uom\n        , match_count\n    FROM po_candidates\n    WHERE rn = 1\n)\nUPDATE p\nSET\n      p.po_line_uid = c.po_line_uid\n    , p.cancel_flag = c.cancel_flag\n    , p.container_uom = c.container_uom\n    , p.has_duplicate_supplier_part =\n        CASE WHEN ISNULL(sp.active_part_count, 0) > 1 THEN 1 ELSE 0 END\n    , p.missing_supplier_part_flag =\n        CASE WHEN ISNULL(sp.active_part_count, 0) = 0 THEN 1 ELSE 0 END\n    , p.komar_item_id = sp.komar_item_id\nFROM P21Import.dbo.coats_mexico_shipment_pallet_line AS p\nLEFT JOIN supplier_part AS sp\n  ON sp.supplier_part_no = p.Item_ID\nLEFT JOIN chosen_po AS c\n  ON c.shipment_pallet_line_id = p.shipment_pallet_line_id\nWHERE p.shipment_file_id = @ShipmentFileId;\n\n;WITH po_line_status AS (\n    SELECT\n          p.shipment_pallet_line_id\n        , any_po_line_count = COUNT(DISTINCT pol.po_line_uid)\n        , open_or_canceled_po_line_count = COUNT(DISTINCT CASE\n              WHEN pol.complete <> 'Y'\n                OR ISNULL(pol.cancel_flag, 'N') = 'Y'\n                  THEN pol.po_line_uid\n          END)\n        , completed_non_canceled_po_line_count = COUNT(DISTINCT CASE\n              WHEN pol.complete = 'Y'\n                AND ISNULL(pol.cancel_flag, 'N') <> 'Y'\n                  THEN pol.po_line_uid\n          END)\n    FROM P21Import.dbo.coats_mexico_shipment_pallet_line AS p\n    JOIN P21.dbo.inventory_supplier AS ivs\n      ON ivs.supplier_id = @SupplierID\n     AND ivs.supplier_part_no = p.Item_ID\n    JOIN P21.dbo.inv_mast AS ivm\n      ON ivm.inv_mast_uid = ivs.inv_mast_uid\n     AND ISNULL(ivm.delete_flag, 'N') <> 'Y'\n    JOIN P21.dbo.po_line AS pol\n      ON pol.po_no = p.PO_No\n     AND pol.inv_mast_uid = ivm.inv_mast_uid\n    WHERE p.shipment_file_id = @ShipmentFileId\n    GROUP BY\n          p.shipment_pallet_line_id\n)\nINSERT INTO P21Import.dbo.coats_mexico_shipment_validation_issue\n(\n      shipment_file_id\n    , severity\n    , issue_code\n    , message\n    , source_sheet\n    , source_row_number\n    , Bin_ID\n    , Item_ID\n    , PO_No\n    , raw_pallet_comment\n)\nSELECT\n      p.shipment_file_id\n    , v.severity\n    , v.issue_code\n    , v.message\n    , p.source_sheet\n    , p.source_row_number\n    , p.Bin_ID\n    , p.Item_ID\n    , p.PO_No\n    , p.raw_pallet_comment\nFROM P21Import.dbo.coats_mexico_shipment_pallet_line AS p\nLEFT JOIN po_line_status AS pls\n  ON pls.shipment_pallet_line_id = p.shipment_pallet_line_id\nCROSS APPLY (\n    VALUES\n          (\n              CASE\n                  WHEN NULLIF(LTRIM(RTRIM(ISNULL(p.Item_ID, ''))), '') IS NULL\n                    OR NULLIF(LTRIM(RTRIM(ISNULL(p.PO_No, ''))), '') IS NULL\n                    OR p.Invoiced_Qty IS NULL\n                      THEN 'MISSING_REQUIRED_VALUE_SQL'\n              END,\n              'BLOCKING',\n              'Required item, purchase order, or quantity value is missing from the workbook.'\n          )\n        , (\n              CASE WHEN p.missing_supplier_part_flag = 1 THEN 'MISSING_SUPPLIER_PART' END,\n              'BLOCKING',\n              CONCAT('Item ', ISNULL(NULLIF(p.Item_ID, ''), '[blank]'), ' has a supplier part number mismatch. Please check Item Maintenance.')\n          )\n        , (\n              CASE WHEN p.has_duplicate_supplier_part = 1 THEN 'DUPLICATE_SUPPLIER_PART' END,\n              'BLOCKING',\n              CONCAT('Item ', ISNULL(NULLIF(p.Item_ID, ''), '[blank]'), ' has duplicate supplier parts. Please check Item Maintenance.')\n          )\n        , (\n              CASE\n                  WHEN p.po_line_uid IS NULL\n                    AND ISNULL(p.missing_supplier_part_flag, 0) = 0\n                    AND ISNULL(pls.any_po_line_count, 0) = 0\n                      THEN 'MISSING_PO_LINE'\n              END,\n              CASE WHEN @BypassMissingPoLine = 1 THEN 'INTERNAL' ELSE 'BLOCKING' END,\n              CASE\n                  WHEN @BypassMissingPoLine = 1\n                      THEN CONCAT('Item ', ISNULL(NULLIF(p.Item_ID, ''), '[blank]'), ' is missing from the Purchase Order and will be skipped for this test run.')\n                  ELSE CONCAT('Item ', ISNULL(NULLIF(p.Item_ID, ''), '[blank]'), ' is missing from the Purchase Order.')\n              END\n          )\n        , (\n              CASE\n                  WHEN p.po_line_uid IS NULL\n                    AND ISNULL(p.missing_supplier_part_flag, 0) = 0\n                    AND ISNULL(pls.completed_non_canceled_po_line_count, 0) > 0\n                    AND ISNULL(pls.open_or_canceled_po_line_count, 0) = 0\n                      THEN 'COMPLETED_PO_LINE'\n              END,\n              'BLOCKING',\n              CONCAT('Item ', ISNULL(NULLIF(p.Item_ID, ''), '[blank]'), ' is on the Purchase Order but the matching PO line is complete. Please review the PO line.')\n          )\n        , (\n              CASE WHEN p.cancel_flag = 'Y' THEN 'CANCELED_PO_LINE' END,\n              'BLOCKING',\n              CONCAT('Item ', ISNULL(NULLIF(p.Item_ID, ''), '[blank]'), ' is on the Purchase Order but the line is cancelled. Please un-cancel the PO line.')\n          )\n        , (\n              CASE\n                  WHEN p.P21_Bin_ID IS NULL\n                    OR (p.P21_Bin_ID NOT LIKE 'BL%' AND p.P21_Bin_ID NOT LIKE 'Y%')\n                      THEN 'INVALID_BIN_ID'\n              END,\n              'INTERNAL',\n              'Bin ID requires pipeline review; no purchaser action is required.'\n          )\n) AS v(issue_code, severity, message)\nWHERE p.shipment_file_id = @ShipmentFileId\n  AND v.issue_code IS NOT NULL;\n\n;WITH po_match_counts AS (\n    SELECT\n          p.shipment_pallet_line_id\n        , match_count = COUNT(*)\n    FROM P21Import.dbo.coats_mexico_shipment_pallet_line AS p\n    JOIN P21.dbo.po_line AS pol\n      ON pol.po_no = p.PO_No\n     AND pol.complete <> 'Y'\n    JOIN P21.dbo.inv_mast AS ivm\n      ON ivm.inv_mast_uid = pol.inv_mast_uid\n     AND ISNULL(ivm.delete_flag, 'N') <> 'Y'\n    JOIN P21.dbo.inventory_supplier AS ivs\n      ON ivs.inv_mast_uid = ivm.inv_mast_uid\n     AND ivs.supplier_id = @SupplierID\n     AND ivs.supplier_part_no = p.Item_ID\n    WHERE p.shipment_file_id = @ShipmentFileId\n    GROUP BY\n          p.shipment_pallet_line_id\n)\nINSERT INTO P21Import.dbo.coats_mexico_shipment_validation_issue\n(\n      shipment_file_id\n    , severity\n    , issue_code\n    , message\n    , source_sheet\n    , source_row_number\n    , Bin_ID\n    , Item_ID\n    , PO_No\n    , raw_pallet_comment\n)\nSELECT\n      p.shipment_file_id\n    , 'BLOCKING'\n    , 'DUPLICATE_PO_LINE'\n    , CONCAT('Item ', ISNULL(NULLIF(p.Item_ID, ''), '[blank]'), ' matches more than one open Purchase Order line. Please review the Purchase Order.')\n    , p.source_sheet\n    , p.source_row_number\n    , p.Bin_ID\n    , p.Item_ID\n    , p.PO_No\n    , p.raw_pallet_comment\nFROM P21Import.dbo.coats_mexico_shipment_pallet_line AS p\nJOIN po_match_counts AS c\n  ON c.shipment_pallet_line_id = p.shipment_pallet_line_id\nWHERE c.match_count > 1;\n\nCOMMIT;\n\nSELECT\n      shipment_file_id = @ShipmentFileId\n    , f.source_file_name\n    , f.source_web_url\n    , f.shipment_date\n    , f.trailer_name\n    , f.estimated_arrival_date\n    , pallet_line_count = (\n          SELECT COUNT(*)\n          FROM P21Import.dbo.coats_mexico_shipment_pallet_line\n          WHERE shipment_file_id = @ShipmentFileId\n      )\n    , blocking_issue_count = (\n          SELECT COUNT(*)\n          FROM P21Import.dbo.coats_mexico_shipment_validation_issue\n          WHERE shipment_file_id = @ShipmentFileId\n                AND severity = 'BLOCKING'\n      )\nFROM P21Import.dbo.coats_mexico_shipment_file AS f\nWHERE f.shipment_file_id = @ShipmentFileId;\n\nSELECT\n      i.issue_code\n    , i.severity\n    , i.message\n    , i.source_sheet\n    , i.source_row_number\n    , i.Bin_ID\n    , i.Item_ID\n    , i.PO_No\n    , Invoiced_Qty = (\n          SELECT TOP (1) p.Invoiced_Qty\n          FROM P21Import.dbo.coats_mexico_shipment_pallet_line AS p\n          WHERE p.shipment_file_id = i.shipment_file_id\n            AND p.source_sheet = i.source_sheet\n            AND p.source_row_number = i.source_row_number\n            AND ISNULL(p.Bin_ID, '') = ISNULL(i.Bin_ID, '')\n            AND ISNULL(p.Item_ID, '') = ISNULL(i.Item_ID, '')\n            AND ISNULL(p.PO_No, '') = ISNULL(i.PO_No, '')\n          ORDER BY p.shipment_pallet_line_id\n      )\n    , i.raw_pallet_comment\nFROM P21Import.dbo.coats_mexico_shipment_validation_issue AS i\nWHERE i.shipment_file_id = @ShipmentFileId\nORDER BY\n      i.severity\n    , i.issue_code\n    , i.source_row_number;\n\nSELECT issue_json =\n    COALESCE(\n        (\n            SELECT\n                  i.issue_code\n                , i.severity\n                , i.message\n                , i.source_sheet\n                , i.source_row_number\n                , i.Bin_ID\n                , i.Item_ID\n                , i.PO_No\n                , Invoiced_Qty = (\n                      SELECT TOP (1) p.Invoiced_Qty\n                      FROM P21Import.dbo.coats_mexico_shipment_pallet_line AS p\n                      WHERE p.shipment_file_id = i.shipment_file_id\n                        AND p.source_sheet = i.source_sheet\n                        AND p.source_row_number = i.source_row_number\n                        AND ISNULL(p.Bin_ID, '') = ISNULL(i.Bin_ID, '')\n                        AND ISNULL(p.Item_ID, '') = ISNULL(i.Item_ID, '')\n                        AND ISNULL(p.PO_No, '') = ISNULL(i.PO_No, '')\n                      ORDER BY p.shipment_pallet_line_id\n                  )\n                , i.raw_pallet_comment\n            FROM P21Import.dbo.coats_mexico_shipment_validation_issue AS i\n            WHERE i.shipment_file_id = @ShipmentFileId\n            ORDER BY\n                  i.severity\n                , i.issue_code\n                , i.source_row_number\n            FOR JSON PATH\n        ),\n        '[]'\n    );\n",
+              "type": "Query"
+            }
+          ]
+        }
+      },
+      {
+        "dependsOn": [
+          {
+            "activity": "ValidateCoatsShipment",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ],
+        "name": "IfBlockingValidationIssues",
+        "type": "IfCondition",
+        "typeProperties": {
+          "expression": {
+            "type": "Expression",
+            "value": "@greater(int(activity('ValidateCoatsShipment').output.resultSets[0].rows[0].blocking_issue_count), 0)"
+          },
+          "ifFalseActivities": [
+            {
+              "dependsOn": [],
+              "linkedServiceName": {
+                "referenceName": "SqlServer1",
+                "type": "LinkedServiceReference"
+              },
+              "name": "CreateP21Receipts",
+              "policy": {
+                "retry": 0,
+                "retryIntervalInSeconds": 30,
+                "secureInput": true,
+                "secureOutput": false,
+                "timeout": "0.00:10:00"
+              },
+              "type": "Script",
+              "typeProperties": {
+                "logSettings": {
+                  "logDestination": "ActivityOutput"
+                },
+                "scriptBlockExecutionTimeout": "00:10:00",
+                "scripts": [
+                  {
+                    "parameters": [
+                      {
+                        "direction": "Input",
+                        "name": "extraction_payload",
+                        "type": "String",
+                        "value": {
+                          "type": "Expression",
+                          "value": "@string(activity('ProcessCoatsWorkbook').output.extraction)"
+                        }
+                      },
+                      {
+                        "direction": "Input",
+                        "name": "created_by",
+                        "type": "String",
+                        "value": "ADF"
+                      }
+                    ],
+                    "text": "USE P21Import;\n\n/*\nCreate Coats Mexico P21 receipt records from validated P21Import staging rows.\n\nStage audit DDL runs in P21Import; receipt inserts run in P21. This script does not insert document_line_bin rows.\n*/\n\n\nSET NOCOUNT ON;\nSET XACT_ABORT ON;\n\n\nIF OBJECT_ID('dbo.coats_mexico_shipment_receipt_build', 'U') IS NULL\nBEGIN\n    CREATE TABLE dbo.coats_mexico_shipment_receipt_build\n    (\n          shipment_file_id uniqueidentifier NOT NULL\n        , container_building_uid int NOT NULL\n        , vessel_receipts_hdr_uid int NOT NULL\n        , vessel_receipts_container_uid int NOT NULL\n        , container_receipts_hdr_uid int NOT NULL\n        , container_name nvarchar(255) NOT NULL\n        , vessel_receipt_number decimal(19, 0) NOT NULL\n        , line_count int NOT NULL\n        , total_qty decimal(19, 9) NOT NULL\n        , created_by nvarchar(30) NOT NULL\n        , created_at datetime NOT NULL\n        , CONSTRAINT PK_coats_mexico_shipment_receipt_build\n            PRIMARY KEY CLUSTERED (shipment_file_id)\n    );\nEND;\n\n\nIF NOT EXISTS\n(\n    SELECT 1\n    FROM sys.foreign_keys\n    WHERE name = 'FK_coats_mexico_receipt_build_file'\n)\nBEGIN\n    ALTER TABLE dbo.coats_mexico_shipment_receipt_build\n    ADD CONSTRAINT FK_coats_mexico_receipt_build_file\n        FOREIGN KEY (shipment_file_id)\n        REFERENCES dbo.coats_mexico_shipment_file (shipment_file_id);\nEND;\n\n\nIF COL_LENGTH('dbo.coats_mexico_shipment_pallet_line', 'vessel_receipts_line_uid') IS NULL\nBEGIN\n    ALTER TABLE dbo.coats_mexico_shipment_pallet_line\n    ADD vessel_receipts_line_uid int NULL;\nEND;\n\n\nIF COL_LENGTH('dbo.coats_mexico_shipment_pallet_line', 'container_receipts_line_uid') IS NULL\nBEGIN\n    ALTER TABLE dbo.coats_mexico_shipment_pallet_line\n    ADD container_receipts_line_uid int NULL;\nEND;\n\n\n\nUSE P21;\n\nDECLARE @extractionPayload nvarchar(max) = @extraction_payload;\nDECLARE @ShipmentFileId uniqueidentifier = TRY_CONVERT(uniqueidentifier, JSON_VALUE(@extractionPayload, '$.metadata.shipment_file_id'));\nDECLARE @CreatedBy nvarchar(30) = @created_by;\nDECLARE @ReceiptDate date = NULL;\nDECLARE @AllowExisting bit = 1;\n\nSET NOCOUNT ON;\n    SET XACT_ABORT ON;\n\n    DECLARE\n          @Now datetime = dbo.p21_fn_GetSystemDatetime(CURRENT_TIMESTAMP, NULL, NULL)\n        , @ShipmentDate date\n        , @EstimatedArrivalDate date\n        , @TrailerName nvarchar(50)\n        , @ContainerName nvarchar(255)\n        , @CompanyId varchar(8) = 'KA'\n        , @LocationId decimal(19, 0) = 210\n        , @FreightTermsCd int = 1773\n        , @DocumentsReceivedFlag char(1) = 'N'\n        , @ApplyLandedCostsFlag char(1) = 'N'\n        , @ContainerBuildingStatus int = 702\n        , @ContainerBuildingPoStatus int = 702\n        , @VesselHdrStatus int = 972\n        , @VesselLineStatus int = 702\n        , @VesselContainerStatus int = 704\n        , @ContainerReceiptsHdrStatus int = 971\n        , @ContainerPackagingWeight decimal(19, 9) = 0.0\n        , @ContainerBuildingUid int\n        , @VesselReceiptsHdrUid int\n        , @VesselReceiptsContainerUid int\n        , @ContainerReceiptsHdrUid int\n        , @FirstVesselReceiptsLineUid bigint\n        , @FirstContainerReceiptsLineUid bigint\n        , @LastValue bigint\n        , @LineCount int\n        , @TotalQty decimal(19, 9)\n        , @UseDirectSequenceCounters bit = 0\n        , @CounterLoop int;\n\n    IF NULLIF(LTRIM(RTRIM(@CreatedBy)), '') IS NULL\n    BEGIN\n        THROW 52000, '@CreatedBy is required.', 1;\n    END;\n\n    IF DB_NAME() <> 'P21'\n    BEGIN\n        THROW 52001, 'This receipt script must run in the P21 database.', 1;\n    END;\n\n    IF DB_NAME() = 'P21Play'\n       AND HAS_PERMS_BY_NAME('dbo.p21_get_counter', 'OBJECT', 'EXECUTE') = 0\n    BEGIN\n        SET @UseDirectSequenceCounters = 1;\n    END;\n\n    DECLARE @required_column table\n    (\n          table_name sysname NOT NULL\n        , column_name sysname NOT NULL\n    );\n\n    INSERT INTO @required_column (table_name, column_name)\n    VALUES\n          ('container_building', 'container_building_uid')\n        , ('container_building', 'container_name')\n        , ('container_building', 'location_id')\n        , ('container_building', 'row_status_flag')\n        , ('container_building', 'date_created')\n        , ('container_building', 'created_by')\n        , ('container_building', 'date_last_modified')\n        , ('container_building', 'last_maintained_by')\n        , ('container_building', 'container_type_uid')\n        , ('container_building', 'container_packaging_weight')\n        , ('container_building_po', 'container_building_po_uid')\n        , ('container_building_po', 'container_building_uid')\n        , ('container_building_po', 'po_line_uid')\n        , ('container_building_po', 'row_status_flag')\n        , ('container_building_po', 'sequence_no')\n        , ('container_building_po', 'po_container_unit_qty')\n        , ('container_building_po', 'container_uom')\n        , ('container_building_po', 'container_unit_size')\n        , ('container_building_po', 'po_line_schedule_uid')\n        , ('container_building_po', 'priority_status_cd')\n        , ('container_building_po', 'date_created')\n        , ('container_building_po', 'created_by')\n        , ('container_building_po', 'date_last_modified')\n        , ('container_building_po', 'last_maintained_by')\n        , ('vessel_receipts_hdr', 'vessel_receipts_hdr_uid')\n        , ('vessel_receipts_hdr', 'vessel_receipt_number')\n        , ('vessel_receipts_hdr', 'company_id')\n        , ('vessel_receipts_hdr', 'location_id')\n        , ('vessel_receipts_hdr', 'vessel_name')\n        , ('vessel_receipts_hdr', 'departure_date')\n        , ('vessel_receipts_hdr', 'arrival_date')\n        , ('vessel_receipts_hdr', 'est_avail_ship_date')\n        , ('vessel_receipts_hdr', 'freight_terms_cd')\n        , ('vessel_receipts_hdr', 'documents_received_flag')\n        , ('vessel_receipts_hdr', 'apply_landed_costs_flag')\n        , ('vessel_receipts_hdr', 'period')\n        , ('vessel_receipts_hdr', 'year_for_period')\n        , ('vessel_receipts_hdr', 'row_status_flag')\n        , ('vessel_receipts_hdr', 'date_created')\n        , ('vessel_receipts_hdr', 'created_by')\n        , ('vessel_receipts_hdr', 'date_last_modified')\n        , ('vessel_receipts_hdr', 'last_maintained_by')\n        , ('vessel_receipts_hdr', 'currency_line_uid')\n        , ('vessel_receipts_hdr', 'exchange_date')\n        , ('vessel_receipts_hdr', 'receipt_date')\n        , ('vessel_receipts_hdr', 'currency_id')\n        , ('vessel_receipts_hdr', 'loading_port')\n        , ('vessel_receipts_hdr', 'loading_country')\n        , ('vessel_receipts_hdr', 'discharge_port')\n        , ('vessel_receipts_hdr', 'discharge_country')\n        , ('vessel_receipts_hdr', 'delivery_method')\n        , ('vessel_receipts_container', 'vessel_receipts_container_uid')\n        , ('vessel_receipts_container', 'vessel_receipts_hdr_uid')\n        , ('vessel_receipts_container', 'container_name')\n        , ('vessel_receipts_container', 'expected_arrival_date')\n        , ('vessel_receipts_container', 'row_status_flag')\n        , ('vessel_receipts_container', 'container_building_uid')\n        , ('vessel_receipts_container', 'date_created')\n        , ('vessel_receipts_container', 'created_by')\n        , ('vessel_receipts_container', 'date_last_modified')\n        , ('vessel_receipts_container', 'last_maintained_by')\n        , ('vessel_receipts_container', 'container_packaging_weight')\n        , ('vessel_receipts_container', 'container_capacity')\n        , ('vessel_receipts_container', 'received_date')\n        , ('vessel_receipts_container', 'container_seal_id')\n        , ('vessel_receipts_container', 'comments')\n        , ('vessel_receipts_container', 'container_type_uid')\n        , ('vessel_receipts_container', 'processing')\n        , ('vessel_receipts_container', 'processing_by')\n        , ('vessel_receipts_line', 'vessel_receipts_line_uid')\n        , ('vessel_receipts_line', 'vessel_receipts_hdr_uid')\n        , ('vessel_receipts_line', 'vessel_receipts_container_uid')\n        , ('vessel_receipts_line', 'line_no')\n        , ('vessel_receipts_line', 'po_line_uid')\n        , ('vessel_receipts_line', 'container_building_po_uid')\n        , ('vessel_receipts_line', 'container_qty_received')\n        , ('vessel_receipts_line', 'container_qty_unloaded')\n        , ('vessel_receipts_line', 'po_sku_cost')\n        , ('vessel_receipts_line', 'po_sku_cost_display')\n        , ('vessel_receipts_line', 'sku_vessel_line_lc_amt')\n        , ('vessel_receipts_line', 'container_uom')\n        , ('vessel_receipts_line', 'container_unit_size')\n        , ('vessel_receipts_line', 'row_status_flag')\n        , ('vessel_receipts_line', 'date_created')\n        , ('vessel_receipts_line', 'created_by')\n        , ('vessel_receipts_line', 'date_last_modified')\n        , ('vessel_receipts_line', 'last_maintained_by')\n        , ('vessel_receipts_line', 'reduce_po_line_qty_flag')\n        , ('vessel_receipts_line', 'exclude_from_landed_cost_flag')\n        , ('oe_line_po', 'order_number')\n        , ('oe_line_po', 'line_number')\n        , ('oe_line_po', 'po_no')\n        , ('oe_line_po', 'date_created')\n        , ('oe_line_po', 'date_last_modified')\n        , ('oe_line_po', 'last_maintained_by')\n        , ('oe_line_po', 'quantity_on_po')\n        , ('oe_line_po', 'po_line_number')\n        , ('oe_line_po', 'delete_flag')\n        , ('oe_line_po', 'cancel_flag')\n        , ('oe_line_po', 'completed')\n        , ('oe_line_po', 'connection_type')\n        , ('container_receipts_hdr', 'container_receipts_hdr_uid')\n        , ('container_receipts_hdr', 'vessel_receipts_container_uid')\n        , ('container_receipts_hdr', 'date_received')\n        , ('container_receipts_hdr', 'period')\n        , ('container_receipts_hdr', 'year_for_period')\n        , ('container_receipts_hdr', 'row_status_flag')\n        , ('container_receipts_hdr', 'date_created')\n        , ('container_receipts_hdr', 'created_by')\n        , ('container_receipts_hdr', 'date_last_modified')\n        , ('container_receipts_hdr', 'last_maintained_by')\n        , ('container_receipts_hdr', 'receiving_location_id')\n        , ('container_receipts_hdr', 'currency_line_uid')\n        , ('container_receipts_hdr', 'exchange_date')\n        , ('container_receipts_hdr', 'rfnav_trans_no')\n        , ('container_receipts_hdr', 'processing')\n        , ('container_receipts_hdr', 'processing_by')\n        , ('container_receipts_line', 'container_receipts_line_uid')\n        , ('container_receipts_line', 'container_receipts_hdr_uid')\n        , ('container_receipts_line', 'vessel_receipts_line_uid')\n        , ('container_receipts_line', 'qty_received')\n        , ('container_receipts_line', 'unit_of_measure')\n        , ('container_receipts_line', 'unit_size')\n        , ('container_receipts_line', 'date_created')\n        , ('container_receipts_line', 'created_by')\n        , ('container_receipts_line', 'date_last_modified')\n        , ('container_receipts_line', 'last_maintained_by')\n        , ('container_receipts_line', 'complete_po_line_flag')\n        , ('container_receipts_line', 'transfer_flag')\n        , ('container_receipts_line', 'wrong_part_no_flag')\n        , ('container_receipts_line', 'currency_line_uid')\n        , ('container_receipts_line', 'exclude_from_landed_cost_flag');\n\n    IF EXISTS\n    (\n        SELECT 1\n        FROM @required_column AS rc\n        WHERE COL_LENGTH('dbo.' + rc.table_name, rc.column_name) IS NULL\n    )\n    BEGIN\n        SELECT\n              rc.table_name\n            , rc.column_name\n            , full_table_name = 'dbo.' + rc.table_name\n            , col_length_value = COL_LENGTH('dbo.' + rc.table_name, rc.column_name)\n            , issue = 'Missing required P21 column according to ADF linked service login'\n        FROM @required_column AS rc\n        WHERE COL_LENGTH('dbo.' + rc.table_name, rc.column_name) IS NULL\n        ORDER BY\n              rc.table_name\n            , rc.column_name;\n\n        THROW 52009, 'One or more required P21 target columns are missing. No counters were allocated.', 1;\n    END;\n\n    SELECT\n          @ShipmentDate = f.shipment_date\n        , @EstimatedArrivalDate = f.estimated_arrival_date\n        , @TrailerName = f.trailer_name\n    FROM P21Import.dbo.coats_mexico_shipment_file AS f\n    WHERE f.shipment_file_id = @ShipmentFileId;\n\n    IF @ShipmentDate IS NULL OR @EstimatedArrivalDate IS NULL OR NULLIF(LTRIM(RTRIM(@TrailerName)), '') IS NULL\n    BEGIN\n        THROW 52002, 'Shipment file is missing shipment_date, estimated_arrival_date, or trailer_name.', 1;\n    END;\n\n    SET @ReceiptDate = COALESCE(@ReceiptDate, @EstimatedArrivalDate);\n    SET @ContainerName = LEFT(@TrailerName, 255);\n\n    IF EXISTS\n    (\n        SELECT 1\n        FROM P21Import.dbo.coats_mexico_shipment_validation_issue\n        WHERE shipment_file_id = @ShipmentFileId\n          AND severity = 'BLOCKING'\n    )\n    BEGIN\n        THROW 52003, 'Blocking validation issues exist for this shipment. Resolve them before creating P21 receipt records.', 1;\n    END;\n\n    IF EXISTS\n    (\n        SELECT 1\n        FROM P21Import.dbo.coats_mexico_shipment_receipt_build\n        WHERE shipment_file_id = @ShipmentFileId\n    )\n    BEGIN\n        IF @AllowExisting = 1\n        BEGIN\n            SELECT\n                  shipment_file_id\n                , container_building_uid\n                , vessel_receipts_hdr_uid\n                , vessel_receipts_container_uid\n                , container_receipts_hdr_uid\n                , container_name\n                , vessel_receipt_number\n                , line_count\n                , total_qty\n                , created_by\n                , created_at\n            FROM P21Import.dbo.coats_mexico_shipment_receipt_build\n            WHERE shipment_file_id = @ShipmentFileId;\n\n            RETURN;\n        END;\n\n        THROW 52004, 'Receipt records have already been created for this shipment_file_id.', 1;\n    END;\n\n    IF EXISTS\n    (\n        SELECT 1\n        FROM P21Import.dbo.coats_mexico_shipment_receipt_build AS rb WITH (UPDLOCK, HOLDLOCK)\n        INNER JOIN P21Import.dbo.coats_mexico_shipment_file AS f\n          ON f.shipment_file_id = rb.shipment_file_id\n        WHERE rb.shipment_file_id <> @ShipmentFileId\n          AND f.shipment_date = @ShipmentDate\n          AND UPPER(LTRIM(RTRIM(f.trailer_name))) = UPPER(LTRIM(RTRIM(@TrailerName)))\n    )\n    BEGIN\n        THROW 52015, 'Receipt records already exist for another shipment_file_id with the same shipment_date and trailer_name.', 1;\n    END;\n\n    IF EXISTS\n    (\n        SELECT 1\n        FROM dbo.container_building\n        WHERE location_id = @LocationId\n          AND container_name = @ContainerName\n    )\n    BEGIN\n        SET @ContainerName = LEFT(CONCAT(LEFT(@TrailerName, 244), ' ', CONVERT(char(10), CAST(@Now AS date), 23)), 255);\n\n        IF EXISTS\n        (\n            SELECT 1\n            FROM dbo.container_building\n            WHERE location_id = @LocationId\n              AND container_name = @ContainerName\n        )\n        BEGIN\n            THROW 52005, 'A container_building row already exists for this location_id and both the original and dated fallback trailer/container names.', 1;\n        END;\n    END;\n\n    IF EXISTS\n    (\n        SELECT 1\n        FROM dbo.vessel_receipts_hdr\n        WHERE location_id = @LocationId\n          AND vessel_name = @ContainerName\n          AND departure_date = @ShipmentDate\n    )\n    BEGIN\n        THROW 52006, 'A vessel_receipts_hdr row already exists for this location, trailer, and shipment date.', 1;\n    END;\n\n    IF OBJECT_ID('tempdb..#shipment_line') IS NOT NULL\n        DROP TABLE #shipment_line;\n\n    ;WITH grouped AS\n    (\n        SELECT\n              p.po_line_uid\n            , sort_po_no = MIN(p.PO_No)\n            , sort_item_id = MIN(p.Item_ID)\n            , qty = SUM(CONVERT(decimal(19, 9), p.Invoiced_Qty))\n            , container_uom = MAX(COALESCE(\n                  p.container_uom,\n                  CASE\n                      WHEN ivm.default_purchasing_unit = pol.unit_of_measure\n                          THEN pol.unit_of_measure\n                      ELSE ivm.default_purchasing_unit\n                  END\n              ))\n            , container_unit_size = CONVERT(decimal(19, 9), 1.0)\n        FROM P21Import.dbo.coats_mexico_shipment_pallet_line AS p\n        LEFT JOIN dbo.po_line AS pol\n          ON pol.po_line_uid = p.po_line_uid\n        LEFT JOIN dbo.inv_mast AS ivm\n          ON ivm.inv_mast_uid = pol.inv_mast_uid\n        WHERE p.shipment_file_id = @ShipmentFileId\n          AND p.po_line_uid IS NOT NULL\n          AND p.Invoiced_Qty IS NOT NULL\n        GROUP BY\n              p.po_line_uid\n    )\n    SELECT\n          po_line_uid\n        , qty\n        , container_uom\n        , container_unit_size\n        , line_no = ROW_NUMBER() OVER (ORDER BY sort_po_no, sort_item_id, po_line_uid)\n    INTO #shipment_line\n    FROM grouped;\n\n    SELECT\n          @LineCount = COUNT(*)\n        , @TotalQty = COALESCE(SUM(qty), 0)\n    FROM #shipment_line;\n\n    IF OBJECT_ID('tempdb..#shipment_sales_order_link') IS NOT NULL\n        DROP TABLE #shipment_sales_order_link;\n\n    ;WITH open_po_link AS\n    (\n        SELECT\n              s.po_line_uid\n            , s.line_no\n            , pol.po_no\n            , po_line_no = pol.line_no\n            , olp.order_number\n            , olp.line_number\n            , available_qty = CONVERT(decimal(19, 9), olp.quantity_on_po)\n            , prior_available_qty = CONVERT(decimal(19, 9), COALESCE(SUM(CONVERT(decimal(19, 9), olp.quantity_on_po)) OVER\n              (\n                  PARTITION BY s.po_line_uid\n                  ORDER BY olp.date_created, olp.order_number, olp.line_number\n                  ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING\n              ), 0))\n            , receipt_qty = s.qty\n        FROM #shipment_line AS s\n        INNER JOIN dbo.po_line AS pol\n          ON pol.po_line_uid = s.po_line_uid\n        INNER JOIN dbo.oe_line_po AS olp\n          ON olp.po_no = pol.po_no\n         AND olp.po_line_number = pol.line_no\n         AND olp.connection_type = 'P'\n         AND ISNULL(olp.delete_flag, 'N') = 'N'\n         AND ISNULL(olp.cancel_flag, 'N') = 'N'\n         AND ISNULL(olp.completed, 'N') = 'N'\n         AND CONVERT(decimal(19, 9), olp.quantity_on_po) > 0\n    )\n    SELECT\n          po_line_uid\n        , line_no\n        , po_no\n        , po_line_no\n        , order_number\n        , line_number\n        , quantity_to_move = CONVERT(decimal(19, 9),\n              CASE\n                  WHEN receipt_qty <= prior_available_qty THEN 0\n                  WHEN receipt_qty - prior_available_qty >= available_qty THEN available_qty\n                  ELSE receipt_qty - prior_available_qty\n              END)\n    INTO #shipment_sales_order_link\n    FROM open_po_link\n    WHERE receipt_qty > prior_available_qty;\n\n    DELETE FROM #shipment_sales_order_link\n    WHERE quantity_to_move <= 0;\n\n    IF @LineCount = 0\n    BEGIN\n        THROW 52007, 'No validated staged pallet lines with po_line_uid and quantity were found for this shipment.', 1;\n    END;\n\n    IF EXISTS\n    (\n        SELECT 1\n        FROM #shipment_line\n        WHERE container_uom IS NULL\n    )\n    BEGIN\n        THROW 52008, 'One or more shipment lines could not resolve a container UOM.', 1;\n    END;\n\n    IF @UseDirectSequenceCounters = 1\n        SELECT @LastValue = NEXT VALUE FOR dbo.seq_container_building;\n    ELSE\n        EXEC dbo.p21_get_counter\n             @strCounterID = 'container_building'\n           , @iIncrementValue = 1\n           , @LastValue = @LastValue OUTPUT;\n    SET @ContainerBuildingUid = CONVERT(int, @LastValue);\n\n    IF @UseDirectSequenceCounters = 1\n        SELECT @LastValue = NEXT VALUE FOR dbo.seq_vessel_receipts_hdr;\n    ELSE\n        EXEC dbo.p21_get_counter\n             @strCounterID = 'vessel_receipts_hdr'\n           , @iIncrementValue = 1\n           , @LastValue = @LastValue OUTPUT;\n    SET @VesselReceiptsHdrUid = CONVERT(int, @LastValue);\n\n    IF @UseDirectSequenceCounters = 1\n        SELECT @LastValue = NEXT VALUE FOR dbo.seq_vessel_receipts_container;\n    ELSE\n        EXEC dbo.p21_get_counter\n             @strCounterID = 'vessel_receipts_container'\n           , @iIncrementValue = 1\n           , @LastValue = @LastValue OUTPUT;\n    SET @VesselReceiptsContainerUid = CONVERT(int, @LastValue);\n\n    DECLARE @MaxVesselReceiptsContainerUid bigint =\n    (\n        SELECT ISNULL(MAX(vessel_receipts_container_uid), 0)\n        FROM dbo.vessel_receipts_container\n    );\n\n    IF @VesselReceiptsContainerUid <= @MaxVesselReceiptsContainerUid\n    BEGIN\n        DECLARE @AdditionalVesselContainerCounterIncrement bigint =\n            (@MaxVesselReceiptsContainerUid + 1) - @LastValue;\n\n        IF @AdditionalVesselContainerCounterIncrement <= 0\n        BEGIN\n            THROW 52015, 'Calculated vessel_receipts_container counter catch-up increment was not positive.', 1;\n        END;\n\n        IF @UseDirectSequenceCounters = 1\n        BEGIN\n            SET @CounterLoop = 0;\n            WHILE @CounterLoop < @AdditionalVesselContainerCounterIncrement\n            BEGIN\n                SELECT @LastValue = NEXT VALUE FOR dbo.seq_vessel_receipts_container;\n                SET @CounterLoop += 1;\n            END;\n        END\n        ELSE\n            EXEC dbo.p21_get_counter\n                 @strCounterID = 'vessel_receipts_container'\n               , @iIncrementValue = @AdditionalVesselContainerCounterIncrement\n               , @LastValue = @LastValue OUTPUT;\n\n        SET @VesselReceiptsContainerUid = CONVERT(int, @LastValue);\n    END;\n\n    IF @VesselReceiptsContainerUid <= @MaxVesselReceiptsContainerUid\n    BEGIN\n        THROW 52015, 'Allocated vessel_receipts_container_uid overlaps existing rows. Counter is behind.', 1;\n    END;\n\n    IF @UseDirectSequenceCounters = 1\n        SELECT @LastValue = NEXT VALUE FOR dbo.seq_container_receipts_hdr;\n    ELSE\n        EXEC dbo.p21_get_counter\n             @strCounterID = 'container_receipts_hdr'\n           , @iIncrementValue = 1\n           , @LastValue = @LastValue OUTPUT;\n    SET @ContainerReceiptsHdrUid = CONVERT(int, @LastValue);\n\n    IF @UseDirectSequenceCounters = 1\n    BEGIN\n        SET @CounterLoop = 0;\n        WHILE @CounterLoop < @LineCount\n        BEGIN\n            SELECT @LastValue = NEXT VALUE FOR dbo.seq_vessel_receipts_line;\n            SET @CounterLoop += 1;\n        END;\n    END\n    ELSE\n        EXEC dbo.p21_get_counter\n             @strCounterID = 'vessel_receipts_line'\n           , @iIncrementValue = @LineCount\n           , @LastValue = @LastValue OUTPUT;\n    SET @FirstVesselReceiptsLineUid = @LastValue - @LineCount + 1;\n\n    DECLARE @MaxVesselReceiptsLineUid bigint =\n    (\n        SELECT ISNULL(MAX(vessel_receipts_line_uid), 0)\n        FROM dbo.vessel_receipts_line\n    );\n\n    IF @FirstVesselReceiptsLineUid <= @MaxVesselReceiptsLineUid\n    BEGIN\n        DECLARE @AdditionalVesselLineCounterIncrement bigint =\n            (@MaxVesselReceiptsLineUid + @LineCount) - @LastValue;\n\n        IF @AdditionalVesselLineCounterIncrement <= 0\n        BEGIN\n            THROW 52013, 'Calculated vessel_receipts_line counter catch-up increment was not positive.', 1;\n        END;\n\n        IF @UseDirectSequenceCounters = 1\n        BEGIN\n            SET @CounterLoop = 0;\n            WHILE @CounterLoop < @AdditionalVesselLineCounterIncrement\n            BEGIN\n                SELECT @LastValue = NEXT VALUE FOR dbo.seq_vessel_receipts_line;\n                SET @CounterLoop += 1;\n            END;\n        END\n        ELSE\n            EXEC dbo.p21_get_counter\n                 @strCounterID = 'vessel_receipts_line'\n               , @iIncrementValue = @AdditionalVesselLineCounterIncrement\n               , @LastValue = @LastValue OUTPUT;\n\n        SET @FirstVesselReceiptsLineUid = @LastValue - @LineCount + 1;\n    END;\n\n    IF @FirstVesselReceiptsLineUid <= @MaxVesselReceiptsLineUid\n    BEGIN\n        THROW 52013, 'Allocated vessel_receipts_line_uid block overlaps existing rows. Counter is behind.', 1;\n    END;\n\n    IF @UseDirectSequenceCounters = 1\n    BEGIN\n        SET @CounterLoop = 0;\n        WHILE @CounterLoop < @LineCount\n        BEGIN\n            SELECT @LastValue = NEXT VALUE FOR dbo.seq_container_receipts_line;\n            SET @CounterLoop += 1;\n        END;\n    END\n    ELSE\n        EXEC dbo.p21_get_counter\n             @strCounterID = 'container_receipts_line'\n           , @iIncrementValue = @LineCount\n           , @LastValue = @LastValue OUTPUT;\n    SET @FirstContainerReceiptsLineUid = @LastValue - @LineCount + 1;\n\n    DECLARE @MaxContainerReceiptsLineUid bigint =\n    (\n        SELECT ISNULL(MAX(container_receipts_line_uid), 0)\n        FROM dbo.container_receipts_line\n    );\n\n    IF @FirstContainerReceiptsLineUid <= @MaxContainerReceiptsLineUid\n    BEGIN\n        DECLARE @AdditionalContainerLineCounterIncrement bigint =\n            (@MaxContainerReceiptsLineUid + @LineCount) - @LastValue;\n\n        IF @AdditionalContainerLineCounterIncrement <= 0\n        BEGIN\n            THROW 52014, 'Calculated container_receipts_line counter catch-up increment was not positive.', 1;\n        END;\n\n        IF @UseDirectSequenceCounters = 1\n        BEGIN\n            SET @CounterLoop = 0;\n            WHILE @CounterLoop < @AdditionalContainerLineCounterIncrement\n            BEGIN\n                SELECT @LastValue = NEXT VALUE FOR dbo.seq_container_receipts_line;\n                SET @CounterLoop += 1;\n            END;\n        END\n        ELSE\n            EXEC dbo.p21_get_counter\n                 @strCounterID = 'container_receipts_line'\n               , @iIncrementValue = @AdditionalContainerLineCounterIncrement\n               , @LastValue = @LastValue OUTPUT;\n\n        SET @FirstContainerReceiptsLineUid = @LastValue - @LineCount + 1;\n    END;\n\n    IF @FirstContainerReceiptsLineUid <= @MaxContainerReceiptsLineUid\n    BEGIN\n        THROW 52014, 'Allocated container_receipts_line_uid block overlaps existing rows. Counter is behind.', 1;\n    END;\n\n    IF @ContainerBuildingUid <= ISNULL((SELECT MAX(container_building_uid) FROM dbo.container_building), 0)\n    BEGIN\n        THROW 52010, 'Allocated container_building_uid overlaps existing rows. Counter is behind.', 1;\n    END;\n\n    IF @VesselReceiptsHdrUid <= ISNULL((SELECT MAX(vessel_receipts_hdr_uid) FROM dbo.vessel_receipts_hdr), 0)\n    BEGIN\n        THROW 52011, 'Allocated vessel_receipts_hdr_uid overlaps existing rows. Counter is behind.', 1;\n    END;\n\n    IF @VesselReceiptsContainerUid <= ISNULL((SELECT MAX(vessel_receipts_container_uid) FROM dbo.vessel_receipts_container), 0)\n    BEGIN\n        THROW 52015, 'Allocated vessel_receipts_container_uid overlaps existing rows. Counter is behind.', 1;\n    END;\n\n    IF @ContainerReceiptsHdrUid <= ISNULL((SELECT MAX(container_receipts_hdr_uid) FROM dbo.container_receipts_hdr), 0)\n    BEGIN\n        THROW 52012, 'Allocated container_receipts_hdr_uid overlaps existing rows. Counter is behind.', 1;\n    END;\n\n    IF @FirstVesselReceiptsLineUid <= ISNULL((SELECT MAX(vessel_receipts_line_uid) FROM dbo.vessel_receipts_line), 0)\n    BEGIN\n        THROW 52013, 'Allocated vessel_receipts_line_uid block overlaps existing rows. Counter is behind.', 1;\n    END;\n\n    IF @FirstContainerReceiptsLineUid <= ISNULL((SELECT MAX(container_receipts_line_uid) FROM dbo.container_receipts_line), 0)\n    BEGIN\n        THROW 52014, 'Allocated container_receipts_line_uid block overlaps existing rows. Counter is behind.', 1;\n    END;\n\n    BEGIN TRY\n        BEGIN TRAN;\n\n        INSERT INTO dbo.container_building\n        (\n              container_building_uid\n            , container_name\n            , location_id\n            , row_status_flag\n            , date_created\n            , created_by\n            , date_last_modified\n            , last_maintained_by\n            , container_type_uid\n            , container_packaging_weight\n        )\n        VALUES\n        (\n              @ContainerBuildingUid\n            , @ContainerName\n            , @LocationId\n            , @ContainerBuildingStatus\n            , @Now\n            , @CreatedBy\n            , @Now\n            , @CreatedBy\n            , NULL\n            , @ContainerPackagingWeight\n        );\n\n        INSERT INTO dbo.container_building_po\n        (\n              container_building_uid\n            , po_line_uid\n            , row_status_flag\n            , sequence_no\n            , po_container_unit_qty\n            , container_uom\n            , container_unit_size\n            , po_line_schedule_uid\n            , priority_status_cd\n            , date_created\n            , created_by\n            , date_last_modified\n            , last_maintained_by\n        )\n        SELECT\n              @ContainerBuildingUid\n            , s.po_line_uid\n            , @ContainerBuildingPoStatus\n            , 10000\n            , s.qty\n            , s.container_uom\n            , s.container_unit_size\n            , NULL\n            , 3103\n            , @Now\n            , @CreatedBy\n            , @Now\n            , @CreatedBy\n        FROM #shipment_line AS s\n        WHERE NOT EXISTS\n        (\n            SELECT 1\n            FROM dbo.container_building_po AS x WITH (UPDLOCK, HOLDLOCK)\n            WHERE x.container_building_uid = @ContainerBuildingUid\n              AND x.po_line_uid = s.po_line_uid\n              AND ISNULL(x.po_line_schedule_uid, -1) = -1\n              AND x.sequence_no = 10000\n        );\n\n        INSERT INTO dbo.vessel_receipts_hdr\n        (\n              vessel_receipts_hdr_uid\n            , vessel_receipt_number\n            , company_id\n            , location_id\n            , vessel_name\n            , departure_date\n            , arrival_date\n            , est_avail_ship_date\n            , freight_terms_cd\n            , documents_received_flag\n            , apply_landed_costs_flag\n            , period\n            , year_for_period\n            , row_status_flag\n            , date_created\n            , created_by\n            , date_last_modified\n            , last_maintained_by\n            , currency_line_uid\n            , exchange_date\n            , receipt_date\n            , currency_id\n            , loading_port\n            , loading_country\n            , discharge_port\n            , discharge_country\n            , delivery_method\n        )\n        VALUES\n        (\n              @VesselReceiptsHdrUid\n            , @VesselReceiptsHdrUid\n            , @CompanyId\n            , @LocationId\n            , @ContainerName\n            , @ShipmentDate\n            , @EstimatedArrivalDate\n            , @EstimatedArrivalDate\n            , @FreightTermsCd\n            , @DocumentsReceivedFlag\n            , @ApplyLandedCostsFlag\n            , DATEPART(month, @ShipmentDate)\n            , DATEPART(year, @ShipmentDate)\n            , @VesselHdrStatus\n            , @Now\n            , @CreatedBy\n            , @Now\n            , @CreatedBy\n            , NULL\n            , CONVERT(date, @Now)\n            , @Now\n            , 1\n            , NULL\n            , NULL\n            , NULL\n            , NULL\n            , NULL\n        );\n\n        INSERT INTO dbo.vessel_receipts_container\n        (\n              vessel_receipts_container_uid\n            , vessel_receipts_hdr_uid\n            , container_name\n            , expected_arrival_date\n            , row_status_flag\n            , date_created\n            , created_by\n            , date_last_modified\n            , last_maintained_by\n            , container_building_uid\n            , container_packaging_weight\n            , container_capacity\n            , received_date\n            , container_seal_id\n            , comments\n            , container_type_uid\n            , processing\n            , processing_by\n        )\n        VALUES\n        (\n              @VesselReceiptsContainerUid\n            , @VesselReceiptsHdrUid\n            , @ContainerName\n            , @EstimatedArrivalDate\n            , @VesselContainerStatus\n            , @Now\n            , @CreatedBy\n            , @Now\n            , @CreatedBy\n            , @ContainerBuildingUid\n            , @ContainerPackagingWeight\n            , NULL\n            , NULL\n            , NULL\n            , NULL\n            , NULL\n            , NULL\n            , NULL\n        );\n\n        INSERT INTO dbo.vessel_receipts_line\n        (\n              vessel_receipts_line_uid\n            , vessel_receipts_hdr_uid\n            , vessel_receipts_container_uid\n            , line_no\n            , po_line_uid\n            , container_building_po_uid\n            , container_qty_received\n            , container_qty_unloaded\n            , po_sku_cost\n            , po_sku_cost_display\n            , sku_vessel_line_lc_amt\n            , container_uom\n            , container_unit_size\n            , row_status_flag\n            , date_created\n            , created_by\n            , date_last_modified\n            , last_maintained_by\n            , reduce_po_line_qty_flag\n            , exclude_from_landed_cost_flag\n        )\n        SELECT\n              @FirstVesselReceiptsLineUid + s.line_no - 1\n            , @VesselReceiptsHdrUid\n            , @VesselReceiptsContainerUid\n            , s.line_no\n            , s.po_line_uid\n            , cbp.container_building_po_uid\n            , s.qty\n            , 0\n            , pol.unit_price\n            , pol.unit_price\n            , 0\n            , s.container_uom\n            , s.container_unit_size\n            , @VesselLineStatus\n            , @Now\n            , @CreatedBy\n            , @Now\n            , @CreatedBy\n            , 'N'\n            , 'N'\n        FROM #shipment_line AS s\n        INNER JOIN dbo.container_building_po AS cbp\n          ON cbp.container_building_uid = @ContainerBuildingUid\n         AND cbp.po_line_uid = s.po_line_uid\n         AND ISNULL(cbp.po_line_schedule_uid, -1) = -1\n         AND cbp.sequence_no = 10000\n        INNER JOIN dbo.po_line AS pol\n          ON pol.po_line_uid = s.po_line_uid;\n\n        INSERT INTO dbo.oe_line_po\n        (\n              order_number\n            , line_number\n            , po_no\n            , date_created\n            , date_last_modified\n            , last_maintained_by\n            , quantity_on_po\n            , po_line_number\n            , delete_flag\n            , cancel_flag\n            , completed\n            , connection_type\n        )\n        SELECT\n              l.order_number\n            , l.line_number\n            , @VesselReceiptsHdrUid\n            , @Now\n            , @Now\n            , @CreatedBy\n            , l.quantity_to_move\n            , l.line_no\n            , 'N'\n            , 'N'\n            , 'N'\n            , 'V'\n        FROM #shipment_sales_order_link AS l\n        WHERE NOT EXISTS\n        (\n            SELECT 1\n            FROM dbo.oe_line_po AS existing WITH (UPDLOCK, HOLDLOCK)\n            WHERE existing.order_number = l.order_number\n              AND existing.line_number = l.line_number\n              AND existing.po_no = @VesselReceiptsHdrUid\n              AND existing.po_line_number = l.line_no\n              AND existing.connection_type = 'V'\n        );\n\n        ;WITH moved AS\n        (\n            SELECT\n                  po_no\n                , po_line_no\n                , order_number\n                , line_number\n                , quantity_to_move = SUM(quantity_to_move)\n            FROM #shipment_sales_order_link\n            GROUP BY\n                  po_no\n                , po_line_no\n                , order_number\n                , line_number\n        )\n        UPDATE olp\n        SET\n              olp.quantity_on_po = CASE\n                  WHEN CONVERT(decimal(19, 9), olp.quantity_on_po) - m.quantity_to_move <= 0 THEN 0\n                  ELSE CONVERT(decimal(19, 9), olp.quantity_on_po) - m.quantity_to_move\n              END\n            , olp.completed = CASE\n                  WHEN CONVERT(decimal(19, 9), olp.quantity_on_po) - m.quantity_to_move <= 0 THEN 'Y'\n                  ELSE olp.completed\n              END\n            , olp.date_last_modified = @Now\n            , olp.last_maintained_by = @CreatedBy\n        FROM dbo.oe_line_po AS olp\n        INNER JOIN moved AS m\n          ON m.po_no = olp.po_no\n         AND m.po_line_no = olp.po_line_number\n         AND m.order_number = olp.order_number\n         AND m.line_number = olp.line_number\n        WHERE olp.connection_type = 'P'\n          AND ISNULL(olp.delete_flag, 'N') = 'N'\n          AND ISNULL(olp.cancel_flag, 'N') = 'N'\n          AND ISNULL(olp.completed, 'N') = 'N';\n\n        INSERT INTO dbo.container_receipts_hdr\n        (\n              container_receipts_hdr_uid\n            , vessel_receipts_container_uid\n            , date_received\n            , period\n            , year_for_period\n            , row_status_flag\n            , date_created\n            , created_by\n            , date_last_modified\n            , last_maintained_by\n            , receiving_location_id\n            , currency_line_uid\n            , exchange_date\n            , rfnav_trans_no\n            , processing\n            , processing_by\n        )\n        VALUES\n        (\n              @ContainerReceiptsHdrUid\n            , @VesselReceiptsContainerUid\n            , @ReceiptDate\n            , DATEPART(month, @ReceiptDate)\n            , DATEPART(year, @ReceiptDate)\n            , @ContainerReceiptsHdrStatus\n            , @Now\n            , @CreatedBy\n            , @Now\n            , @CreatedBy\n            , NULL\n            , NULL\n            , CONVERT(date, @Now)\n            , NULL\n            , NULL\n            , NULL\n        );\n\n        INSERT INTO dbo.container_receipts_line\n        (\n              container_receipts_line_uid\n            , container_receipts_hdr_uid\n            , vessel_receipts_line_uid\n            , qty_received\n            , unit_of_measure\n            , unit_size\n            , date_created\n            , created_by\n            , date_last_modified\n            , last_maintained_by\n            , complete_po_line_flag\n            , transfer_flag\n            , wrong_part_no_flag\n            , currency_line_uid\n            , exclude_from_landed_cost_flag\n        )\n        SELECT\n              @FirstContainerReceiptsLineUid + s.line_no - 1\n            , @ContainerReceiptsHdrUid\n            , @FirstVesselReceiptsLineUid + s.line_no - 1\n            , s.qty\n            , s.container_uom\n            , s.container_unit_size\n            , @Now\n            , @CreatedBy\n            , @Now\n            , @CreatedBy\n            , CASE\n                  WHEN s.qty + ISNULL(pol.qty_received, 0) >= ISNULL(pol.qty_ordered, 0) THEN 'Y'\n                  ELSE 'N'\n              END\n            , NULL\n            , 'N'\n            , NULL\n            , 'N'\n        FROM #shipment_line AS s\n        LEFT JOIN dbo.po_line AS pol\n          ON pol.po_line_uid = s.po_line_uid;\n\n        UPDATE p\n        SET\n              p.vessel_receipts_line_uid = @FirstVesselReceiptsLineUid + s.line_no - 1\n            , p.container_receipts_line_uid = @FirstContainerReceiptsLineUid + s.line_no - 1\n        FROM P21Import.dbo.coats_mexico_shipment_pallet_line AS p\n        JOIN #shipment_line AS s\n          ON s.po_line_uid = p.po_line_uid\n        WHERE p.shipment_file_id = @ShipmentFileId;\n\n        INSERT INTO P21Import.dbo.coats_mexico_shipment_receipt_build\n        (\n              shipment_file_id\n            , container_building_uid\n            , vessel_receipts_hdr_uid\n            , vessel_receipts_container_uid\n            , container_receipts_hdr_uid\n            , container_name\n            , vessel_receipt_number\n            , line_count\n            , total_qty\n            , created_by\n            , created_at\n        )\n        VALUES\n        (\n              @ShipmentFileId\n            , @ContainerBuildingUid\n            , @VesselReceiptsHdrUid\n            , @VesselReceiptsContainerUid\n            , @ContainerReceiptsHdrUid\n            , @ContainerName\n            , @VesselReceiptsHdrUid\n            , @LineCount\n            , @TotalQty\n            , @CreatedBy\n            , @Now\n        );\n\n        COMMIT;\n    END TRY\n    BEGIN CATCH\n        IF XACT_STATE() <> 0\n            ROLLBACK;\n\n        THROW;\n    END CATCH;\n\n    SELECT\n          shipment_file_id\n        , container_building_uid\n        , vessel_receipts_hdr_uid\n        , vessel_receipts_container_uid\n        , container_receipts_hdr_uid\n        , container_name\n        , vessel_receipt_number\n        , line_count\n        , total_qty\n        , created_by\n        , created_at\n    FROM P21Import.dbo.coats_mexico_shipment_receipt_build\n    WHERE shipment_file_id = @ShipmentFileId;\n",
+                    "type": "Query"
+                  }
+                ]
+              }
+            },
+            {
+              "dependsOn": [
+                {
+                  "activity": "CreateP21Receipts",
+                  "dependencyConditions": [
+                    "Failed"
+                  ]
+                }
+              ],
+              "name": "SendReceiptFailureEmail",
+              "policy": {
+                "retry": 1,
+                "retryIntervalInSeconds": 30,
+                "secureInput": true,
+                "secureOutput": false,
+                "timeout": "0.00:05:00"
+              },
+              "type": "WebActivity",
+              "typeProperties": {
+                "body": {
+                  "type": "Expression",
+                  "value": "@json(concat('{', '\"sourceFileName\":\"', replace(pipeline().parameters.sourceFileName, '\"', '\\\"'), '\",', '\"sourceWebUrl\":\"', replace(pipeline().parameters.sourceWebUrl, '\"', '\\\"'), '\",', '\"pipelineRunId\":\"', pipeline().RunId, '\",', '\"activityName\":\"CreateP21Receipts\",', '\"pipelineDisplayPrefix\":\"[LIVE] \",', '\"targetDatabase\":\"P21\",', '\"stagingDatabase\":\"P21Import\",', '\"error\":', string(activity('CreateP21Receipts').error), '}'))"
+                },
+                "headers": {
+                  "Content-Type": "application/json"
+                },
+                "method": "POST",
+                "url": "https://func-coats-mexico-20260401dshao.azurewebsites.net/api/send-coats-failure-email?code=eJQUUOrEm6FmTYlxPQyjJiHq72cDjnvYB7rCE9d53AyLAzFusfl7jA=="
+              }
+            },
+            {
+              "dependsOn": [
+                {
+                  "activity": "SendReceiptFailureEmail",
+                  "dependencyConditions": [
+                    "Succeeded"
+                  ]
+                }
+              ],
+              "name": "FailReceiptFailure",
+              "type": "Fail",
+              "typeProperties": {
+                "errorCode": "COATS_PIPELINE_ACTIVITY_FAILED",
+                "message": {
+                  "type": "Expression",
+                  "value": "@concat('[LIVE] ', 'Coats Mexico pipeline activity failed: CreateP21Receipts. ', coalesce(activity('CreateP21Receipts').error.message, string(activity('CreateP21Receipts').error)))"
+                }
+              }
+            },
+            {
+              "dependsOn": [
+                {
+                  "activity": "CreateP21Receipts",
+                  "dependencyConditions": [
+                    "Succeeded"
+                  ]
+                }
+              ],
+              "linkedServiceName": {
+                "referenceName": "SqlServer1",
+                "type": "LinkedServiceReference"
+              },
+              "name": "ExtractRawFileForEmail",
+              "policy": {
+                "retry": 0,
+                "retryIntervalInSeconds": 30,
+                "secureInput": true,
+                "secureOutput": false,
+                "timeout": "0.00:10:00"
+              },
+              "type": "Script",
+              "typeProperties": {
+                "logSettings": {
+                  "logDestination": "ActivityOutput"
+                },
+                "scriptBlockExecutionTimeout": "00:10:00",
+                "scripts": [
+                  {
+                    "parameters": [
+                      {
+                        "direction": "Input",
+                        "name": "extraction_payload",
+                        "type": "String",
+                        "value": {
+                          "type": "Expression",
+                          "value": "@string(activity('ProcessCoatsWorkbook').output.extraction)"
+                        }
+                      }
+                    ],
+                    "text": "USE P21;\n\nDECLARE @extractionPayload nvarchar(max) = @extraction_payload;\n\nDECLARE @ShipmentFileId uniqueidentifier = TRY_CONVERT(uniqueidentifier, JSON_VALUE(@extractionPayload, '$.metadata.shipment_file_id'));\nIF @ShipmentFileId IS NULL\nBEGIN\n    THROW 53000, 'Extractor payload metadata.shipment_file_id is missing or invalid.', 1;\nEND;\n\nWITH cte_last_color_bin AS (\n    SELECT TOP (1)\n          dlb.bin_cd\n        , dlb.date_created\n        , CASE \n              WHEN p.prefix = 'BL' THEN 'Y'\n              WHEN p.prefix = 'Y'  THEN 'BL'\n              ELSE 'unknown'\n          END AS next_bin_start\n    FROM document_line_bin AS dlb\n    CROSS APPLY (\n        SELECT\n              prefix =\n                  CASE \n                      WHEN PATINDEX('%[0-9]%', dlb.bin_cd) > 0 \n                          THEN LEFT(dlb.bin_cd, PATINDEX('%[0-9]%', dlb.bin_cd) - 1)\n                      ELSE dlb.bin_cd\n                  END\n    ) AS p\n    WHERE dlb.document_type = 'CR'\n      AND p.prefix IN ('BL', 'Y')\n    ORDER BY\n          dlb.date_created DESC\n        , dlb.bin_cd DESC\n)\n\nSELECT \n      CASE \n          WHEN CHARINDEX('-', cmt.Bin_ID) > 0 THEN \n                lcb.next_bin_start\n                + SUBSTRING(\n                      cmt.Bin_ID\n                    , CHARINDEX('-', cmt.Bin_ID) + 1\n                    , LEN(cmt.Bin_ID)\n                  )\n          ELSE cmt.Bin_ID\n      END AS Bin_ID\n    , cmt.PO_No\n    , ivm.item_id\n    , ROUND(cmt.Invoiced_Qty, 4) AS Invoiced_Qty\n    , CONCAT(cmt.PO_No, ' ', ivm.item_id) AS join_key\n    , ' ' AS order_no\nFROM P21Import.dbo.coats_mexico_shipment_raw_line AS cmt\n\nLEFT JOIN cte_last_color_bin AS lcb\n    ON 1 = 1\n\nLEFT JOIN inventory_supplier AS ivs\n    ON cmt.Item_ID = ivs.supplier_part_no\n   AND ivs.supplier_id = '40408'\n\nLEFT JOIN inv_mast AS ivm\n    ON ivm.inv_mast_uid = ivs.inv_mast_uid\nWHERE cmt.shipment_file_id = @ShipmentFileId\n;\n",
+                    "type": "Query"
+                  }
+                ]
+              }
+            },
+            {
+              "dependsOn": [
+                {
+                  "activity": "ExtractRawFileForEmail",
+                  "dependencyConditions": [
+                    "Succeeded"
+                  ]
+                }
+              ],
+              "name": "SendSuccessEmail",
+              "policy": {
+                "retry": 1,
+                "retryIntervalInSeconds": 30,
+                "secureInput": true,
+                "secureOutput": false,
+                "timeout": "0.00:05:00"
+              },
+              "type": "WebActivity",
+              "typeProperties": {
+                "body": {
+                  "type": "Expression",
+                  "value": "@json(concat('{', '\"sourceFileName\":\"', replace(coalesce(activity('ValidateCoatsShipment').output.resultSets[0].rows[0].source_file_name, ''), '\"', '\\\"'), '\",', '\"sourceWebUrl\":\"', replace(coalesce(activity('ValidateCoatsShipment').output.resultSets[0].rows[0].source_web_url, ''), '\"', '\\\"'), '\",', '\"shipmentFileId\":\"', string(activity('ValidateCoatsShipment').output.resultSets[0].rows[0].shipment_file_id), '\",', '\"shipmentDate\":\"', string(activity('ValidateCoatsShipment').output.resultSets[0].rows[0].shipment_date), '\",', '\"trailerName\":\"', replace(coalesce(activity('ValidateCoatsShipment').output.resultSets[0].rows[0].trailer_name, ''), '\"', '\\\"'), '\",', '\"pipelineRunId\":\"', pipeline().RunId, '\",', '\"pipelineDisplayPrefix\":\"[LIVE] \",', '\"targetDatabase\":\"P21\",', '\"stagingDatabase\":\"P21Import\",', '\"receipt\":', string(activity('CreateP21Receipts').output.resultSets[0].rows[0]), ',', '\"rawFileAttachmentName\":\"', replace(concat('coats-mexico-raw-extract-', coalesce(activity('ValidateCoatsShipment').output.resultSets[0].rows[0].trailer_name, 'shipment'), '-', string(activity('ValidateCoatsShipment').output.resultSets[0].rows[0].shipment_date), '.csv'), '\"', '\\\"'), '\",', '\"rawFileRows\":', if(equals(activity('ExtractRawFileForEmail').output.resultSetCount, 0), '[]', string(activity('ExtractRawFileForEmail').output.resultSets[0].rows)), '}'))"
+                },
+                "headers": {
+                  "Content-Type": "application/json"
+                },
+                "method": "POST",
+                "url": "https://func-coats-mexico-20260401dshao.azurewebsites.net/api/send-coats-success-email?code=eJQUUOrEm6FmTYlxPQyjJiHq72cDjnvYB7rCE9d53AyLAzFusfl7jA=="
+              }
+            }
+          ],
+          "ifTrueActivities": [
+            {
+              "dependsOn": [],
+              "name": "SendBlockingValidationEmail",
+              "policy": {
+                "retry": 1,
+                "retryIntervalInSeconds": 30,
+                "secureInput": true,
+                "secureOutput": false,
+                "timeout": "0.00:05:00"
+              },
+              "type": "WebActivity",
+              "typeProperties": {
+                "body": {
+                  "type": "Expression",
+                  "value": "@json(concat('{', '\"sourceFileName\":\"', replace(coalesce(activity('ValidateCoatsShipment').output.resultSets[0].rows[0].source_file_name, ''), '\"', '\\\"'), '\",', '\"sourceWebUrl\":\"', replace(coalesce(activity('ValidateCoatsShipment').output.resultSets[0].rows[0].source_web_url, ''), '\"', '\\\"'), '\",', '\"shipmentFileId\":\"', string(activity('ValidateCoatsShipment').output.resultSets[0].rows[0].shipment_file_id), '\",', '\"shipmentDate\":\"', string(activity('ValidateCoatsShipment').output.resultSets[0].rows[0].shipment_date), '\",', '\"trailerName\":\"', replace(coalesce(activity('ValidateCoatsShipment').output.resultSets[0].rows[0].trailer_name, ''), '\"', '\\\"'), '\",', '\"pipelineRunId\":\"', pipeline().RunId, '\",', '\"pipelineDisplayPrefix\":\"[LIVE] \",', '\"targetDatabase\":\"P21\",', '\"stagingDatabase\":\"P21Import\",', '\"blockingIssueCount\":', string(activity('ValidateCoatsShipment').output.resultSets[0].rows[0].blocking_issue_count), ',', '\"issues\":', activity('ValidateCoatsShipment').output.resultSets[2].rows[0].issue_json, '}'))"
+                },
+                "headers": {
+                  "Content-Type": "application/json"
+                },
+                "method": "POST",
+                "url": "https://func-coats-mexico-20260401dshao.azurewebsites.net/api/send-coats-validation-email?code=eJQUUOrEm6FmTYlxPQyjJiHq72cDjnvYB7rCE9d53AyLAzFusfl7jA=="
+              }
+            },
+            {
+              "dependsOn": [
+                {
+                  "activity": "SendBlockingValidationEmail",
+                  "dependencyConditions": [
+                    "Succeeded"
+                  ]
+                }
+              ],
+              "name": "FailBlockingValidation",
+              "type": "Fail",
+              "typeProperties": {
+                "errorCode": "COATS_BLOCKING_VALIDATION",
+                "message": {
+                  "type": "Expression",
+                  "value": "@concat('[LIVE] ', 'Coats Mexico shipment has ', string(activity('ValidateCoatsShipment').output.resultSets[0].rows[0].blocking_issue_count), ' blocking validation issue(s). Email notification sent; P21 receipts were not created.')"
+                }
+              }
+            }
+          ]
+        }
+      },
+      {
+        "dependsOn": [
+          {
+            "activity": "ProcessCoatsWorkbook",
+            "dependencyConditions": [
+              "Failed"
+            ]
+          }
+        ],
+        "name": "SendProcessFailureEmail",
+        "policy": {
+          "retry": 1,
+          "retryIntervalInSeconds": 30,
+          "secureInput": true,
+          "secureOutput": false,
+          "timeout": "0.00:05:00"
+        },
+        "type": "WebActivity",
+        "typeProperties": {
+          "body": {
+            "type": "Expression",
+            "value": "@json(concat('{', '\"sourceFileName\":\"', replace(pipeline().parameters.sourceFileName, '\"', '\\\"'), '\",', '\"sourceWebUrl\":\"', replace(pipeline().parameters.sourceWebUrl, '\"', '\\\"'), '\",', '\"pipelineRunId\":\"', pipeline().RunId, '\",', '\"activityName\":\"ProcessCoatsWorkbook\",', '\"pipelineDisplayPrefix\":\"[LIVE] \",', '\"targetDatabase\":\"P21\",', '\"stagingDatabase\":\"P21Import\",', '\"error\":', string(activity('ProcessCoatsWorkbook').error), '}'))"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "method": "POST",
+          "url": "https://func-coats-mexico-20260401dshao.azurewebsites.net/api/send-coats-failure-email?code=eJQUUOrEm6FmTYlxPQyjJiHq72cDjnvYB7rCE9d53AyLAzFusfl7jA=="
+        }
+      },
+      {
+        "dependsOn": [
+          {
+            "activity": "SendProcessFailureEmail",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ],
+        "name": "FailProcessFailure",
+        "type": "Fail",
+        "typeProperties": {
+          "errorCode": "COATS_PIPELINE_ACTIVITY_FAILED",
+          "message": {
+            "type": "Expression",
+            "value": "@concat('[LIVE] ', 'Coats Mexico pipeline activity failed: ProcessCoatsWorkbook. ', coalesce(activity('ProcessCoatsWorkbook').error.message, string(activity('ProcessCoatsWorkbook').error)))"
+          }
+        }
+      },
+      {
+        "dependsOn": [
+          {
+            "activity": "StageCoatsShipmentJson",
+            "dependencyConditions": [
+              "Failed"
+            ]
+          }
+        ],
+        "name": "SendStageFailureEmail",
+        "policy": {
+          "retry": 1,
+          "retryIntervalInSeconds": 30,
+          "secureInput": true,
+          "secureOutput": false,
+          "timeout": "0.00:05:00"
+        },
+        "type": "WebActivity",
+        "typeProperties": {
+          "body": {
+            "type": "Expression",
+            "value": "@json(concat('{', '\"sourceFileName\":\"', replace(pipeline().parameters.sourceFileName, '\"', '\\\"'), '\",', '\"sourceWebUrl\":\"', replace(pipeline().parameters.sourceWebUrl, '\"', '\\\"'), '\",', '\"pipelineRunId\":\"', pipeline().RunId, '\",', '\"activityName\":\"StageCoatsShipmentJson\",', '\"pipelineDisplayPrefix\":\"[LIVE] \",', '\"targetDatabase\":\"P21\",', '\"stagingDatabase\":\"P21Import\",', '\"error\":', string(activity('StageCoatsShipmentJson').error), '}'))"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "method": "POST",
+          "url": "https://func-coats-mexico-20260401dshao.azurewebsites.net/api/send-coats-failure-email?code=eJQUUOrEm6FmTYlxPQyjJiHq72cDjnvYB7rCE9d53AyLAzFusfl7jA=="
+        }
+      },
+      {
+        "dependsOn": [
+          {
+            "activity": "SendStageFailureEmail",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ],
+        "name": "FailStageFailure",
+        "type": "Fail",
+        "typeProperties": {
+          "errorCode": "COATS_PIPELINE_ACTIVITY_FAILED",
+          "message": {
+            "type": "Expression",
+            "value": "@concat('[LIVE] ', 'Coats Mexico pipeline activity failed: StageCoatsShipmentJson. ', coalesce(activity('StageCoatsShipmentJson').error.message, string(activity('StageCoatsShipmentJson').error)))"
+          }
+        }
+      },
+      {
+        "dependsOn": [
+          {
+            "activity": "ValidateCoatsShipment",
+            "dependencyConditions": [
+              "Failed"
+            ]
+          }
+        ],
+        "name": "SendValidateFailureEmail",
+        "policy": {
+          "retry": 1,
+          "retryIntervalInSeconds": 30,
+          "secureInput": true,
+          "secureOutput": false,
+          "timeout": "0.00:05:00"
+        },
+        "type": "WebActivity",
+        "typeProperties": {
+          "body": {
+            "type": "Expression",
+            "value": "@json(concat('{', '\"sourceFileName\":\"', replace(pipeline().parameters.sourceFileName, '\"', '\\\"'), '\",', '\"sourceWebUrl\":\"', replace(pipeline().parameters.sourceWebUrl, '\"', '\\\"'), '\",', '\"pipelineRunId\":\"', pipeline().RunId, '\",', '\"activityName\":\"ValidateCoatsShipment\",', '\"pipelineDisplayPrefix\":\"[LIVE] \",', '\"targetDatabase\":\"P21\",', '\"stagingDatabase\":\"P21Import\",', '\"error\":', string(activity('ValidateCoatsShipment').error), '}'))"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "method": "POST",
+          "url": "https://func-coats-mexico-20260401dshao.azurewebsites.net/api/send-coats-failure-email?code=eJQUUOrEm6FmTYlxPQyjJiHq72cDjnvYB7rCE9d53AyLAzFusfl7jA=="
+        }
+      },
+      {
+        "dependsOn": [
+          {
+            "activity": "SendValidateFailureEmail",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ],
+        "name": "FailValidateFailure",
+        "type": "Fail",
+        "typeProperties": {
+          "errorCode": "COATS_PIPELINE_ACTIVITY_FAILED",
+          "message": {
+            "type": "Expression",
+            "value": "@concat('[LIVE] ', 'Coats Mexico pipeline activity failed: ValidateCoatsShipment. ', coalesce(activity('ValidateCoatsShipment').error.message, string(activity('ValidateCoatsShipment').error)))"
+          }
+        }
+      }
+    ],
+    "lastPublishTime": "2026-07-09T19:28:10Z",
+    "parameters": {
+      "graphSubscriptionId": {
+        "type": "String"
+      },
+      "notificationReceivedUtc": {
+        "type": "String"
+      },
+      "sharePointDriveId": {
+        "type": "String"
+      },
+      "sharePointDriveItemId": {
+        "type": "String"
+      },
+      "sourceFileName": {
+        "type": "String"
+      },
+      "sourceFolderPath": {
+        "type": "String"
+      },
+      "sourceWebUrl": {
+        "type": "String"
+      }
+    }
+  },
+  "type": "Microsoft.DataFactory/factories/pipelines"
+}

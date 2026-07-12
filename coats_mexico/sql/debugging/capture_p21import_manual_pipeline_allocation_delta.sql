@@ -1,11 +1,20 @@
 ﻿/*
-Capture before/after P21Play data changes across the full manual container workflow, including PO/SO link and allocation state.
+Capture before/after P21Import data changes across the full manual container workflow, including PO/SO link and allocation state.
 
 Purpose
 -------
 Use this in a test environment to answer: "What exactly changes as a purchaser
 goes through the manual path from container building, to vessel receipts, to
 container receipt creation, to container receipt approval/allocation?"
+
+Database topology
+-----------------
+- Business/application tables are read from P21Import (three-part qualified).
+- Debug capture tables are created and written in KOMAR_DATA.dbo (this is the
+  USE database), so they survive P21Import/P21Play rebuilds and never mingle
+  with the P21 vendor schema. The two capture tables carry an intra-database
+  foreign key, which is why they live together in KOMAR_DATA rather than being
+  split across databases.
 
 Workflow
 --------
@@ -32,18 +41,35 @@ Run this script after setting @Mode and @ContainerName at each checkpoint:
 
 Notes
 -----
-- This script creates and writes only to P21Import debug capture tables.
-- It reads P21 business/application tables from P21Play.
+- This script creates and writes only to KOMAR_DATA.dbo debug capture tables.
+- It reads P21 business/application tables from P21Import.
 - It does not update P21 business tables, allocations, receipts, transfers,
-  sales orders, or counters.
+  sales orders, general ledger, or counters.
 - Key the test with a unique @ContainerName when possible, such as a trailer
   plus date suffix, so "before" captures prove no stale rows already exist.
 - For the pre-container-building checkpoint, set at least one of the targeted
   PO/item fields below so the script can capture backorder/link/allocation
   state before any container/vessel rows exist.
+
+General ledger tracking
+-----------------------
+Creating a vessel receipt in P21 posts a balanced pair of rows to dbo.gl:
+
+    journal_id      = 'IR'
+    source_type_cd  = 1674            (code_p21 description "Vessel Receipts")
+    source          = vessel_receipts_hdr_uid (as varchar)
+    description     = vessel_name
+    seq 1           = credit A/P Vessel/Container account (e.g. 2161000)
+    seq 2           = debit  Inventory In Transit account (e.g. 1345210)
+
+This script captures those gl rows (and any gl_trans_x_dimension rows keyed on
+their transaction_number) scoped to the in-scope vessel receipt header(s). The
+gl rows do not exist until the vessel receipt is created, so a DIFF between
+CAPTURE_AFTER_CONTAINER_BUILDING and CAPTURE_AFTER_VESSEL_RECEIPTS isolates
+exactly what the vessel receipt window wrote to the general ledger.
 */
 
-USE P21Import;
+USE KOMAR_DATA;
 GO
 
 SET NOCOUNT ON;
@@ -76,6 +102,12 @@ DECLARE @LinkLookAheadDays int = NULL;
 DECLARE @LinkType char(1) = 'P';
 DECLARE @CurrentDateNoTime datetime = NULL;
 
+-- GL balances watch: capture dbo.balances for the accounts a Coats vessel receipt
+-- posts to, so a before/after DIFF reveals whether/how vessel receipt creation
+-- provisions the period balance row (carry-forward) and the trigger updates it.
+DECLARE @GlWatchCompanyNo varchar(8) = 'KA';
+DECLARE @GlWatchAccounts varchar(400) = '2161000,1345210';  -- A/P Vessel/Container - Coats, Inventory In Transit
+
 IF OBJECT_ID('dbo.coats_mexico_manual_pipeline_capture_run', 'U') IS NULL
 BEGIN
     CREATE TABLE dbo.coats_mexico_manual_pipeline_capture_run
@@ -100,11 +132,15 @@ END;
 
 IF OBJECT_ID('dbo.coats_mexico_manual_pipeline_capture_row', 'U') IS NULL
 BEGIN
+    -- entity_name / entity_key are ASCII structural keys (table names + numeric
+    -- ids), kept as varchar so the clustered PK stays under the 900-byte limit
+    -- (int 4 + varchar 128 + varchar 400 = 532 bytes). row_json stays nvarchar
+    -- to preserve unicode business data.
     CREATE TABLE dbo.coats_mexico_manual_pipeline_capture_row
     (
           capture_run_uid int NOT NULL
-        , entity_name sysname NOT NULL
-        , entity_key nvarchar(400) NOT NULL
+        , entity_name varchar(128) NOT NULL
+        , entity_key varchar(400) NOT NULL
         , row_hash varbinary(32) NOT NULL
         , row_json nvarchar(max) NOT NULL
         , CONSTRAINT PK_coats_mexico_manual_pipeline_capture_row
@@ -194,6 +230,9 @@ BEGIN
               WHEN COALESCE(b.entity_name, a.entity_name) = 'vessel_receipts_hdr' THEN 30
               WHEN COALESCE(b.entity_name, a.entity_name) = 'vessel_receipts_container' THEN 40
               WHEN COALESCE(b.entity_name, a.entity_name) = 'vessel_receipts_line' THEN 50
+              WHEN COALESCE(b.entity_name, a.entity_name) = 'gl' THEN 55
+              WHEN COALESCE(b.entity_name, a.entity_name) = 'gl_trans_x_dimension' THEN 56
+              WHEN COALESCE(b.entity_name, a.entity_name) = 'balances' THEN 57
               WHEN COALESCE(b.entity_name, a.entity_name) = 'container_receipts_hdr' THEN 60
               WHEN COALESCE(b.entity_name, a.entity_name) = 'container_receipts_line' THEN 70
               WHEN COALESCE(b.entity_name, a.entity_name) = 'document_line_bin' THEN 80
@@ -276,6 +315,7 @@ DROP TABLE IF EXISTS #scope_item;
 DROP TABLE IF EXISTS #target_po_line;
 DROP TABLE IF EXISTS #near_transfer;
 DROP TABLE IF EXISTS #open_oe_line;
+DROP TABLE IF EXISTS #scope_gl;
 
 CREATE TABLE #scope_container_building
 (
@@ -344,7 +384,7 @@ CREATE TABLE #near_transfer
       transfer_no decimal(19, 0) NOT NULL PRIMARY KEY
 );
 
-SET @CurrentDateNoTime = COALESCE(@CurrentDateNoTime, CONVERT(date, P21Play.dbo.p21_fn_GetSystemDatetime(CURRENT_TIMESTAMP, NULL, NULL)));
+SET @CurrentDateNoTime = COALESCE(@CurrentDateNoTime, CONVERT(date, P21Import.dbo.p21_fn_GetSystemDatetime(CURRENT_TIMESTAMP, NULL, NULL)));
 
 INSERT INTO #target_po_line
 (
@@ -360,8 +400,8 @@ SELECT
     , pol.line_no
     , pol.inv_mast_uid
     , im.item_id
-FROM P21Play.dbo.po_line AS pol
-INNER JOIN P21Play.dbo.inv_mast AS im
+FROM P21Import.dbo.po_line AS pol
+INNER JOIN P21Import.dbo.inv_mast AS im
   ON im.inv_mast_uid = pol.inv_mast_uid
 WHERE
   (
@@ -399,7 +439,7 @@ CREATE TABLE #open_oe_line
 
 INSERT INTO #scope_container_building (container_building_uid)
 SELECT cb.container_building_uid
-FROM P21Play.dbo.container_building AS cb
+FROM P21Import.dbo.container_building AS cb
 WHERE
   (
       (@ContainerBuildingUid IS NOT NULL AND cb.container_building_uid = @ContainerBuildingUid)
@@ -417,8 +457,8 @@ SELECT
       vc.vessel_receipts_container_uid
     , vc.vessel_receipts_hdr_uid
     , vc.container_building_uid
-FROM P21Play.dbo.vessel_receipts_container AS vc
-INNER JOIN P21Play.dbo.vessel_receipts_hdr AS vh
+FROM P21Import.dbo.vessel_receipts_container AS vc
+INNER JOIN P21Import.dbo.vessel_receipts_hdr AS vh
   ON vh.vessel_receipts_hdr_uid = vc.vessel_receipts_hdr_uid
 WHERE
   (
@@ -443,7 +483,7 @@ WHERE vc.container_building_uid IS NOT NULL
 
 INSERT INTO #scope_vessel_hdr (vessel_receipts_hdr_uid)
 SELECT vh.vessel_receipts_hdr_uid
-FROM P21Play.dbo.vessel_receipts_hdr AS vh
+FROM P21Import.dbo.vessel_receipts_hdr AS vh
 WHERE
   (
       (@VesselReceiptsHdrUid IS NOT NULL AND vh.vessel_receipts_hdr_uid = @VesselReceiptsHdrUid)
@@ -466,7 +506,7 @@ SELECT
       vc.vessel_receipts_container_uid
     , vc.vessel_receipts_hdr_uid
     , vc.container_building_uid
-FROM P21Play.dbo.vessel_receipts_container AS vc
+FROM P21Import.dbo.vessel_receipts_container AS vc
 WHERE EXISTS
 (
     SELECT 1
@@ -493,7 +533,7 @@ SELECT
     , crh.vessel_receipts_container_uid
     , crh.date_created
     , crh.date_last_modified
-FROM P21Play.dbo.container_receipts_hdr AS crh
+FROM P21Import.dbo.container_receipts_hdr AS crh
 WHERE (@ContainerReceiptsHdrUid IS NULL OR crh.container_receipts_hdr_uid = @ContainerReceiptsHdrUid)
   AND
   (
@@ -516,7 +556,7 @@ SELECT
       vc.vessel_receipts_container_uid
     , vc.vessel_receipts_hdr_uid
     , vc.container_building_uid
-FROM P21Play.dbo.vessel_receipts_container AS vc
+FROM P21Import.dbo.vessel_receipts_container AS vc
 WHERE EXISTS
 (
     SELECT 1
@@ -560,7 +600,7 @@ INSERT INTO #scope_container_building_po
 SELECT
       cbp.container_building_po_uid
     , cbp.po_line_uid
-FROM P21Play.dbo.container_building_po AS cbp
+FROM P21Import.dbo.container_building_po AS cbp
 WHERE EXISTS
 (
     SELECT 1
@@ -582,7 +622,7 @@ SELECT
     , vl.vessel_receipts_container_uid
     , vl.po_line_uid
     , vl.container_building_po_uid
-FROM P21Play.dbo.vessel_receipts_line AS vl
+FROM P21Import.dbo.vessel_receipts_line AS vl
 WHERE EXISTS
 (
     SELECT 1
@@ -610,7 +650,7 @@ INSERT INTO #scope_container_building_po
 SELECT
       cbp.container_building_po_uid
     , cbp.po_line_uid
-FROM P21Play.dbo.container_building_po AS cbp
+FROM P21Import.dbo.container_building_po AS cbp
 WHERE EXISTS
 (
     SELECT 1
@@ -634,7 +674,7 @@ SELECT
       crl.container_receipts_line_uid
     , crl.container_receipts_hdr_uid
     , crl.vessel_receipts_line_uid
-FROM P21Play.dbo.container_receipts_line AS crl
+FROM P21Import.dbo.container_receipts_line AS crl
 WHERE EXISTS
 (
     SELECT 1
@@ -662,8 +702,8 @@ SELECT DISTINCT
     , pol.line_no
     , pol.inv_mast_uid
     , im.item_id
-FROM P21Play.dbo.po_line AS pol
-INNER JOIN P21Play.dbo.inv_mast AS im
+FROM P21Import.dbo.po_line AS pol
+INNER JOIN P21Import.dbo.inv_mast AS im
   ON im.inv_mast_uid = pol.inv_mast_uid
 WHERE
   (
@@ -695,8 +735,8 @@ INSERT INTO #scope_item
 SELECT DISTINCT
       pol.inv_mast_uid
     , im.item_id
-FROM P21Play.dbo.po_line AS pol
-INNER JOIN P21Play.dbo.inv_mast AS im
+FROM P21Import.dbo.po_line AS pol
+INNER JOIN P21Import.dbo.inv_mast AS im
   ON im.inv_mast_uid = pol.inv_mast_uid
 WHERE EXISTS
 (
@@ -719,8 +759,8 @@ OR EXISTS
 
 INSERT INTO #near_transfer (transfer_no)
 SELECT th.transfer_no
-FROM P21Play.dbo.transfer_hdr AS th
-INNER JOIN P21Play.dbo.transfer_line AS tl
+FROM P21Import.dbo.transfer_hdr AS th
+INNER JOIN P21Import.dbo.transfer_line AS tl
   ON tl.transfer_no = th.transfer_no
 INNER JOIN #scope_item AS si
   ON si.inv_mast_uid = tl.inv_mast_uid
@@ -737,8 +777,8 @@ WHERE (th.from_location_id = @TargetLocationId OR th.to_location_id = @TargetLoc
       OR
       (
           @Mode = 'CAPTURE_AFTER_CONTAINER_RECEIPT_APPROVAL'
-          AND th.date_created BETWEEN DATEADD(day, -@TransferSearchDaysBefore, P21Play.dbo.p21_fn_GetSystemDatetime(CURRENT_TIMESTAMP, NULL, NULL))
-                                  AND DATEADD(day, @TransferSearchDaysAfter, P21Play.dbo.p21_fn_GetSystemDatetime(CURRENT_TIMESTAMP, NULL, NULL))
+          AND th.date_created BETWEEN DATEADD(day, -@TransferSearchDaysBefore, P21Import.dbo.p21_fn_GetSystemDatetime(CURRENT_TIMESTAMP, NULL, NULL))
+                                  AND DATEADD(day, @TransferSearchDaysAfter, P21Import.dbo.p21_fn_GetSystemDatetime(CURRENT_TIMESTAMP, NULL, NULL))
       )
   )
 GROUP BY
@@ -753,10 +793,10 @@ SELECT DISTINCT
       ol.order_no
     , ol.line_no
 FROM #scope_item AS si
-INNER JOIN P21Play.dbo.oe_line AS ol
+INNER JOIN P21Import.dbo.oe_line AS ol
   ON ol.inv_mast_uid = si.inv_mast_uid
  AND ol.ship_loc_id = @TargetLocationId
-INNER JOIN P21Play.dbo.oe_hdr AS oh
+INNER JOIN P21Import.dbo.oe_hdr AS oh
   ON oh.order_no = ol.order_no
 WHERE COALESCE(ol.complete, 'N') = 'N'
   AND COALESCE(ol.cancel_flag, 'N') = 'N'
@@ -771,7 +811,7 @@ INSERT INTO #open_oe_line
 SELECT DISTINCT
       olp.order_number
     , olp.line_number
-FROM P21Play.dbo.oe_line_po AS olp
+FROM P21Import.dbo.oe_line_po AS olp
 WHERE EXISTS
 (
     SELECT 1
@@ -787,6 +827,36 @@ AND NOT EXISTS
       AND existing.line_no = olp.line_number
 );
 
+-- General ledger rows posted by vessel receipt creation.
+-- gl.source holds the vessel_receipts_hdr_uid (as varchar) for source_type_cd
+-- 1674 (Vessel Receipts). Also match vessel_receipt_number defensively in case
+-- a header ever numbers differently from its uid. Driven from the small scope
+-- header set so gl is seeked by source, not scanned.
+CREATE TABLE #scope_gl
+(
+      gl_uid int NOT NULL PRIMARY KEY
+    , transaction_number decimal(19, 0) NULL
+);
+
+INSERT INTO #scope_gl
+(
+      gl_uid
+    , transaction_number
+)
+SELECT DISTINCT
+      gl.gl_uid
+    , gl.transaction_number
+FROM #scope_vessel_hdr AS svh
+INNER JOIN P21Import.dbo.vessel_receipts_hdr AS vh
+  ON vh.vessel_receipts_hdr_uid = svh.vessel_receipts_hdr_uid
+INNER JOIN P21Import.dbo.gl AS gl
+  ON gl.source_type_cd = 1674
+ AND gl.source IN
+     (
+         CONVERT(varchar(50), vh.vessel_receipts_hdr_uid)
+       , CONVERT(varchar(50), vh.vessel_receipt_number)
+     );
+
 DECLARE @DiscoveredContainerBuildingUid int = (SELECT MIN(container_building_uid) FROM #scope_container_building);
 DECLARE @DiscoveredVesselReceiptsHdrUid int = (SELECT MIN(vessel_receipts_hdr_uid) FROM #scope_vessel_hdr);
 DECLARE @DiscoveredVesselReceiptsContainerUid int = (SELECT MIN(vessel_receipts_container_uid) FROM #scope_vessel_container);
@@ -794,7 +864,7 @@ DECLARE @DiscoveredContainerReceiptsHdrUid int = (SELECT MIN(container_receipts_
 DECLARE @DiscoveredVesselReceiptNumber decimal(19, 0) =
 (
     SELECT MIN(vh.vessel_receipt_number)
-    FROM P21Play.dbo.vessel_receipts_hdr AS vh
+    FROM P21Import.dbo.vessel_receipts_hdr AS vh
     WHERE EXISTS
     (
         SELECT 1
@@ -804,7 +874,7 @@ DECLARE @DiscoveredVesselReceiptNumber decimal(19, 0) =
 );
 
 DECLARE @CaptureRunUid int;
-DECLARE @CapturedAt datetime = P21Play.dbo.p21_fn_GetSystemDatetime(CURRENT_TIMESTAMP, NULL, NULL);
+DECLARE @CapturedAt datetime = P21Import.dbo.p21_fn_GetSystemDatetime(CURRENT_TIMESTAMP, NULL, NULL);
 
 INSERT INTO dbo.coats_mexico_manual_pipeline_capture_run
 (
@@ -844,10 +914,10 @@ DECLARE @RowsCaptured int = 0;
 ;WITH src AS
 (
     SELECT
-          entity_name = CONVERT(sysname, 'container_building')
+          entity_name = CONVERT(varchar(128), 'container_building')
         , entity_key = CONCAT('container_building_uid=', cb.container_building_uid)
         , row_json = (SELECT cb.* FOR JSON PATH, WITHOUT_ARRAY_WRAPPER)
-    FROM P21Play.dbo.container_building AS cb
+    FROM P21Import.dbo.container_building AS cb
     WHERE EXISTS
     (
         SELECT 1
@@ -863,10 +933,10 @@ SET @RowsCaptured += @@ROWCOUNT;
 ;WITH src AS
 (
     SELECT
-          entity_name = CONVERT(sysname, 'container_building_po')
+          entity_name = CONVERT(varchar(128), 'container_building_po')
         , entity_key = CONCAT('container_building_po_uid=', cbp.container_building_po_uid)
         , row_json = (SELECT cbp.* FOR JSON PATH, WITHOUT_ARRAY_WRAPPER)
-    FROM P21Play.dbo.container_building_po AS cbp
+    FROM P21Import.dbo.container_building_po AS cbp
     WHERE EXISTS
     (
         SELECT 1
@@ -882,10 +952,10 @@ SET @RowsCaptured += @@ROWCOUNT;
 ;WITH src AS
 (
     SELECT
-          entity_name = CONVERT(sysname, 'vessel_receipts_hdr')
+          entity_name = CONVERT(varchar(128), 'vessel_receipts_hdr')
         , entity_key = CONCAT('vessel_receipts_hdr_uid=', vh.vessel_receipts_hdr_uid)
         , row_json = (SELECT vh.* FOR JSON PATH, WITHOUT_ARRAY_WRAPPER)
-    FROM P21Play.dbo.vessel_receipts_hdr AS vh
+    FROM P21Import.dbo.vessel_receipts_hdr AS vh
     WHERE EXISTS
     (
         SELECT 1
@@ -901,10 +971,10 @@ SET @RowsCaptured += @@ROWCOUNT;
 ;WITH src AS
 (
     SELECT
-          entity_name = CONVERT(sysname, 'vessel_receipts_container')
+          entity_name = CONVERT(varchar(128), 'vessel_receipts_container')
         , entity_key = CONCAT('vessel_receipts_container_uid=', vc.vessel_receipts_container_uid)
         , row_json = (SELECT vc.* FOR JSON PATH, WITHOUT_ARRAY_WRAPPER)
-    FROM P21Play.dbo.vessel_receipts_container AS vc
+    FROM P21Import.dbo.vessel_receipts_container AS vc
     WHERE EXISTS
     (
         SELECT 1
@@ -920,10 +990,10 @@ SET @RowsCaptured += @@ROWCOUNT;
 ;WITH src AS
 (
     SELECT
-          entity_name = CONVERT(sysname, 'vessel_receipts_line')
+          entity_name = CONVERT(varchar(128), 'vessel_receipts_line')
         , entity_key = CONCAT('vessel_receipts_line_uid=', vl.vessel_receipts_line_uid)
         , row_json = (SELECT vl.* FOR JSON PATH, WITHOUT_ARRAY_WRAPPER)
-    FROM P21Play.dbo.vessel_receipts_line AS vl
+    FROM P21Import.dbo.vessel_receipts_line AS vl
     WHERE EXISTS
     (
         SELECT 1
@@ -939,10 +1009,72 @@ SET @RowsCaptured += @@ROWCOUNT;
 ;WITH src AS
 (
     SELECT
-          entity_name = CONVERT(sysname, 'container_receipts_hdr')
+          entity_name = CONVERT(varchar(128), 'gl')
+        , entity_key = CONCAT('gl_uid=', gl.gl_uid)
+        , row_json = (SELECT gl.* FOR JSON PATH, WITHOUT_ARRAY_WRAPPER)
+    FROM P21Import.dbo.gl AS gl
+    WHERE EXISTS
+    (
+        SELECT 1
+        FROM #scope_gl AS sg
+        WHERE sg.gl_uid = gl.gl_uid
+    )
+)
+INSERT INTO dbo.coats_mexico_manual_pipeline_capture_row (capture_run_uid, entity_name, entity_key, row_hash, row_json)
+SELECT @CaptureRunUid, entity_name, entity_key, HASHBYTES('SHA2_256', CONVERT(varbinary(max), row_json)), row_json
+FROM src;
+SET @RowsCaptured += @@ROWCOUNT;
+
+;WITH src AS
+(
+    SELECT
+          entity_name = CONVERT(varchar(128), 'gl_trans_x_dimension')
+        , entity_key = CONCAT('gl_trans_x_dimension_uid=', gtd.gl_trans_x_dimension_uid)
+        , row_json = (SELECT gtd.* FOR JSON PATH, WITHOUT_ARRAY_WRAPPER)
+    FROM P21Import.dbo.gl_trans_x_dimension AS gtd
+    WHERE gtd.transaction_number IS NOT NULL
+      AND EXISTS
+      (
+          SELECT 1
+          FROM #scope_gl AS sg
+          WHERE sg.transaction_number = gtd.transaction_number
+      )
+)
+INSERT INTO dbo.coats_mexico_manual_pipeline_capture_row (capture_run_uid, entity_name, entity_key, row_hash, row_json)
+SELECT @CaptureRunUid, entity_name, entity_key, HASHBYTES('SHA2_256', CONVERT(varbinary(max), row_json)), row_json
+FROM src;
+SET @RowsCaptured += @@ROWCOUNT;
+
+-- GL account balances for the watched accounts (all periods/years), so a DIFF
+-- shows period rows ADDED (provisioned by vessel receipt creation) vs CHANGED
+-- (rolled by the t_gl_iu trigger). Seeded carry-forward can be backed out as
+-- (cumulative_after - posted_amount).
+;WITH src AS
+(
+    SELECT
+          entity_name = CONVERT(varchar(128), 'balances')
+        , entity_key = CONCAT('company_no=', b.company_no, ';account_no=', b.account_no, ';period=', b.period, ';year_for_period=', b.year_for_period, ';currency_id=', b.currency_id)
+        , row_json = (SELECT b.* FOR JSON PATH, WITHOUT_ARRAY_WRAPPER)
+    FROM P21Import.dbo.balances AS b
+    WHERE b.company_no = @GlWatchCompanyNo
+      -- delimited-LIKE membership test. STRING_SPLIT needs compat level >= 130,
+      -- and this script runs under USE KOMAR_DATA (compat 100), so built-in
+      -- resolution happens there, not in P21Import. @GlWatchAccounts is a comma
+      -- list with no spaces.
+      AND (',' + @GlWatchAccounts + ',') LIKE ('%,' + RTRIM(LTRIM(b.account_no)) + ',%')
+)
+INSERT INTO dbo.coats_mexico_manual_pipeline_capture_row (capture_run_uid, entity_name, entity_key, row_hash, row_json)
+SELECT @CaptureRunUid, entity_name, entity_key, HASHBYTES('SHA2_256', CONVERT(varbinary(max), row_json)), row_json
+FROM src;
+SET @RowsCaptured += @@ROWCOUNT;
+
+;WITH src AS
+(
+    SELECT
+          entity_name = CONVERT(varchar(128), 'container_receipts_hdr')
         , entity_key = CONCAT('container_receipts_hdr_uid=', crh.container_receipts_hdr_uid)
         , row_json = (SELECT crh.* FOR JSON PATH, WITHOUT_ARRAY_WRAPPER)
-    FROM P21Play.dbo.container_receipts_hdr AS crh
+    FROM P21Import.dbo.container_receipts_hdr AS crh
     WHERE EXISTS
     (
         SELECT 1
@@ -958,10 +1090,10 @@ SET @RowsCaptured += @@ROWCOUNT;
 ;WITH src AS
 (
     SELECT
-          entity_name = CONVERT(sysname, 'container_receipts_line')
+          entity_name = CONVERT(varchar(128), 'container_receipts_line')
         , entity_key = CONCAT('container_receipts_line_uid=', crl.container_receipts_line_uid)
         , row_json = (SELECT crl.* FOR JSON PATH, WITHOUT_ARRAY_WRAPPER)
-    FROM P21Play.dbo.container_receipts_line AS crl
+    FROM P21Import.dbo.container_receipts_line AS crl
     WHERE EXISTS
     (
         SELECT 1
@@ -977,10 +1109,10 @@ SET @RowsCaptured += @@ROWCOUNT;
 ;WITH src AS
 (
     SELECT
-          entity_name = CONVERT(sysname, 'document_line_bin')
+          entity_name = CONVERT(varchar(128), 'document_line_bin')
         , entity_key = CONCAT('document_no=', CONVERT(varchar(50), dlb.document_no), ';line_no=', dlb.line_no, ';bin_cd=', dlb.bin_cd, ';sub_line_no=', dlb.sub_line_no)
         , row_json = (SELECT dlb.* FOR JSON PATH, WITHOUT_ARRAY_WRAPPER)
-    FROM P21Play.dbo.document_line_bin AS dlb
+    FROM P21Import.dbo.document_line_bin AS dlb
     WHERE dlb.document_type = 'CR'
       AND EXISTS
       (
@@ -997,10 +1129,10 @@ SET @RowsCaptured += @@ROWCOUNT;
 ;WITH src AS
 (
     SELECT
-          entity_name = CONVERT(sysname, 'transfer_hdr')
+          entity_name = CONVERT(varchar(128), 'transfer_hdr')
         , entity_key = CONCAT('transfer_no=', th.transfer_no)
         , row_json = (SELECT th.* FOR JSON PATH, WITHOUT_ARRAY_WRAPPER)
-    FROM P21Play.dbo.transfer_hdr AS th
+    FROM P21Import.dbo.transfer_hdr AS th
     WHERE EXISTS
     (
         SELECT 1
@@ -1016,10 +1148,10 @@ SET @RowsCaptured += @@ROWCOUNT;
 ;WITH src AS
 (
     SELECT
-          entity_name = CONVERT(sysname, 'transfer_line')
+          entity_name = CONVERT(varchar(128), 'transfer_line')
         , entity_key = CONCAT('transfer_no=', tl.transfer_no, ';line_no=', tl.line_no)
         , row_json = (SELECT tl.* FOR JSON PATH, WITHOUT_ARRAY_WRAPPER)
-    FROM P21Play.dbo.transfer_line AS tl
+    FROM P21Import.dbo.transfer_line AS tl
     WHERE EXISTS
     (
         SELECT 1
@@ -1035,10 +1167,10 @@ SET @RowsCaptured += @@ROWCOUNT;
 ;WITH src AS
 (
     SELECT
-          entity_name = CONVERT(sysname, 'oe_line_po')
+          entity_name = CONVERT(varchar(128), 'oe_line_po')
         , entity_key = CONCAT('order_number=', olp.order_number, ';line_number=', olp.line_number, ';po_no=', olp.po_no, ';po_line_number=', olp.po_line_number, ';connection_type=', olp.connection_type)
         , row_json = (SELECT olp.* FOR JSON PATH, WITHOUT_ARRAY_WRAPPER)
-    FROM P21Play.dbo.oe_line_po AS olp
+    FROM P21Import.dbo.oe_line_po AS olp
     WHERE EXISTS
     (
         SELECT 1
@@ -1062,7 +1194,7 @@ SET @RowsCaptured += @@ROWCOUNT;
 ;WITH src AS
 (
     SELECT
-          entity_name = CONVERT(sysname, 'linkable_transaction')
+          entity_name = CONVERT(varchar(128), 'linkable_transaction')
         , entity_key = CONCAT('po_line_uid=', tpl.po_line_uid, ';order_no=', lt.order_no, ';line_no=', lt.line_no, ';oe_line_uid=', lt.oe_line_uid)
         , row_json =
           (
@@ -1101,7 +1233,7 @@ SET @RowsCaptured += @@ROWCOUNT;
               FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
           )
     FROM #target_po_line AS tpl
-    CROSS APPLY P21Play.dbo.p21_fnt_get_linkable_transactions
+    CROSS APPLY P21Import.dbo.p21_fnt_get_linkable_transactions
     (
           CONVERT(int, @TargetLocationId)
         , tpl.item_id
@@ -1125,7 +1257,7 @@ SET @RowsCaptured += @@ROWCOUNT;
 ;WITH src AS
 (
     SELECT
-          entity_name = CONVERT(sysname, 'linkable_transaction_summary')
+          entity_name = CONVERT(varchar(128), 'linkable_transaction_summary')
         , entity_key = CONCAT('po_line_uid=', tpl.po_line_uid)
         , row_json =
           (
@@ -1142,7 +1274,7 @@ SET @RowsCaptured += @@ROWCOUNT;
               FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
           )
     FROM #target_po_line AS tpl
-    OUTER APPLY P21Play.dbo.p21_fnt_get_linkable_transactions
+    OUTER APPLY P21Import.dbo.p21_fnt_get_linkable_transactions
     (
           CONVERT(int, @TargetLocationId)
         , tpl.item_id
@@ -1171,10 +1303,10 @@ SET @RowsCaptured += @@ROWCOUNT;
 ;WITH src AS
 (
     SELECT
-          entity_name = CONVERT(sysname, 'transfer_backorders')
+          entity_name = CONVERT(varchar(128), 'transfer_backorders')
         , entity_key = CONCAT('transfer_backorders_uid=', tb.transfer_backorders_uid)
         , row_json = (SELECT tb.* FOR JSON PATH, WITHOUT_ARRAY_WRAPPER)
-    FROM P21Play.dbo.transfer_backorders AS tb
+    FROM P21Import.dbo.transfer_backorders AS tb
     WHERE EXISTS
     (
         SELECT 1
@@ -1190,10 +1322,10 @@ SET @RowsCaptured += @@ROWCOUNT;
 ;WITH src AS
 (
     SELECT
-          entity_name = CONVERT(sysname, 'anticipated_allocation')
+          entity_name = CONVERT(varchar(128), 'anticipated_allocation')
         , entity_key = CONCAT('anticipated_allocation_uid=', aa.anticipated_allocation_uid)
         , row_json = (SELECT aa.* FOR JSON PATH, WITHOUT_ARRAY_WRAPPER)
-    FROM P21Play.dbo.anticipated_allocation AS aa
+    FROM P21Import.dbo.anticipated_allocation AS aa
     WHERE aa.location_id = @TargetLocationId
       AND EXISTS
       (
@@ -1210,7 +1342,7 @@ SET @RowsCaptured += @@ROWCOUNT;
 ;WITH src AS
 (
     SELECT
-          entity_name = CONVERT(sysname, 'inv_loc')
+          entity_name = CONVERT(varchar(128), 'inv_loc')
         , entity_key = CONCAT('location_id=', il.location_id, ';inv_mast_uid=', il.inv_mast_uid)
         , row_json =
           (
@@ -1225,7 +1357,7 @@ SET @RowsCaptured += @@ROWCOUNT;
                   , il.last_maintained_by
               FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
           )
-    FROM P21Play.dbo.inv_loc AS il
+    FROM P21Import.dbo.inv_loc AS il
     WHERE il.location_id IN (@TargetLocationId, 200)
       AND EXISTS
       (
@@ -1242,10 +1374,10 @@ SET @RowsCaptured += @@ROWCOUNT;
 ;WITH src AS
 (
     SELECT
-          entity_name = CONVERT(sysname, 'oe_hdr')
+          entity_name = CONVERT(varchar(128), 'oe_hdr')
         , entity_key = CONCAT('order_no=', oh.order_no)
         , row_json = (SELECT oh.* FOR JSON PATH, WITHOUT_ARRAY_WRAPPER)
-    FROM P21Play.dbo.oe_hdr AS oh
+    FROM P21Import.dbo.oe_hdr AS oh
     WHERE EXISTS
     (
         SELECT 1
@@ -1261,10 +1393,10 @@ SET @RowsCaptured += @@ROWCOUNT;
 ;WITH src AS
 (
     SELECT
-          entity_name = CONVERT(sysname, 'oe_line')
+          entity_name = CONVERT(varchar(128), 'oe_line')
         , entity_key = CONCAT('order_no=', ol.order_no, ';line_no=', ol.line_no)
         , row_json = (SELECT ol.* FOR JSON PATH, WITHOUT_ARRAY_WRAPPER)
-    FROM P21Play.dbo.oe_line AS ol
+    FROM P21Import.dbo.oe_line AS ol
     WHERE EXISTS
     (
         SELECT 1
